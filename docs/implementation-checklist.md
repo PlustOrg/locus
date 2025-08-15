@@ -99,11 +99,12 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
 - [ ] Integration with real parsed AST (currently uses a simplified page shape in tests)
 
 ## Generators: Express API (Phase 2.3)
-- [~] Routes per entity generated (GET list present)
-  - Evidence: `src/generator/express.ts`; test in `tests/generator/express.test.ts`
-- [ ] GET one, POST create, PUT/PATCH update, DELETE remove
+- [x] Routes per entity generated
+  - Evidence: `src/generator/express.ts`; tests in `tests/generator/express.test.ts`, `tests/generator/express_crud.test.ts`
+- [x] GET one, POST create, PUT/PATCH update, DELETE remove
 - [ ] Validation, error handling, pagination/filtering alignment with `find(where: ...)`
-- [ ] Express app bootstrap (router mounting)
+- [~] Express app bootstrap (router mounting)
+  - Evidence: placeholder `server.ts` emitted; router mounting TBD
 
 ## CLI (Phase 3)
 - [x] `locus db migrate` → runs `prisma migrate dev`
@@ -111,7 +112,7 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
   - Evidence: `src/cli/db.ts`; tests `tests/cli/db.test.ts`
 - [~] `locus build` orchestrates parse → merge → generate → write
   - Evidence: `src/cli/build.ts`; tests `tests/cli/build.test.ts`
-  - Notes: Current build reads file names and relies on mocked parser in tests; real file content reading and recursive discovery are pending.
+  - Notes: Build now discovers `.locus` files recursively and reads real file contents; generates Prisma schema and Express routes. React component generation is pending.
 - [~] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
   - Evidence: `src/cli/dev.ts`; test `tests/cli/dev.test.ts`
 
@@ -131,7 +132,8 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
 - [x] Parser tests for database/design_system and invalid cases
 - [~] Generators tests (Prisma good; React minimal; Express minimal)
 - [~] CLI tests (db/build/dev covered via mocks)
-- [ ] E2E fixture test: parse real `.locus` files, merge, and generate outputs
+- [x] E2E fixture test: parse real `.locus` files, merge, and generate outputs
+  - Evidence: `tests/cli/e2e_build.test.ts`
 
 ## DX and errors
 - [~] Consistent error classes (parse, merge present; generator/cli errors TBD)
