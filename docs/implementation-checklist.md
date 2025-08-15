@@ -45,16 +45,16 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
 - [x] Nested themes handled
 
 ## Language: features (docs/language/features.md, ui-syntax.md)
-- [~] `page`, `component`, `store` blocks recognized by parser (names only)
-  - Evidence: minimal rules in `databaseParser.ts`, AST builder stores names; tests in `tests/parser/features.test.ts`
-- [ ] `state` block parsed to AST (variables, types, defaults)
-- [ ] `param` block parsed for components (with defaults)
-- [ ] `action` blocks parsed (params/body)
-- [ ] Lifecycle hooks parsed: `on load`, `on unload`
-- [ ] `ui` block parsed to UI AST (tags, props, expressions)
+- [x] `page`, `component`, `store` blocks recognized by parser
+  - Evidence: rules and extraction in `databaseParser.ts`, `astBuilder.ts`; tests: `tests/parser/features.test.ts`, `tests/parser/features_full.test.ts`
+- [~] `state` block parsed (heuristic from original source; supports `list of X` and defaults)
+- [~] `param` block parsed for components (name/type)
+- [~] `action` blocks parsed (name/params/body captured as strings)
+- [~] Lifecycle hooks parsed: `on load` body captured
+- [ ] `ui` block parsed to a structured UI AST (currently captured as raw string)
 - [ ] Event directives `on:*` and `bind:value`
 - [ ] Control flow `<if>/<elseif>/<else>` and lists `for:each`
-- Notes: For Phase 1, feature bodies are stripped by `src/parser/preprocess.ts` to keep parsing focused; full feature parsing is deferred.
+Notes: We still strip feature bodies for lexing, then enrich nodes using the original source; migrate to full grammar later.
 
 ## Parser implementation details
 - [x] Lexer tokens for keywords, punctuation, literals, comments/whitespace
@@ -94,9 +94,10 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
 - [~] `state` → `useState` hooks with defaults
 - [~] `on load` → `useEffect`
 - [~] `action` blocks → functions
-- [~] `ui` passthrough (no real UI AST transform yet)
+- [~] `ui` passthrough; strips `ui { ... }` wrapper when present
+- [~] Component generator with props interface and UI passthrough
 - [ ] Event wiring (`on:*`), two-way binding (`bind:value`), control flow, lists, slots to JSX
-- [ ] Integration with real parsed AST (currently uses a simplified page shape in tests)
+- [ ] Integration with full UI AST (currently raw string)
 
 ## Generators: Express API (Phase 2.3)
 - [x] Routes per entity generated
