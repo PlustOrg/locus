@@ -21,7 +21,12 @@ import * as merger from '../../src/parser/merger';
 describe('CLI build command', () => {
   beforeEach(() => {
     (parser.parseLocus as any).mockReturnValue({ databases: [], designSystems: [], pages: [], components: [], stores: [] });
-    (merger.mergeAsts as any).mockReturnValue({ database: { entities: [] }, pages: [], components: [], stores: [] });
+    (merger.mergeAsts as any).mockReturnValue({
+      database: { entities: [] },
+      pages: [{ name: 'Home', ui: 'ui { <div /> }', state: [], actions: [] }],
+      components: [{ name: 'Card', params: [], ui: 'ui { <div /> }' }],
+      stores: []
+    });
     for (const k of Object.keys(mockFs)) delete mockFs[k];
   });
 
@@ -29,8 +34,10 @@ describe('CLI build command', () => {
     await buildProject({ srcDir: '/proj' } as any);
     expect(parser.parseLocus).toHaveBeenCalledTimes(2);
     expect(merger.mergeAsts).toHaveBeenCalled();
-    // crude assertion that something was written
+  // crude assertions that outputs were written
     const keys = Object.keys(mockFs);
     expect(keys.some(k => k.includes('schema.prisma'))).toBe(true);
+  expect(keys.some(k => k.includes('/react/pages/Home.tsx'))).toBe(true);
+  expect(keys.some(k => k.includes('/react/components/Card.tsx'))).toBe(true);
   });
 });

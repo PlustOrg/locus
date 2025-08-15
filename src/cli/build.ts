@@ -4,6 +4,7 @@ import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { generatePrismaSchema } from '../generator/prisma';
 import { generateExpressApi } from '../generator/express';
+import { generateReactComponent, generateReactPage } from '../generator/react';
 
 export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   const srcDir = opts.srcDir;
@@ -29,6 +30,21 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
     const dir = full.split('/').slice(0, -1).join('/');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     writeFileSync(full, c);
+  }
+
+  // React (pages & components)
+  const reactBase = join(outDir, 'react');
+  const pagesDir = join(reactBase, 'pages');
+  const compsDir = join(reactBase, 'components');
+  if (!existsSync(pagesDir)) mkdirSync(pagesDir, { recursive: true });
+  if (!existsSync(compsDir)) mkdirSync(compsDir, { recursive: true });
+  for (const p of merged.pages as any[]) {
+    const code = generateReactPage(p);
+    writeFileSync(join(pagesDir, `${p.name}.tsx`), code);
+  }
+  for (const c of merged.components as any[]) {
+    const code = generateReactComponent(c);
+    writeFileSync(join(compsDir, `${c.name}.tsx`), code);
   }
 
   return { outDir };

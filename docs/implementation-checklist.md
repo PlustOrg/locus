@@ -51,9 +51,12 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
 - [~] `param` block parsed for components (name/type)
 - [~] `action` blocks parsed (name/params/body captured as strings)
 - [~] Lifecycle hooks parsed: `on load` body captured
-- [ ] `ui` block parsed to a structured UI AST (currently captured as raw string)
-- [ ] Event directives `on:*` and `bind:value`
-- [ ] Control flow `<if>/<elseif>/<else>` and lists `for:each`
+- [x] `ui` block parsed to a structured UI AST (tags, props, expressions)
+  - Evidence: `src/parser/uiAst.ts`, `src/parser/astBuilder.ts` (parseUi, transformUiTreeToStructured), tests: `tests/parser/ui_ast.test.ts`, `tests/parser/ui_ast_bind.test.ts`, `tests/parser/ui_ast_if_else_parse.test.ts`
+- [x] Event directives `on:*` and `bind:value`
+  - Evidence: normalized in AST builder; verified in parser and generator tests
+- [x] Control flow `<if>/<elseif>/<else>` and lists `for:each`
+  - Evidence: structured IfNode/ForEachNode; tests for parse and generation
 Notes: We still strip feature bodies for lexing, then enrich nodes using the original source; migrate to full grammar later.
 
 ## Parser implementation details
@@ -96,8 +99,14 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 - [~] `action` blocks → functions
 - [~] `ui` passthrough; strips `ui { ... }` wrapper when present
 - [~] Component generator with props interface and UI passthrough
-- [ ] Event wiring (`on:*`), two-way binding (`bind:value`), control flow, lists, slots to JSX
-- [ ] Integration with full UI AST (currently raw string)
+- [x] Event wiring (`on:*` → React props like onClick) and two-way binding (`bind:value` → value + onChange setter)
+  - Evidence: `src/generator/react.ts`; tests in `tests/generator/react_ui.test.ts`
+- [x] Control flow and lists: `<if>/<elseif>/<else>` → ternary chain, `for:each` → `.map(item, index)` with key
+  - Evidence: `tests/generator/react_ui_ast_if_else.test.ts`, `tests/generator/react_ui_ast_render.test.ts`
+- [~] Slots/children mapping to props (slot → React.ReactNode)
+  - Evidence: `tests/generator/react_slots.test.ts`
+- [x] Integration with UI AST (pages/components render from uiAst with fallback)
+  - Evidence: `src/generator/react.ts` (renderUiAst), `tests/generator/react_ui_ast_render.test.ts`, `tests/generator/react_ui_ast_if_else.test.ts`
 
 ## Generators: Express API (Phase 2.3)
 - [x] Routes per entity generated
@@ -113,7 +122,7 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
   - Evidence: `src/cli/db.ts`; tests `tests/cli/db.test.ts`
 - [~] `locus build` orchestrates parse → merge → generate → write
   - Evidence: `src/cli/build.ts`; tests `tests/cli/build.test.ts`
-  - Notes: Build now discovers `.locus` files recursively and reads real file contents; generates Prisma schema and Express routes. React component generation is pending.
+  - Notes: Build discovers `.locus` files recursively and reads real file contents; generates Prisma schema, Express routes, and React components (UI AST-supported).
 - [~] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
   - Evidence: `src/cli/dev.ts`; test `tests/cli/dev.test.ts`
 
@@ -131,10 +140,16 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 
 ## Testing completeness
 - [x] Parser tests for database/design_system and invalid cases
-- [~] Generators tests (Prisma good; React minimal; Express minimal)
+- [~] Generators tests (Prisma good; React improved with UI transforms; Express CRUD covered)
 - [~] CLI tests (db/build/dev covered via mocks)
 - [x] E2E fixture test: parse real `.locus` files, merge, and generate outputs
   - Evidence: `tests/cli/e2e_build.test.ts`
+ 
+ - [x] React generator UI AST rendering tests
+   - Evidence: `tests/generator/react_ui_ast_render.test.ts`, `tests/generator/react_ui_ast_if_else.test.ts`
+  
+ - [x] UI AST parsing tests for `ui` blocks
+   - Evidence: `tests/parser/ui_ast.test.ts`
 
 ## DX and errors
 - [~] Consistent error classes (parse, merge present; generator/cli errors TBD)

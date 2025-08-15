@@ -4,7 +4,7 @@ export function generateReactPage(page: any): string {
   const stateLines = (page.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n');
   const onLoad = page.onLoad ? `\n  useEffect(() => {\n    ${page.onLoad}\n  }, []);\n` : '';
   const actions = (page.actions || []).map((a: any) => `  function ${a.name}(${(a.params||[]).join(', ')}) {\n    ${a.body || ''}\n  }`).join('\n\n');
-  const uiContent = stripUiWrapper(page.ui) || '<div />';
+  const uiContent = page.uiAst ? renderUiAst(page.uiAst) : transformUi(stripUiWrapper(page.ui) || '<div />', page.state || []);
   const ui = `\n  return (\n    ${uiContent}\n  );\n`;
   const end = `}\n`;
   return [imports, compStart, stateLines, onLoad, actions, ui, end].join('\n');
@@ -12,10 +12,10 @@ export function generateReactPage(page: any): string {
 
 export function generateReactComponent(component: any): string {
   const imports = `import React from 'react';\n`;
-  const props = (component.params || []).map((p: any) => `${p.name}: any`).join('; ');
+  const props = (component.params || []).map((p: any) => `${p.name}: ${mapPropType(p.type)}`).join('; ');
   const propsInterface = props ? `interface ${component.name}Props { ${props} }\n` : '';
   const signature = props ? `(${lowerFirst(component.name)}Props: ${component.name}Props)` : `()`;
-  const uiContent = stripUiWrapper(component.ui) || '<div />';
+  const uiContent = component.uiAst ? renderUiAst(component.uiAst) : transformUi(stripUiWrapper(component.ui) || '<div />', component.state || []);
   const comp = `export default function ${component.name}${signature} {\n  return (\n    ${uiContent}\n  );\n}\n`;
   return [imports, propsInterface, comp].join('\n');
 }
@@ -27,4 +27,162 @@ function stripUiWrapper(ui?: string): string | undefined {
   const m = /\bui\s*\{([\s\S]*?)\}$/m.exec(ui.trim());
   if (m) return m[1];
   return ui;
+}
+
+function mapPropType(t: any): string {
+  if (!t) return 'any';
+  if (t.kind === 'primitive') {
+    if ((t.name || '').toLowerCase() === 'slot') return 'React.ReactNode';
+    return 'any';
+  }
+  return 'any';
+}
+
+function transformUi(ui: string, state: any[]): string {
+  let out = ui;
+  // events: on:click -> onClick, on:submit -> onSubmit, etc.
+  out = out.replace(/on:([a-zA-Z]+)/g, (_, ev) => `on${capitalize(ev)}`);
+
+  // bind:value={var} -> value={var} onChange={(e) => setVar(e.target.value)}
+  out = out.replace(/bind:value=\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_m, v) => {
+    const setter = `set${capitalize(v)}`;
+    const onChange = `onChange={(e) => ${setter}(e.target.value)}`;
+    return `value={${v}} ${onChange}`;
+  });
+
+  // <if condition={expr}> ... </if><elseif condition={expr2}> ... </elseif><else> ... </else>
+  out = transformIfElse(out);
+
+  // for:each={item in items} on a tag -> wrap with items.map
+  out = out.replace(/<([A-Za-z_][A-Za-z0-9_]*)\s+([^>]*?)for:each=\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([^}]+)\}\s*([^>]*)\/>/g,
+    (_m, tag, preAttrs, item, arr, postAttrs) => {
+      const open = `<${tag} ${preAttrs.trim()} ${postAttrs.trim()}`.replace(/\s+/g, ' ').trim();
+      return `{${arr}.map((${item}, index) => (\n  ${open} key={index} />\n))}`;
+    });
+
+  return out;
+}
+
+function transformIfElse(src: string): string {
+  // Capture the trio as they appear and convert to ternary blocks.
+  // This is a simplistic pass and assumes one chain.
+  const ifRe = /<if\s+condition=\{([\s\S]*?)\}\s*>[\s\S]*?<\/if>/m;
+  const elseifRe = /<elseif\s+condition=\{([\s\S]*?)\}\s*>[\s\S]*?<\/elseif>/m;
+  const elseRe = /<else\s*>[\s\S]*?<\/else>/m;
+
+  // Extract contents
+  const ifMatch = src.match(/<if\s+condition=\{([\s\S]*?)\}\s*>\s*([\s\S]*?)\s*<\/if>/m);
+  if (!ifMatch) return src;
+  const ifCond = ifMatch[1];
+  const ifBody = ifMatch[2];
+
+  const elseifMatch = src.match(/<elseif\s+condition=\{([\s\S]*?)\}\s*>\s*([\s\S]*?)\s*<\/elseif>/m);
+  const elseMatch = src.match(/<else\s*>\s*([\s\S]*?)\s*<\/else>/m);
+
+  let middle = '';
+  if (elseifMatch) {
+    middle = `: ${elseifMatch[1]} ? (\n${elseifMatch[2]}\n) `;
+  }
+  const end = elseMatch ? `: (\n${elseMatch[1]}\n)` : ': null';
+  const ternary = `{${ifCond} ? (\n${ifBody}\n) ${middle}${end}}`;
+  // Replace the whole if/elseif/else chain
+  return src
+    .replace(ifRe, '__IF_BLOCK__')
+    .replace(elseifRe, '')
+    .replace(elseRe, '')
+    .replace('__IF_BLOCK__', ternary);
+}
+
+// --- UI AST rendering ---
+type UIAttr = { kind: 'string'; value: string } | { kind: 'expr'; value: string } | { kind: 'forEach'; item: string; iterable: string };
+type IfNode = { type: 'if'; condition: string; consequent: UINode[]; elif?: Array<{ condition: string; children: UINode[] }>; else?: UINode[] };
+type ForEachNode = { type: 'forEach'; item: string; iterable: string; template: any };
+type UINode = { type: 'text'; value: string } | { type: 'element'; tag: string; attrs: Record<string, UIAttr>; children: UINode[] } | IfNode | ForEachNode;
+
+function renderUiAst(node: UINode): string {
+  if ((node as any).type === 'text') {
+    return (node as any).value;
+  }
+  if ((node as any).type === 'forEach') {
+    const fe = node as any as ForEachNode;
+    const inner = renderElement(fe.template.tag, fe.template.attrs, fe.template.children, true);
+    return `{${fe.iterable}.map((${fe.item}, index) => (\n${inner.replace(/<([A-Za-z0-9_:-]+)([^>]*)\/>/, '<$1$2 key={index} />')}\n))}`;
+  }
+  if ((node as any).type === 'if') {
+    const ifn = node as any as IfNode;
+    let expr = `{${ifn.condition} ? (\n${renderChildren(ifn.consequent)}\n)`;
+    if ((ifn.elif || []).length) {
+      for (const e of ifn.elif!) {
+        expr += ` : ${e.condition} ? (\n${renderChildren(e.children)}\n)`;
+      }
+    }
+    if (ifn.else && ifn.else.length) expr += ` : (\n${renderChildren(ifn.else)}\n)`; else expr += ` : null`;
+    expr += `}`;
+    return expr;
+  }
+  const el = node as any as { tag: string; attrs: Record<string, UIAttr>; children: UINode[] };
+  return renderElement(el.tag, el.attrs || {}, el.children || [], false);
+}
+
+function renderElement(tag: string, attrs: Record<string, UIAttr>, children: UINode[], alreadyHasKey: boolean): string {
+  const attrStrs: string[] = [];
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'forEach') continue;
+    if (k === 'bindValue' && (v as any).kind === 'expr') {
+      const stateVar = (v as any).value;
+      const setter = `set${capitalize(stateVar)}`;
+      attrStrs.push(`value={${stateVar}}`);
+      attrStrs.push(`onChange={(e) => ${setter}(e.target.value)}`);
+      continue;
+    }
+    const key = k === 'class' ? 'className' : k;
+    if ((v as any).kind === 'string') attrStrs.push(`${key}="${(v as any).value}"`);
+    else if ((v as any).kind === 'expr') attrStrs.push(`${key}={${(v as any).value}}`);
+  }
+  const open = `<${tag}${attrStrs.length ? ' ' + attrStrs.join(' ') : ''}`;
+  if (!children || children.length === 0) return `${open} />`;
+  const inner = renderChildren(children);
+  return `${open}>${inner}</${tag}>`;
+}
+
+function renderChildren(children: UINode[]): string {
+  const out: string[] = [];
+  for (let i = 0; i < children.length; i++) {
+    const cur: any = children[i];
+    if (cur && cur.type === 'element' && cur.tag === 'if') {
+      const chain = [cur];
+      let j = i + 1;
+      while (j < children.length) {
+        const next: any = children[j];
+        if (next && next.type === 'element' && (next.tag === 'elseif' || next.tag === 'else')) {
+          chain.push(next);
+          j++;
+        } else break;
+      }
+      // Build ternary chain
+      const ifNode = chain[0];
+      const cond = (((ifNode.attrs || {}) as any).condition || { kind: 'expr', value: 'false' }).value;
+      const ifBody = (ifNode.children || []).map((c: any) => renderUiAst(c)).join('');
+      let expr = `{${cond} ? (\n${ifBody}\n)`;
+      // subsequent elseif nodes
+      for (let k = 1; k < chain.length; k++) {
+        const node: any = chain[k];
+        if (node.tag === 'elseif') {
+          const ec = (((node.attrs || {}) as any).condition || { kind: 'expr', value: 'false' }).value;
+          const eb = (node.children || []).map((c: any) => renderUiAst(c)).join('');
+          expr += ` : ${ec} ? (\n${eb}\n)`;
+        } else if (node.tag === 'else') {
+          const eb = (node.children || []).map((c: any) => renderUiAst(c)).join('');
+          expr += ` : (\n${eb}\n)`;
+        }
+      }
+      if (!chain.some((n: any) => n.tag === 'else')) expr += ` : null`;
+      expr += `}`;
+      out.push(expr);
+      i = j - 1; // skip consumed
+    } else {
+      out.push(renderUiAst(children[i] as any));
+    }
+  }
+  return out.join('');
 }

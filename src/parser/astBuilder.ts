@@ -13,6 +13,7 @@ import {
   Relation,
 } from '../ast';
 import { extractFeatureBlocks } from './preprocess';
+import { UINode, ElementNode, TextNode, UIAttr } from './uiAst';
 
 function getText(tok?: IToken | IToken[]): string | undefined {
   if (!tok) return undefined;
@@ -257,15 +258,15 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFi
     const fb = extractFeatureBlocks(originalSource);
     for (const p of pages) {
       const body = fb.pages[p.name];
-      if (body) enrichPageLike(p, body);
+  if (body) enrichPageLike(p, body);
     }
     for (const c of components) {
       const body = fb.components[c.name];
-      if (body) enrichComponent(c, body);
+  if (body) enrichComponent(c, body);
     }
     for (const s of stores) {
       const body = fb.stores[s.name];
-      if (body) enrichStore(s, body);
+  if (body) enrichStore(s, body);
     }
   }
 
@@ -289,8 +290,11 @@ function enrichPageLike(node: any, body: string) {
     node.actions.push({ name: m[1], params: m[2].trim() ? m[2].split(/\s*,\s*/) : [], body: m[3] });
   }
   // ui (raw string)
-  const uiMatch = /\bui\s*\{([\s\S]*?)\}/m.exec(body);
-  if (uiMatch) node.ui = uiMatch[0];
+  const uiBlk = extractUiBlock(body);
+  if (uiBlk) {
+    node.ui = uiBlk.full;
+    node.uiAst = parseUi(uiBlk.inner);
+  }
   else {
     node.ui = body;
   }
@@ -306,8 +310,11 @@ function enrichComponent(node: any, body: string) {
   }
   if (params.length) node.params = params;
   // ui
-  const uiMatch = /\bui\s*\{([\s\S]*?)\}/m.exec(body);
-  if (uiMatch) node.ui = uiMatch[0];
+  const uiBlk = extractUiBlock(body);
+  if (uiBlk) {
+    node.ui = uiBlk.full;
+    node.uiAst = parseUi(uiBlk.inner);
+  }
   else {
     node.ui = body;
   }
@@ -334,4 +341,150 @@ function parseStateDecls(src: string) {
     }
   }
   return out;
+}
+
+function parseUi(src: string): UINode {
+  // Minimal parser: supports single root element with nested elements and text.
+  // Attributes: size="str", attr={expr}, on:evt={expr}, for:each={item in items}
+  const stack: ElementNode[] = [];
+  let i = 0;
+  let root: ElementNode | null = null;
+  while (i < src.length) {
+    if (src[i] === '<') {
+      if (src[i + 1] === '/') {
+        // closing
+  const end = src.indexOf('>', i + 2);
+  if (end === -1) { i++; continue; }
+        const tag = src.slice(i + 2, end).trim();
+        const node = stack.pop();
+        i = end + 1;
+        if (!stack.length && node) root = node;
+      } else {
+        // opening or self-close
+  const end = src.indexOf('>', i + 1);
+  if (end === -1) { i++; continue; }
+        const raw = src.slice(i + 1, end);
+        const selfClose = raw.endsWith('/');
+        const parts = raw.replace(/\/\s*$/, '').trim().split(/\s+/);
+        const tag = parts.shift() as string;
+        const attrs = parseAttrs(raw.slice(tag.length));
+    const el: ElementNode = { type: 'element', tag, attrs, children: [] };
+  if (stack.length) stack[stack.length - 1].children.push(el);
+        stack.push(el);
+        i = end + 1;
+        if (selfClose) {
+          stack.pop();
+          if (!stack.length) root = el;
+        }
+      }
+    } else {
+      // text node
+      const next = src.indexOf('<', i);
+      const text = src.slice(i, next === -1 ? src.length : next);
+      if (text.trim()) {
+        const tn: TextNode = { type: 'text', value: text.trim() };
+        if (stack.length) stack[stack.length - 1].children.push(tn);
+      }
+      i = next === -1 ? src.length : next;
+    }
+  }
+  const built = (root as any) || ({ type: 'text', value: src } as TextNode);
+  // Post-process element tree into structured control-flow nodes
+  return transformUiTreeToStructured(built);
+}
+
+function parseAttrs(src: string): Record<string, UIAttr> {
+  const attrs: Record<string, UIAttr> = {};
+  // on:evt={...} or name={...} or name="..." or for:each={item in items}
+  const re = /(for:each|on:[A-Za-z]+|[A-Za-z_:][A-Za-z0-9_:.-]*)\s*=\s*(\{[^}]*\}|"[^"]*"|[^\s>]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src)) !== null) {
+    const key = m[1];
+    const val = m[2];
+    if (key === 'for:each' && /^\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([\s\S]+)\}$/.test(val)) {
+      const mm = /\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([\s\S]+)\}/.exec(val)!;
+      attrs['forEach'] = { kind: 'forEach', item: mm[1], iterable: mm[2].trim() } as any;
+    } else if (val.startsWith('"')) {
+      attrs[normalizeAttrKey(key)] = { kind: 'string', value: val.slice(1, -1) };
+    } else if (val.startsWith('{') && val.endsWith('}')) {
+      attrs[normalizeAttrKey(key)] = { kind: 'expr', value: val.slice(1, -1).trim() };
+    } else {
+      attrs[normalizeAttrKey(key)] = { kind: 'string', value: val };
+    }
+  }
+  return attrs;
+}
+
+function normalizeAttrKey(k: string): string {
+  if (k.startsWith('on:')) {
+    const ev = k.slice(3);
+    return 'on' + ev.charAt(0).toUpperCase() + ev.slice(1);
+  }
+  if (k === 'bind:value') return 'bindValue';
+  return k.replace(':', '');
+}
+
+function extractUiBlock(src: string): { full: string; inner: string } | null {
+  const uiIdx = src.search(/\bui\s*\{/);
+  if (uiIdx === -1) return null;
+  // find the first '{' after 'ui'
+  const braceIdx = src.indexOf('{', uiIdx);
+  if (braceIdx === -1) return null;
+  let depth = 1;
+  let i = braceIdx + 1;
+  while (i < src.length && depth > 0) {
+    const ch = src[i];
+    if (ch === '{') depth++;
+    else if (ch === '}') depth--;
+    i++;
+  }
+  if (depth !== 0) return null;
+  const end = i; // position after matching '}'
+  const full = src.slice(uiIdx, end);
+  const inner = src.slice(braceIdx + 1, end - 1);
+  return { full, inner };
+}
+
+function transformUiTreeToStructured(node: any): UINode {
+  if (!node || node.type !== 'element') return node as UINode;
+  // Handle for:each on elements
+  if ((node.attrs as any)?.forEach?.kind === 'forEach') {
+    const fe = (node.attrs as any).forEach;
+    const template = { ...node, attrs: Object.fromEntries(Object.entries(node.attrs).filter(([k]) => k !== 'forEach')) };
+    return { type: 'forEach', item: fe.item, iterable: fe.iterable, template } as any;
+  }
+  // Handle if/elseif/else sibling chains under this element
+  node.children = (node.children || []).map((c: any) => transformUiTreeToStructured(c));
+  const children: any[] = node.children || [];
+  const newChildren: any[] = [];
+  for (let i = 0; i < children.length; i++) {
+    const cur = children[i];
+    if (cur.type === 'element' && cur.tag === 'if') {
+      const cond = (cur.attrs?.condition?.value) || 'false';
+      const consequent = (cur.children || []).map((x: any) => transformUiTreeToStructured(x));
+      const ifNode: any = { type: 'if', condition: cond, consequent };
+      i++;
+      // collect elseif/else
+      while (i < children.length) {
+        const nxt = children[i];
+        if (nxt.type === 'element' && nxt.tag === 'elseif') {
+          const ec = (nxt.attrs?.condition?.value) || 'false';
+          const eb = (nxt.children || []).map((x: any) => transformUiTreeToStructured(x));
+          ifNode.elif = ifNode.elif || [];
+          ifNode.elif.push({ condition: ec, children: eb });
+          i++;
+        } else if (nxt.type === 'element' && nxt.tag === 'else') {
+          ifNode.else = (nxt.children || []).map((x: any) => transformUiTreeToStructured(x));
+          i++;
+          break;
+        } else break;
+      }
+      newChildren.push(ifNode);
+      i--; // compensate for loop increment
+    } else {
+      newChildren.push(cur);
+    }
+  }
+  node.children = newChildren;
+  return node as UINode;
 }
