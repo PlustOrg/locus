@@ -12,6 +12,7 @@ import {
   LocusFileAST,
   Relation,
 } from '../ast';
+import { extractFeatureBlocks } from './preprocess';
 
 function getText(tok?: IToken | IToken[]): string | undefined {
   if (!tok) return undefined;
@@ -19,7 +20,7 @@ function getText(tok?: IToken | IToken[]): string | undefined {
   return tok.image;
 }
 
-export function buildDatabaseAst(cst: CstNode): LocusFileAST {
+export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFileAST {
   const databases: DatabaseBlock[] = [];
   const designSystems: DesignSystemBlock[] = [];
   const pages: any[] = [];
@@ -251,5 +252,86 @@ export function buildDatabaseAst(cst: CstNode): LocusFileAST {
     }
   }
 
+  // Heuristic extraction of feature contents (state/params/actions/ui) from original source
+  if (originalSource) {
+    const fb = extractFeatureBlocks(originalSource);
+    for (const p of pages) {
+      const body = fb.pages[p.name];
+      if (body) enrichPageLike(p, body);
+    }
+    for (const c of components) {
+      const body = fb.components[c.name];
+      if (body) enrichComponent(c, body);
+    }
+    for (const s of stores) {
+      const body = fb.stores[s.name];
+      if (body) enrichStore(s, body);
+    }
+  }
+
   return { databases, designSystems, pages, components, stores };
+}
+
+function enrichPageLike(node: any, body: string) {
+  // state block
+  const stateMatch = /\bstate\s*\{([\s\S]*?)\}/m.exec(body);
+  if (stateMatch) {
+    node.state = parseStateDecls(stateMatch[1]);
+  }
+  // on load
+  const onLoadMatch = /\bon\s+load\s*\{([\s\S]*?)\}/m.exec(body);
+  if (onLoadMatch) node.onLoad = onLoadMatch[1];
+  // actions (names only)
+  node.actions = [] as any[];
+  const actionRe = /\baction\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{([\s\S]*?)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = actionRe.exec(body)) !== null) {
+    node.actions.push({ name: m[1], params: m[2].trim() ? m[2].split(/\s*,\s*/) : [], body: m[3] });
+  }
+  // ui (raw string)
+  const uiMatch = /\bui\s*\{([\s\S]*?)\}/m.exec(body);
+  if (uiMatch) node.ui = uiMatch[0];
+  else {
+    node.ui = body;
+  }
+}
+
+function enrichComponent(node: any, body: string) {
+  // params
+  const params: any[] = [];
+  const paramRe = /\bparam\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/g;
+  let m: RegExpExecArray | null;
+  while ((m = paramRe.exec(body)) !== null) {
+    params.push({ name: m[1], type: { kind: 'primitive', name: m[2] }, default: undefined });
+  }
+  if (params.length) node.params = params;
+  // ui
+  const uiMatch = /\bui\s*\{([\s\S]*?)\}/m.exec(body);
+  if (uiMatch) node.ui = uiMatch[0];
+  else {
+    node.ui = body;
+  }
+}
+
+function enrichStore(node: any, body: string) {
+  node.state = parseStateDecls(body);
+}
+
+function parseStateDecls(src: string) {
+  const lines = src.split(/\n/).map(s => s.trim()).filter(Boolean);
+  const out: any[] = [];
+  for (const line of lines) {
+    const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*=\s*(.+)$/.exec(line);
+    if (!m) continue;
+    const name = m[1];
+    const typeStr = m[2];
+    const def = m[3];
+    if (/^list\s+of\s+([A-Za-z_][A-Za-z0-9_]*)$/.test(typeStr)) {
+      const of = typeStr.replace(/^list\s+of\s+/, '').trim();
+      out.push({ name, type: { kind: 'list', of }, default: def });
+    } else {
+      out.push({ name, type: { kind: 'primitive', name: typeStr }, default: def });
+    }
+  }
+  return out;
 }

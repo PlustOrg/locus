@@ -21,5 +21,5 @@ export function parseLocus(source: string): LocusFileAST {
     throw new LocusParserError('Parsing errors: ' + parser.errors.map(e => e.message).join('; '));
   }
 
-  return buildDatabaseAst(cst);
+  return buildDatabaseAst(cst, source);
 }

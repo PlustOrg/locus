@@ -50,6 +50,16 @@ export const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"(?:
 export const Page = createToken({ name: 'Page', pattern: /page\b/ });
 export const Component = createToken({ name: 'Component', pattern: /component\b/ });
 export const Store = createToken({ name: 'Store', pattern: /store\b/ });
+export const State = createToken({ name: 'State', pattern: /state\b/ });
+export const Action = createToken({ name: 'Action', pattern: /action\b/ });
+export const On = createToken({ name: 'On', pattern: /on\b/ });
+export const Load = createToken({ name: 'Load', pattern: /load\b/ });
+export const Unload = createToken({ name: 'Unload', pattern: /unload\b/ });
+export const UI = createToken({ name: 'UI', pattern: /ui\b/ });
+export const Param = createToken({ name: 'Param', pattern: /param\b/ });
+export const List = createToken({ name: 'List', pattern: /list\b/ });
+export const Of = createToken({ name: 'Of', pattern: /of\b/ });
+export const Equals = createToken({ name: 'Equals', pattern: /=/ });
 
 export const Unknown = createToken({ name: 'Unknown', pattern: /[\s\S]/ });
 
@@ -69,6 +79,20 @@ export const AllTokens = [
   HasMany,
   BelongsTo,
   HasOne,
+  // feature keywords
+  Page,
+  Component,
+  Store,
+  State,
+  Action,
+  On,
+  Load,
+  Unload,
+  UI,
+  Param,
+  List,
+  Of,
+  Equals,
   // types
   StringT,
   TextT,
@@ -92,10 +116,6 @@ export const AllTokens = [
   // literals and identifiers
   StringLiteral,
   NumberLiteral,
-  // features
-  Page,
-  Component,
-  Store,
   Identifier,
   // catch-all raw char token (must be last in list to avoid conflicts)
   Unknown,
