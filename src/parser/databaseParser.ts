@@ -4,6 +4,13 @@ import {
   LCurly,
   RCurly,
   Database,
+  DesignSystem,
+  Colors,
+  Typography,
+  Spacing,
+  Radii,
+  Shadows,
+  Weights,
   Entity,
   Colon,
   StringT,
@@ -35,11 +42,94 @@ export class DatabaseCstParser extends CstParser {
   }
 
   public file = this.RULE('file', () => {
-    this.MANY(() => this.SUBRULE(this.topLevel));
+  this.MANY(() => this.SUBRULE(this.topLevel));
   });
 
   private topLevel = this.RULE('topLevel', () => {
-    this.SUBRULE(this.databaseBlock);
+    this.OR([
+      { ALT: () => this.SUBRULE(this.databaseBlock) },
+      { ALT: () => this.SUBRULE(this.designSystemBlock) },
+    ]);
+  });
+
+  private designSystemBlock = this.RULE('designSystemBlock', () => {
+    this.CONSUME(DesignSystem);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.SUBRULE(this.colorsBlock) },
+      { ALT: () => this.SUBRULE(this.typographyBlock) },
+      { ALT: () => this.SUBRULE(this.spacingBlock) },
+      { ALT: () => this.SUBRULE(this.radiiBlock) },
+      { ALT: () => this.SUBRULE(this.shadowsBlock) },
+    ]));
+    this.CONSUME(RCurly);
+  });
+
+  private colorsBlock = this.RULE('colorsBlock', () => {
+    this.CONSUME(Colors);
+    this.CONSUME(LCurly);
+    this.MANY(() => {
+      this.SUBRULE(this.themeBlock);
+    });
+    this.CONSUME(RCurly);
+  });
+
+  private themeBlock = this.RULE('themeBlock', () => {
+    // theme name: Identifier or StringLiteral
+    this.OR([
+      { ALT: () => this.CONSUME1(Identifier) },
+      { ALT: () => this.CONSUME(StringLiteral) },
+    ]);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.tokenAssignment));
+    this.CONSUME(RCurly);
+  });
+
+  private typographyBlock = this.RULE('typographyBlock', () => {
+    this.CONSUME(Typography);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.SUBRULE(this.tokenAssignment) },
+      { ALT: () => this.SUBRULE(this.weightsBlock) },
+    ]));
+    this.CONSUME(RCurly);
+  });
+
+  private weightsBlock = this.RULE('weightsBlock', () => {
+    this.CONSUME(Weights);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.tokenAssignment));
+    this.CONSUME(RCurly);
+  });
+
+  private spacingBlock = this.RULE('spacingBlock', () => {
+    this.CONSUME(Spacing);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.tokenAssignment));
+    this.CONSUME(RCurly);
+  });
+
+  private radiiBlock = this.RULE('radiiBlock', () => {
+    this.CONSUME(Radii);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.tokenAssignment));
+    this.CONSUME(RCurly);
+  });
+
+  private shadowsBlock = this.RULE('shadowsBlock', () => {
+    this.CONSUME(Shadows);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.tokenAssignment));
+    this.CONSUME(RCurly);
+  });
+
+  private tokenAssignment = this.RULE('tokenAssignment', () => {
+    this.CONSUME1(Identifier);
+    this.CONSUME(Colon);
+    this.OR([
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(NumberLiteral) },
+    ]);
   });
 
   private databaseBlock = this.RULE('databaseBlock', () => {

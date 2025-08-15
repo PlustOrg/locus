@@ -1,6 +1,7 @@
 import { CstNode, CstChildrenDictionary, IToken } from 'chevrotain';
 import {
   DatabaseBlock,
+  DesignSystemBlock,
   Entity,
   Field,
   FieldAttribute,
@@ -19,22 +20,24 @@ function getText(tok?: IToken | IToken[]): string | undefined {
 }
 
 export function buildDatabaseAst(cst: CstNode): LocusFileAST {
-  // The CST structure is implicit; for simplicity, we'll perform a light-weight walk using children labels
   const databases: DatabaseBlock[] = [];
+  const designSystems: DesignSystemBlock[] = [];
 
   const topChildren = cst.children as CstChildrenDictionary;
   const blocks = (topChildren['topLevel'] as CstNode[]) || [];
 
   for (const blk of blocks) {
-    const dbChildren = blk.children as CstChildrenDictionary;
-    const dbNodes = (dbChildren['databaseBlock'] as CstNode[]) || [];
+    const blkCh = blk.children as CstChildrenDictionary;
+
+    // database blocks
+    const dbNodes = (blkCh['databaseBlock'] as CstNode[]) || [];
     for (const dbNode of dbNodes) {
       const entities: Entity[] = [];
       const dbBlockChildren = dbNode.children as CstChildrenDictionary;
       const entityDecls = (dbBlockChildren['entityDecl'] as CstNode[]) || [];
       for (const ent of entityDecls) {
-  const entChildren = ent.children as CstChildrenDictionary;
-  const name = (entChildren['Identifier'] as IToken[])[0].image;
+        const entChildren = ent.children as CstChildrenDictionary;
+        const name = (entChildren['Identifier'] as IToken[])[0].image;
         const fields: Field[] = [];
         const relations: Relation[] = [];
 
@@ -43,7 +46,6 @@ export function buildDatabaseAst(cst: CstNode): LocusFileAST {
           const fdCh = fd.children as CstChildrenDictionary;
           const fieldName = (fdCh['Identifier'] as IToken[])[0].image;
 
-          // fieldType
           const typeAlt = (fdCh['fieldType'] as CstNode[])[0];
           const typeCh = typeAlt.children as CstChildrenDictionary;
           const typeTokenName = Object.keys(typeCh).find(k => [
@@ -62,10 +64,7 @@ export function buildDatabaseAst(cst: CstNode): LocusFileAST {
               default: return 'String';
             }
           };
-          const fieldType: any = {
-            kind: 'primitive',
-            name: mapName(typeTokenName!),
-          } as FieldType;
+          const fieldType: any = { kind: 'primitive', name: mapName(typeTokenName!) } as FieldType;
           if (optional) fieldType.optional = true;
 
           const attributes: FieldAttribute[] = [];
@@ -145,7 +144,89 @@ export function buildDatabaseAst(cst: CstNode): LocusFileAST {
       }
       databases.push({ type: 'database', entities });
     }
+
+    // design_system blocks
+    const dsNodes = (blkCh['designSystemBlock'] as CstNode[]) || [];
+    for (const dsNode of dsNodes) {
+      const dsc: DesignSystemBlock = { type: 'design_system' };
+      const dsCh = dsNode.children as CstChildrenDictionary;
+
+      const colorsBlocks = (dsCh['colorsBlock'] as CstNode[]) || [];
+      for (const cb of colorsBlocks) {
+        const cbCh = cb.children as CstChildrenDictionary;
+        const themes = (cbCh['themeBlock'] as CstNode[]) || [];
+        for (const th of themes) {
+          const tch = th.children as CstChildrenDictionary;
+          let themeName = '';
+          if (tch['Identifier']) themeName = (tch['Identifier'] as IToken[])[0].image;
+          else themeName = (tch['StringLiteral'] as IToken[])[0].image.slice(1, -1);
+          dsc.colors = dsc.colors || {};
+          dsc.colors[themeName] = dsc.colors[themeName] || {};
+          const toks = (tch['tokenAssignment'] as CstNode[]) || [];
+          for (const ta of toks) {
+            const ach = ta.children as CstChildrenDictionary;
+            const key = (ach['Identifier'] as IToken[])[0].image;
+            const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
+            const valTok = lit![0];
+            const val = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
+            dsc.colors[themeName][key] = val as any;
+          }
+        }
+      }
+
+      const typoBlocks = (dsCh['typographyBlock'] as CstNode[]) || [];
+      for (const tb of typoBlocks) {
+        dsc.typography = dsc.typography || { weights: {} };
+        const tbc = tb.children as CstChildrenDictionary;
+        const toks = (tbc['tokenAssignment'] as CstNode[]) || [];
+        for (const ta of toks) {
+          const ach = ta.children as CstChildrenDictionary;
+          const key = (ach['Identifier'] as IToken[])[0].image;
+          const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
+          const valTok = lit![0];
+          const valStr = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
+          if (key === 'fontFamily') dsc.typography.fontFamily = valStr;
+          else if (key === 'baseSize') dsc.typography.baseSize = valStr;
+        }
+        const weightsBlocks = (tbc['weightsBlock'] as CstNode[]) || [];
+        for (const wb of weightsBlocks) {
+          const wbc = wb.children as CstChildrenDictionary;
+          const wToks = (wbc['tokenAssignment'] as CstNode[]) || [];
+          dsc.typography.weights = dsc.typography.weights || {};
+          for (const ta of wToks) {
+            const ach = ta.children as CstChildrenDictionary;
+            const key = (ach['Identifier'] as IToken[])[0].image;
+            const num = (ach['NumberLiteral'] as IToken[])[0].image;
+            dsc.typography.weights[key] = Number(num);
+          }
+        }
+      }
+
+      const simpleBlocks: Array<[keyof DesignSystemBlock, string]> = [
+        ['spacing', 'spacingBlock'],
+        ['radii', 'radiiBlock'],
+        ['shadows', 'shadowsBlock'],
+      ];
+      for (const [prop, name] of simpleBlocks) {
+        const arr = (dsCh[name] as CstNode[]) || [];
+        for (const bl of arr) {
+          (dsc as any)[prop] = (dsc as any)[prop] || {};
+          const bc = bl.children as CstChildrenDictionary;
+          const toks = (bc['tokenAssignment'] as CstNode[]) || [];
+          for (const ta of toks) {
+            const ach = ta.children as CstChildrenDictionary;
+            const key = (ach['Identifier'] as IToken[])[0].image;
+            const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
+            const valTok = lit![0];
+            const val = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
+            (dsc as any)[prop][key] = val as any;
+          }
+        }
+      }
+
+      designSystems.push(dsc);
+    }
   }
 
-  return { databases, designSystems: [], pages: [], components: [], stores: [] };
+  return { databases, designSystems, pages: [], components: [], stores: [] };
 }

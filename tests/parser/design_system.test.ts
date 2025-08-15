@@ -9,7 +9,17 @@ describe('Parser: design_system blocks', () => {
         spacing { sm: "0.5rem" md: "1rem" }
       }
     `;
-    expect(() => parseLocus(src)).toThrow(LocusParserError);
+    const ast = parseLocus(src);
+    expect(ast.designSystems).toHaveLength(1);
+    const ds = ast.designSystems[0]!;
+    expect(ds.colors?.light?.primary).toBe('#007bff');
+    expect(ds.colors?.dark?.primary).toBe('#0a84ff');
+    expect(ds.typography?.fontFamily).toBe('Inter');
+    expect(ds.typography?.baseSize).toBe('16px');
+    expect(ds.typography?.weights?.regular).toBe(400);
+    expect(ds.typography?.weights?.bold).toBe(700);
+    expect(ds.spacing?.sm).toBe('0.5rem');
+    expect(ds.spacing?.md).toBe('1rem');
   });
 
   test('nested themes', () => {
@@ -18,7 +28,10 @@ describe('Parser: design_system blocks', () => {
         colors { light { primary: "#fff" } dark { primary: "#000" } }
       }
     `;
-    expect(() => parseLocus(src)).toThrow(LocusParserError);
+    const ast = parseLocus(src);
+    const ds = ast.designSystems[0]!;
+    expect(ds.colors?.light?.primary).toBe('#fff');
+    expect(ds.colors?.dark?.primary).toBe('#000');
   });
 
   test('multiple design_system blocks', () => {
@@ -26,6 +39,9 @@ describe('Parser: design_system blocks', () => {
       design_system { spacing { lg: "1.5rem" } }
       design_system { radii { md: "0.375rem" } }
     `;
-    expect(() => parseLocus(src)).toThrow(LocusParserError);
+    const ast = parseLocus(src);
+    expect(ast.designSystems).toHaveLength(2);
+    expect(ast.designSystems[0].spacing?.lg).toBe('1.5rem');
+    expect(ast.designSystems[1].radii?.md).toBe('0.375rem');
   });
 });

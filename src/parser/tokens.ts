@@ -7,6 +7,13 @@ export const LineComment = createToken({ name: 'LineComment', pattern: /\/\/[^\n
 // Keywords
 export const Database = createToken({ name: 'Database', pattern: /database\b/ });
 export const Entity = createToken({ name: 'Entity', pattern: /entity\b/ });
+export const DesignSystem = createToken({ name: 'DesignSystem', pattern: /design_system\b/ });
+export const Colors = createToken({ name: 'Colors', pattern: /colors\b/ });
+export const Typography = createToken({ name: 'Typography', pattern: /typography\b/ });
+export const Spacing = createToken({ name: 'Spacing', pattern: /spacing\b/ });
+export const Radii = createToken({ name: 'Radii', pattern: /radii\b/ });
+export const Shadows = createToken({ name: 'Shadows', pattern: /shadows\b/ });
+export const Weights = createToken({ name: 'Weights', pattern: /weights\b/ });
 export const HasMany = createToken({ name: 'HasMany', pattern: /has_many\b/ });
 export const BelongsTo = createToken({ name: 'BelongsTo', pattern: /belongs_to\b/ });
 export const HasOne = createToken({ name: 'HasOne', pattern: /has_one\b/ });
@@ -45,6 +52,13 @@ export const AllTokens = [
   // keywords first
   Database,
   Entity,
+  DesignSystem,
+  Colors,
+  Typography,
+  Spacing,
+  Radii,
+  Shadows,
+  Weights,
   HasMany,
   BelongsTo,
   HasOne,
