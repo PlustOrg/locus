@@ -32,7 +32,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "chevrotain": "^11.0.3",
+    "chevrotain": "10.5.0",
     "commander": "^14.0.0"
   }
 }
