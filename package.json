@@ -9,7 +9,12 @@
     "build": "tsc -p tsconfig.json",
     "test": "jest --colors",
     "test:watch": "jest --watchAll --colors",
-    "lint": "echo 'no linter configured'"
+    "lint": "echo 'no linter configured'",
+    "next:dev": "echo 'Next dev server stub'",
+    "api:dev": "echo 'API dev server stub'"
+  },
+  "bin": {
+    "locus": "dist/index.js"
   },
   "repository": {
     "type": "git",
