@@ -46,6 +46,13 @@ export const Identifier = createToken({ name: 'Identifier', pattern: /[A-Za-z_][
 export const NumberLiteral = createToken({ name: 'NumberLiteral', pattern: /-?\d+(?:\.\d+)?/ });
 export const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"(?:[^"\\]|\\.)*"/ });
 
+// Features keywords (minimal for Phase 1.3)
+export const Page = createToken({ name: 'Page', pattern: /page\b/ });
+export const Component = createToken({ name: 'Component', pattern: /component\b/ });
+export const Store = createToken({ name: 'Store', pattern: /store\b/ });
+
+export const Unknown = createToken({ name: 'Unknown', pattern: /[\s\S]/ });
+
 export const AllTokens = [
   WhiteSpace,
   LineComment,
@@ -85,7 +92,13 @@ export const AllTokens = [
   // literals and identifiers
   StringLiteral,
   NumberLiteral,
+  // features
+  Page,
+  Component,
+  Store,
   Identifier,
+  // catch-all raw char token (must be last in list to avoid conflicts)
+  Unknown,
 ];
 
 export const LocusLexer = new Lexer(AllTokens);

@@ -22,6 +22,9 @@ function getText(tok?: IToken | IToken[]): string | undefined {
 export function buildDatabaseAst(cst: CstNode): LocusFileAST {
   const databases: DatabaseBlock[] = [];
   const designSystems: DesignSystemBlock[] = [];
+  const pages: any[] = [];
+  const components: any[] = [];
+  const stores: any[] = [];
 
   const topChildren = cst.children as CstChildrenDictionary;
   const blocks = (topChildren['topLevel'] as CstNode[]) || [];
@@ -145,7 +148,7 @@ export function buildDatabaseAst(cst: CstNode): LocusFileAST {
       databases.push({ type: 'database', entities });
     }
 
-    // design_system blocks
+  // design_system blocks
     const dsNodes = (blkCh['designSystemBlock'] as CstNode[]) || [];
     for (const dsNode of dsNodes) {
       const dsc: DesignSystemBlock = { type: 'design_system' };
@@ -226,7 +229,27 @@ export function buildDatabaseAst(cst: CstNode): LocusFileAST {
 
       designSystems.push(dsc);
     }
+
+    // page/component/store names (minimal)
+    const pageNodes = (blkCh['pageBlock'] as CstNode[]) || [];
+    for (const pn of pageNodes) {
+      const ch = pn.children as CstChildrenDictionary;
+      const name = (ch['Identifier'] as IToken[])[0].image;
+      pages.push({ type: 'page', name });
+    }
+    const compNodes = (blkCh['componentBlock'] as CstNode[]) || [];
+    for (const cn of compNodes) {
+      const ch = cn.children as CstChildrenDictionary;
+      const name = (ch['Identifier'] as IToken[])[0].image;
+      components.push({ type: 'component', name });
+    }
+    const storeNodes = (blkCh['storeBlock'] as CstNode[]) || [];
+    for (const sn of storeNodes) {
+      const ch = sn.children as CstChildrenDictionary;
+      const name = (ch['Identifier'] as IToken[])[0].image;
+      stores.push({ type: 'store', name });
+    }
   }
 
-  return { databases, designSystems, pages: [], components: [], stores: [] };
+  return { databases, designSystems, pages, components, stores };
 }

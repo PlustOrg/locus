@@ -33,6 +33,9 @@ import {
   Comma,
   NumberLiteral,
   StringLiteral,
+  Page,
+  Component,
+  Store,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -49,7 +52,56 @@ export class DatabaseCstParser extends CstParser {
     this.OR([
       { ALT: () => this.SUBRULE(this.databaseBlock) },
       { ALT: () => this.SUBRULE(this.designSystemBlock) },
+      { ALT: () => this.SUBRULE(this.pageBlock) },
+      { ALT: () => this.SUBRULE(this.componentBlock) },
+      { ALT: () => this.SUBRULE(this.storeBlock) },
     ]);
+  });
+
+  private pageBlock = this.RULE('pageBlock', () => {
+    this.CONSUME(Page);
+    this.CONSUME(Identifier);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.CONSUME1(Identifier) },
+      { ALT: () => this.CONSUME1(StringLiteral) },
+      { ALT: () => this.CONSUME1(NumberLiteral) },
+      { ALT: () => this.CONSUME1(LCurly) },
+      // do not consume RCurly inside body list
+      { ALT: () => this.CONSUME1(Colon) },
+      { ALT: () => this.CONSUME1(Comma) },
+    ]));
+    this.CONSUME(RCurly);
+  });
+
+  private componentBlock = this.RULE('componentBlock', () => {
+    this.CONSUME(Component);
+    this.CONSUME(Identifier);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.CONSUME2(Identifier) },
+      { ALT: () => this.CONSUME2(StringLiteral) },
+      { ALT: () => this.CONSUME2(NumberLiteral) },
+      { ALT: () => this.CONSUME2(LCurly) },
+      { ALT: () => this.CONSUME2(Colon) },
+      { ALT: () => this.CONSUME2(Comma) },
+    ]));
+    this.CONSUME(RCurly);
+  });
+
+  private storeBlock = this.RULE('storeBlock', () => {
+    this.CONSUME(Store);
+    this.CONSUME(Identifier);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.CONSUME3(Identifier) },
+      { ALT: () => this.CONSUME3(StringLiteral) },
+      { ALT: () => this.CONSUME3(NumberLiteral) },
+      { ALT: () => this.CONSUME3(LCurly) },
+      { ALT: () => this.CONSUME3(Colon) },
+      { ALT: () => this.CONSUME3(Comma) },
+    ]));
+    this.CONSUME(RCurly);
   });
 
   private designSystemBlock = this.RULE('designSystemBlock', () => {
