@@ -4,16 +4,22 @@ import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { generatePrismaSchema } from '../generator/prisma';
 import { generateExpressApi } from '../generator/express';
+import { BuildError } from '../errors';
 import { generateReactComponent, generateReactPage } from '../generator/react';
 
 export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
 
-  const files = findLocusFiles(srcDir);
+  let files: string[];
+  try { files = findLocusFiles(srcDir); } catch (e) { throw new BuildError(`Failed to read source directory: ${srcDir}`, e); }
   const asts = files.map(fp => {
-    const content = typeof readFileSync === 'function' ? readFileSync(fp, 'utf8') : String(fp);
-    return parseLocus(content as any);
+    try {
+      const content = typeof readFileSync === 'function' ? readFileSync(fp, 'utf8') : String(fp);
+      return parseLocus(content as any);
+    } catch (e) {
+      throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
+    }
   });
   const merged = mergeAsts(asts);
 

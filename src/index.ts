@@ -5,6 +5,7 @@ import { buildProject } from './cli/build';
 import { dev as devCmd } from './cli/dev';
 import path from 'path';
 import { newProject } from './cli/new';
+import { deploy as deployCmd } from './cli/deploy';
 
 const program = new Command();
 program.name('locus').description('Locus compiler CLI');
@@ -52,3 +53,13 @@ program
   });
 
 program.parseAsync().catch((e) => { console.error(e); process.exit(1); });
+
+program
+  .command('deploy')
+  .description('Deploy using Locus.toml')
+  .argument('<env>', 'environment, e.g., production or staging')
+  .option('--cwd <dir>', 'working directory', '.')
+  .action(async (env: string, opts: any) => {
+    const cwd = path.resolve(opts.cwd);
+    await deployCmd({ cwd, env });
+  });

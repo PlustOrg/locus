@@ -3,7 +3,8 @@ import { Entity } from '../ast';
 export function generateExpressApi(entities: Entity[]): Record<string, string> {
   const files: Record<string, string> = {};
   const mounts: string[] = [];
-  for (const e of entities) {
+  const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
+  for (const e of sorted) {
     const lc = e.name.charAt(0).toLowerCase() + e.name.slice(1);
     const route = `import { Router } from 'express'
 import { PrismaClient } from '@prisma/client'

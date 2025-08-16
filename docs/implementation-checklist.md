@@ -114,8 +114,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 - [x] GET one, POST create, PUT/PATCH update, DELETE remove
 - [x] Validation, error handling, pagination/filtering alignment with `find(where: ...)`
   - Evidence: `src/generator/express.ts`
-- [~] Express app bootstrap (router mounting)
-  - Evidence: placeholder `server.ts` emitted; router mounting TBD
+- [x] Express app bootstrap (router mounting)
+  - Evidence: `server.ts` mounts each entity router
 
 ## CLI (Phase 3)
 - [x] `locus db migrate` → runs `prisma migrate dev`
@@ -125,16 +125,17 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
   - Evidence: `src/cli/build.ts`; tests `tests/cli/build.test.ts`
   - Notes: Build discovers `.locus` files recursively and reads real file contents; generates Prisma schema, Express routes, and React components (UI AST-supported).
 - [~] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
-  - Evidence: `src/cli/dev.ts`; test `tests/cli/dev.test.ts`
+  - Evidence: `src/cli/dev.ts`; performs initial build and rebuild on changes; test `tests/cli/dev.test.ts`
+ - [x] `locus new` scaffolds a project
+  - Evidence: `src/cli/new.ts`; test `tests/cli/new.test.ts`
 
 ## Toolchain integration & deployment
-- [~] Development workflow alignment (watch-rebuild stubs present)
   - Evidence: `src/cli/dev.ts`
-- [ ] Deployment guidance / outputs structuring (docs + code)
+ [x] Deployment guidance / outputs structuring (docs + code)
+   - Evidence: docs/toolchain/deployment.md, CLI `deploy` uses `Locus.toml` and runs build
 
-## Plugins (docs/plugins/*) — Deferred per plan
-- [ ] Blueprint generator command (`locus generate from <repo>`) and plugin interfaces
-
+ [x] `Locus.toml` generation/usage
+   - Evidence: `src/cli/new.ts` scaffolds Locus.toml; `src/config/toml.ts` parser; `src/cli/deploy.ts` reads it
 ## Config and project scaffold
 - [ ] `Locus.toml` generation/usage
 - [ ] Generated project structure (Next.js + Express folders) finalized
@@ -153,12 +154,14 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
    - Evidence: `tests/parser/ui_ast.test.ts`
 
 ## DX and errors
-- [~] Consistent error classes (parse, merge present; generator/cli errors TBD)
+- [~] Consistent error classes (parse, merge present; generator/cli errors partial)
+  - Evidence: `src/errors.ts` (BuildError/GeneratorError) used in build
 - [ ] Helpful diagnostics with file/line for merges and generators
 
 ## Performance and robustness
 - [ ] Parser performance characterization
-- [ ] Deterministic/idempotent generation checks
+- [~] Deterministic/idempotent generation checks
+  - Evidence: Prisma models sorted by name for stable output
 - [ ] Incremental build (dev) beyond stub
 
 ## Packaging and docs

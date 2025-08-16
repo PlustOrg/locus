@@ -3,7 +3,8 @@ import { Entity } from '../ast';
 export function generatePrismaSchema(db: { entities: Entity[] }): string {
   const header = `generator client {\n  provider = \"prisma-client-js\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n`;
 
-  const models = db.entities.map(entity => renderModel(entity, db.entities)).join('\n\n');
+  const sorted = [...db.entities].sort((a, b) => a.name.localeCompare(b.name));
+  const models = sorted.map(entity => renderModel(entity, sorted)).join('\n\n');
   return header + models + '\n';
 }
 
