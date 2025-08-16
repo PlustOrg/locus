@@ -1,189 +1,51 @@
-# Locus Implementation Checklist
+# Locus Implementation Checklist — Open Items
 
-Last audited: 2025-08-15
+Last audited: 2025-08-16
 
-This checklist maps the documentation requirements to the current codebase. Each item is marked as Done, Partial, or Deferred, with short evidence pointers.
+Legend: [~] Partial • [ ] Planned/Not Implemented
 
-Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
+This file tracks only incomplete items and enhancements. Completed items have been removed for focus.
 
-## Project hygiene and foundations
-- [x] TypeScript config: strict mode, outDir/rootDir, Node/Jest types
-  - Evidence: `tsconfig.json`
-- [x] package.json scripts and deps (ts-jest, jest, chevrotain, commander)
-  - Evidence: `package.json`
-- [x] Tests present for parser, generators, CLI
-  - Evidence: `tests/parser/**`, `tests/generator/**`, `tests/cli/**`
-- [x] CLI bin mapping and build
-  - Evidence: `package.json` bin, `src/index.ts`, `npm run build`
+## Dev experience and robustness
+- [ ] Dev watcher: recursive file discovery, handle add/unlink/rename events, and debounce rebuilds (currently shallow init + change only)
+  - Notes: Extend watcher to watch subdirectories and handle create/delete; batch rapid changes.
+- [ ] Real process integration: replace stub scripts (`next:dev`, `api:dev`) with actual Next.js and Express startup wiring
+  - Notes: Ensure env propagation and log piping; document prerequisites.
+- [ ] Graceful shutdown: handle SIGINT/SIGTERM and forward to child processes; ensure cleanup
+- [ ] Cross-platform process spawn compatibility (Windows shells and PATH resolution)
 
-## Language: database block (docs/language/entities.md)
-- [x] Field types: String, Text, Integer, Decimal, Boolean, DateTime, Json
-  - Evidence: tokens and parser in `src/parser/tokens.ts`, `databaseParser.ts`; AST in `src/ast/index.ts`; tests in `tests/parser/database.test.ts`
-- [x] Optional marker `?` on types
-  - Evidence: AST `FieldType.optional`; tests cover optional
-- [x] Attributes: `(unique)`
-  - Evidence: parser+AST builder; tests
-- [x] Attributes: `(default: <literal|call(...)>)`
-  - Evidence: AST `FieldAttributeDefault`; tests include `now()`
-- [x] Attributes: `(map: "db_col")`
-  - Evidence: AST `FieldAttributeMap`; tests
-- [x] Relationships: `has_many`, `belongs_to`, `has_one`
-  - Evidence: parser rules and AST `Relation`; tests include all
-- [x] Many-to-many via `has_many` on both sides
-  - Evidence: parser acceptance; implied in Prisma gen mapping
-- [x] Self-referential relations
-  - Evidence: parser acceptance; tests include example
-- [x] Invalid syntax throws parser error
-  - Evidence: `LocusParserError` in `src/parser/index.ts`; test case present
+## Diagnostics and observability
+- [ ] Precise file/line/column in generator and merger errors using token positions or source maps
+- [ ] Structured logs and a `--debug` flag for CLI commands (verbose parsing/merging/generation timings)
 
-## Language: design system (docs/design-system/*)
-- [x] `design_system` block parsing
-  - Evidence: rules in `databaseParser.ts`, AST in `src/ast/index.ts`, tests in `tests/parser/design_system.test.ts`
-- [x] Colors themes and tokens
-- [x] Typography (fontFamily, baseSize, weights)
-- [x] Spacing, Radii, Shadows token maps
-- [x] Nested themes handled
+## Performance
+- [ ] Incremental caching: reuse lexed tokens/CST per file and skip re-parse if unchanged; measure improvement with bench:assert
+- [ ] Parallelize generation where safe (per entity/page/component) with a small worker pool
 
-## Language: features (docs/language/features.md, ui-syntax.md)
-- [x] `page`, `component`, `store` blocks recognized by parser
-  - Evidence: rules and extraction in `databaseParser.ts`, `astBuilder.ts`; tests: `tests/parser/features.test.ts`, `tests/parser/features_full.test.ts`
-- [x] `state` block parsed (heuristic from original source; supports `list of X`, optionals `?`, and defaults)
-- [x] `param` block parsed for components (name/type, `list of X`, optionals `?`, default values)
-- [x] `action` blocks parsed (name/params/body captured as strings)
-- [x] Lifecycle hooks parsed: `on load` body captured
-- [x] `ui` block parsed to a structured UI AST (tags, props, expressions)
-  - Evidence: `src/parser/uiAst.ts`, `src/parser/astBuilder.ts` (parseUi, transformUiTreeToStructured), tests: `tests/parser/ui_ast.test.ts`, `tests/parser/ui_ast_bind.test.ts`, `tests/parser/ui_ast_if_else_parse.test.ts`
-- [x] Event directives `on:*` and `bind:value`
-  - Evidence: normalized in AST builder; verified in parser and generator tests
-- [x] Control flow `<if>/<elseif>/<else>` and lists `for:each`
-  - Evidence: structured IfNode/ForEachNode; tests for parse and generation
-Notes: We still strip feature bodies for lexing, then enrich nodes using the original source; migrate to full grammar later. Heuristics now support optionals and defaults.
+## Language and validation enhancements
+- [ ] Strict validation for design_system values (e.g., color hex format, token naming conventions)
+- [ ] Feature grammar extensions: richer action signatures, typed stores, and event binding semantics per docs refinements
 
-## Parser implementation details
-- [x] Lexer tokens for keywords, punctuation, literals, comments/whitespace
-  - Evidence: `src/parser/tokens.ts`
-- [x] Grammar rules for database and design_system; features minimal
-  - Evidence: `src/parser/databaseParser.ts`
-- [x] CST → AST builder for database/design_system; features minimal
-  - Evidence: `src/parser/astBuilder.ts`
-- [x] Preprocessing removed; full CST-driven features
-  - Evidence: `src/parser/preprocess.ts` unused; features parsed in `databaseParser.ts`; `astBuilder.ts` notes removal
-- [x] Parser error class and messaging
-  - Evidence: `LocusParserError` in `src/parser/index.ts`
+## Generators
+- [ ] Next.js scaffolding: optional app/ directory routing and shared layout support
+- [ ] Form controls mapping for bind:* (input/select/textarea) with validation hints
+- [ ] Theming: inject design system tokens via CSS variables or context; demonstrate usage in generated components
+- [ ] Express validation layer (e.g., Zod/Joi) based on entity schema; sanitize user inputs; consistent error payloads
+- [ ] Query API: standardize pagination/filtering/sorting params and defaults (caps and validation)
 
-## AST merging (Phase 1.4)
-- [x] Merge database entities across files
-- [x] Detect duplicate entity names and throw
-- [x] Merge design system tokens/weights (shallow)
-- [x] Merge feature blocks and detect duplicates
-  - Evidence: `src/parser/merger.ts`; tests in `tests/parser/merging.test.ts`, `tests/parser/merging_features_dup.test.ts`
+## Tooling & packaging
+- [ ] ESLint + Prettier configuration and CI checks
+- [ ] GitHub Actions CI: test matrix (Node versions + OS), include `npm run bench:assert`
+- [ ] Publish workflow to npm (semantic versioning, tags), and Conventional Commits
+- [ ] Issue/PR templates and CODE_OF_CONDUCT.md/CONTRIBUTING.md
 
-## Generators: Prisma (Phase 2.1)
-- [x] Header (`generator client`, `datasource db` with env URL)
-- [x] Model field type mapping (String/Text→String, Integer→Int, Decimal, Boolean, DateTime, Json)
-- [x] Optional fields with `?`
-- [x] Attributes mapping: `@unique`, `@default(...)`, `@map("...")`
-- [x] Default primary key: `id Int @id @default(autoincrement())`
-- [x] Relations mapping:
-  - [x] `has_many`: array fields
-  - [x] `belongs_to`: relation + scalar fk + `@relation(fields, references)`
-  - [x] `has_one`: optional relation
- - [x] Many-to-many join table strategy per docs (implicit vs explicit) verified
-  - Evidence: `src/generator/prisma.ts`; tests in `tests/generator/prisma.test.ts`, `tests/generator/prisma_many_to_many.test.ts`, `tests/generator/prisma_many_to_many_explicit.test.ts`
+## Documentation
+- [ ] Expanded README with end-to-end example and design overview diagram
+- [ ] Contributor guide: repository layout, testing strategy, coding standards
+- [ ] Troubleshooting section (common parser/generator errors and fixes)
 
-## Generators: React/Next.js (Phase 2.2)
-- [x] Page generation to React component file string
-  - Evidence: `src/generator/react.ts`; tests in `tests/generator/react.test.ts`, UI AST render tests
-- [x] `state` → `useState` hooks with defaults
-- [x] `on load` → `useEffect`
-- [x] `action` blocks → functions
-- [x] `ui` passthrough; strips `ui { ... }` wrapper when present
-- [x] Component generator with props interface and UI passthrough
-- [x] Event wiring (`on:*` → React props like onClick) and two-way binding (`bind:value` → value + onChange setter)
-  - Evidence: `src/generator/react.ts`; tests in `tests/generator/react_ui.test.ts`
-- [x] Control flow and lists: `<if>/<elseif>/<else>` → ternary chain, `for:each` → `.map(item, index)` with key
-  - Evidence: `tests/generator/react_ui_ast_if_else.test.ts`, `tests/generator/react_ui_ast_render.test.ts`
-- [x] Slots/children mapping to props (slot → React.ReactNode)
-  - Evidence: `tests/generator/react_slots.test.ts`
-- [x] Integration with UI AST (pages/components render from uiAst with fallback)
-  - Evidence: `src/generator/react.ts` (renderUiAst), `tests/generator/react_ui_ast_render.test.ts`, `tests/generator/react_ui_ast_if_else.test.ts`
+## Testing
+- [ ] Incremental builder tests: add/addDir/unlink/unlinkDir cases and error paths
+- [ ] Snapshot tests for generated React components and Express routes for stability checks
+- [ ] Windows CI run to verify CLI/dev behavior on Windows
 
-## Generators: Express API (Phase 2.3)
-- [x] Routes per entity generated
-  - Evidence: `src/generator/express.ts`; tests in `tests/generator/express.test.ts`, `tests/generator/express_crud.test.ts`
-- [x] GET one, POST create, PUT/PATCH update, DELETE remove
-- [x] Validation, error handling, pagination/filtering alignment with `find(where: ...)`
-  - Evidence: `src/generator/express.ts`
-- [x] Express app bootstrap (router mounting)
-  - Evidence: `server.ts` mounts each entity router
-
-## CLI (Phase 3)
-- [x] `locus db migrate` → runs `prisma migrate dev`
-- [x] `locus db studio` → runs `prisma studio`
-  - Evidence: `src/cli/db.ts`; tests `tests/cli/db.test.ts`
-- [x] `locus build` orchestrates parse → merge → generate → write (Prisma, Express, React)
-  - Evidence: `src/cli/build.ts`; tests `tests/cli/build.test.ts`
-  - Notes: Build discovers `.locus` files recursively and reads real file contents; generates Prisma schema, Express routes, and React components (UI AST-supported).
-- [x] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
-  - Evidence: `src/cli/dev.ts` (initial build via buildProject, incremental watcher, spawns `next:dev` and `api:dev`); scripts in `package.json`; test `tests/cli/dev.test.ts`
-- [x] `locus new` scaffolds a project
-  - Evidence: `src/cli/new.ts`; test `tests/cli/new.test.ts`
-
-## Toolchain integration & deployment
-  - Evidence: `src/cli/dev.ts`
- [x] Deployment guidance / outputs structuring (docs + code)
-   - Evidence: docs/toolchain/deployment.md, CLI `deploy` uses `Locus.toml` and runs build
-
- [x] `Locus.toml` generation/usage
-   - Evidence: `src/cli/new.ts` scaffolds Locus.toml; `src/config/toml.ts` parser; `src/cli/deploy.ts` reads it
-## Config and project scaffold
-- [x] `Locus.toml` generation/usage
-  - Evidence: `src/cli/new.ts` scaffolds file; `src/config/toml.ts` parser; `src/cli/deploy.ts` consumes it
-- [x] Generated project structure (Next.js + Express folders) finalized
-  - Evidence: `src/cli/build.ts` writes prisma/, react/pages, react/components, routes/, server.ts
-
-## Testing completeness
-- [x] Parser tests for database/design_system and invalid cases
-- [x] Generators tests (Prisma good; React improved with UI transforms; Express CRUD covered)
-- [x] CLI tests (db/build/dev covered via mocks)
-- [x] E2E fixture test: parse real `.locus` files, merge, and generate outputs
-  - Evidence: `tests/cli/e2e_build.test.ts`
- 
- - [x] React generator UI AST rendering tests
-   - Evidence: `tests/generator/react_ui_ast_render.test.ts`, `tests/generator/react_ui_ast_if_else.test.ts`
-  
- - [x] UI AST parsing tests for `ui` blocks
-   - Evidence: `tests/parser/ui_ast.test.ts`
-
-## DX and errors
-- [x] Consistent error classes (parse, merge present; generator/cli errors wired)
-  - Evidence: `src/errors.ts` (BuildError/GeneratorError); build wraps merge and parse failures
-- [x] Helpful diagnostics with context for merges and generators
-  - Evidence: `src/cli/build.ts` wraps merge (BuildError) and generator phases (GeneratorError) with names/file context
-
-## Performance and robustness
-- [x] Parser performance characterization
-  - Evidence: `docs/PERF.md`; `scripts/bench_parser.ts` + `scripts/bench_assert.ts`; `docs/perf-baseline.json`; `npm run bench:assert`
-- [x] Deterministic/idempotent generation checks
-  - Evidence: Prisma models sorted; Express entities sorted; React pages/components sorted before write
-- [x] Incremental build (dev) beyond stub
-  - Evidence: `src/cli/incremental.ts` cache + merge; `src/cli/dev.ts` uses incremental update on file change
-
-## Packaging and docs
-- [x] CLI bin configured; `npm link` readiness
-  - Evidence: `package.json` bin, `src/index.ts`
-- [x] README with quickstart, commands, troubleshooting
-  - Evidence: `README.md`
-- [x] Changelog/versioning (optional)
-  - Evidence: `CHANGELOG.md`
-- [x] License/repo metadata in package.json
-
----
-
-### Summary
-- Core parsing for database and design_system: Done.
-- Features parsing migrated to CST for state/actions/ui/params; heuristics removed.
-- Generators: Prisma/React/Express implemented per spec with stable ordering.
-- CLI: db/build/dev implemented with tests; dev uses watch and stub processes; deploy reads Locus.toml.
-
-Use this as a living document and update statuses as features land.
