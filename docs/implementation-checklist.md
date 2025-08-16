@@ -124,9 +124,9 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 - [x] `locus build` orchestrates parse → merge → generate → write (Prisma, Express, React)
   - Evidence: `src/cli/build.ts`; tests `tests/cli/build.test.ts`
   - Notes: Build discovers `.locus` files recursively and reads real file contents; generates Prisma schema, Express routes, and React components (UI AST-supported).
-- [~] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
-  - Evidence: `src/cli/dev.ts`; performs initial build and rebuild on changes; test `tests/cli/dev.test.ts`
- - [x] `locus new` scaffolds a project
+- [x] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
+  - Evidence: `src/cli/dev.ts` (initial build via buildProject, incremental watcher, spawns `next:dev` and `api:dev`); scripts in `package.json`; test `tests/cli/dev.test.ts`
+- [x] `locus new` scaffolds a project
   - Evidence: `src/cli/new.ts`; test `tests/cli/new.test.ts`
 
 ## Toolchain integration & deployment
@@ -162,8 +162,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
   - Evidence: `src/cli/build.ts` wraps merge (BuildError) and generator phases (GeneratorError) with names/file context
 
 ## Performance and robustness
-- [~] Parser performance characterization
-  - Evidence: `docs/PERF.md`, `scripts/bench_parser.ts`, `npm run bench:parser`; baseline added, thresholds TBD
+- [x] Parser performance characterization
+  - Evidence: `docs/PERF.md`; `scripts/bench_parser.ts` + `scripts/bench_assert.ts`; `docs/perf-baseline.json`; `npm run bench:assert`
 - [x] Deterministic/idempotent generation checks
   - Evidence: Prisma models sorted; Express entities sorted; React pages/components sorted before write
 - [x] Incremental build (dev) beyond stub

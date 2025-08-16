@@ -12,7 +12,8 @@
     "lint": "echo 'no linter configured'",
     "next:dev": "echo 'Next dev server stub'",
   "api:dev": "echo 'API dev server stub'",
-  "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50"
+  "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50",
+  "bench:assert": "ts-node scripts/bench_assert.ts"
   },
   "bin": {
     "locus": "dist/index.js"
