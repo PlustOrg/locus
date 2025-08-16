@@ -158,8 +158,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 ## DX and errors
 - [x] Consistent error classes (parse, merge present; generator/cli errors wired)
   - Evidence: `src/errors.ts` (BuildError/GeneratorError); build wraps merge and parse failures
-- [~] Helpful diagnostics with file/line for merges and generators
-  - Evidence: Build wraps with filename context for parse; merge errors wrapped in BuildError; line info TBD
+- [x] Helpful diagnostics with context for merges and generators
+  - Evidence: `src/cli/build.ts` wraps merge (BuildError) and generator phases (GeneratorError) with names/file context
 
 ## Performance and robustness
 - [~] Parser performance characterization

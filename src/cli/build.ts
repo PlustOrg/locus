@@ -4,7 +4,7 @@ import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { generatePrismaSchema } from '../generator/prisma';
 import { generateExpressApi } from '../generator/express';
-import { BuildError } from '../errors';
+import { BuildError, GeneratorError } from '../errors';
 import { generateReactComponent, generateReactPage } from '../generator/react';
 
 export async function buildProject(opts: { srcDir: string; outDir?: string }) {
@@ -29,18 +29,26 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   }
 
   // Prisma
-  const schema = generatePrismaSchema(merged.database);
-  const prismaDir = join(outDir, 'prisma');
-  if (!existsSync(prismaDir)) mkdirSync(prismaDir, { recursive: true });
-  writeFileSync(join(prismaDir, 'schema.prisma'), schema);
+  try {
+    const schema = generatePrismaSchema(merged.database);
+    const prismaDir = join(outDir, 'prisma');
+    if (!existsSync(prismaDir)) mkdirSync(prismaDir, { recursive: true });
+    writeFileSync(join(prismaDir, 'schema.prisma'), schema);
+  } catch (e) {
+    throw new GeneratorError('Failed generating Prisma schema', e);
+  }
 
   // Express
-  const routes = generateExpressApi(merged.database.entities as any);
-  for (const [p, c] of Object.entries(routes)) {
-    const full = join(outDir, p);
-    const dir = full.split('/').slice(0, -1).join('/');
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(full, c);
+  try {
+    const routes = generateExpressApi(merged.database.entities as any);
+    for (const [p, c] of Object.entries(routes)) {
+      const full = join(outDir, p);
+      const dir = full.split('/').slice(0, -1).join('/');
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      writeFileSync(full, c);
+    }
+  } catch (e) {
+    throw new GeneratorError('Failed generating Express API', e);
   }
 
   // React (pages & components)
@@ -52,13 +60,21 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   // ensure stable output ordering
   const sortedPages = [...(merged.pages as any[])].sort((a, b) => a.name.localeCompare(b.name));
   for (const p of sortedPages) {
-    const code = generateReactPage(p);
-    writeFileSync(join(pagesDir, `${p.name}.tsx`), code);
+    try {
+      const code = generateReactPage(p);
+      writeFileSync(join(pagesDir, `${p.name}.tsx`), code);
+    } catch (e) {
+      throw new GeneratorError(`Failed generating React page '${p.name}'`, e);
+    }
   }
   const sortedComps = [...(merged.components as any[])].sort((a, b) => a.name.localeCompare(b.name));
   for (const c of sortedComps) {
-    const code = generateReactComponent(c);
-    writeFileSync(join(compsDir, `${c.name}.tsx`), code);
+    try {
+      const code = generateReactComponent(c);
+      writeFileSync(join(compsDir, `${c.name}.tsx`), code);
+    } catch (e) {
+      throw new GeneratorError(`Failed generating React component '${c.name}'`, e);
+    }
   }
 
   return { outDir };
