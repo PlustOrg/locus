@@ -35,6 +35,14 @@ export const LParen = createToken({ name: 'LParen', pattern: /\(/ });
 export const RParen = createToken({ name: 'RParen', pattern: /\)/ });
 export const Comma = createToken({ name: 'Comma', pattern: /,/ });
 export const Question = createToken({ name: 'Question', pattern: /\?/ });
+export const Less = createToken({ name: 'Less', pattern: /</ });
+export const Greater = createToken({ name: 'Greater', pattern: />/ });
+export const SlashTok = createToken({ name: 'SlashTok', pattern: /\// });
+export const DotTok = createToken({ name: 'DotTok', pattern: /\./ });
+export const PlusTok = createToken({ name: 'PlusTok', pattern: /\+/ });
+export const LBracketTok = createToken({ name: 'LBracketTok', pattern: /\[/ });
+export const RBracketTok = createToken({ name: 'RBracketTok', pattern: /\]/ });
+export const SingleQuoteTok = createToken({ name: 'SingleQuoteTok', pattern: /'/ });
 
 // Attributes
 export const Unique = createToken({ name: 'Unique', pattern: /unique\b/ });
@@ -109,6 +117,14 @@ export const AllTokens = [
   RParen,
   Comma,
   Question,
+  Less,
+  Greater,
+  SlashTok,
+  DotTok,
+  PlusTok,
+  LBracketTok,
+  RBracketTok,
+  SingleQuoteTok,
   // attributes keywords
   Unique,
   Default,

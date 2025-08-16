@@ -36,6 +36,24 @@ import {
   Page,
   Component,
   Store,
+  State,
+  Action,
+  On,
+  Load,
+  UI,
+  Param,
+  List,
+  Of,
+  Equals,
+  Unknown,
+  Less,
+  Greater,
+  SlashTok,
+  DotTok,
+  PlusTok,
+  LBracketTok,
+  RBracketTok,
+  SingleQuoteTok,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -63,13 +81,17 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier);
     this.CONSUME(LCurly);
     this.MANY(() => this.OR([
-      { ALT: () => this.CONSUME1(Identifier) },
-      { ALT: () => this.CONSUME1(StringLiteral) },
-      { ALT: () => this.CONSUME1(NumberLiteral) },
-      { ALT: () => this.CONSUME1(LCurly) },
-      // do not consume RCurly inside body list
-      { ALT: () => this.CONSUME1(Colon) },
-      { ALT: () => this.CONSUME1(Comma) },
+      { ALT: () => this.SUBRULE(this.stateBlock) },
+      { ALT: () => this.SUBRULE(this.onLoadBlock) },
+      { ALT: () => this.SUBRULE(this.actionDecl) },
+      { ALT: () => this.SUBRULE(this.uiBlock) },
+      {
+        GATE: () => {
+          const t = this.LA(1).tokenType;
+          return t !== State && t !== On && t !== Action && t !== UI && t !== RCurly;
+        },
+        ALT: () => this.SUBRULE(this.rawContent)
+      },
     ]));
     this.CONSUME(RCurly);
   });
@@ -79,12 +101,15 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier);
     this.CONSUME(LCurly);
     this.MANY(() => this.OR([
-      { ALT: () => this.CONSUME2(Identifier) },
-      { ALT: () => this.CONSUME2(StringLiteral) },
-      { ALT: () => this.CONSUME2(NumberLiteral) },
-      { ALT: () => this.CONSUME2(LCurly) },
-      { ALT: () => this.CONSUME2(Colon) },
-      { ALT: () => this.CONSUME2(Comma) },
+      { ALT: () => this.SUBRULE(this.paramDecl) },
+      { ALT: () => this.SUBRULE(this.uiBlock) },
+      {
+        GATE: () => {
+          const t = this.LA(1).tokenType;
+          return t !== Param && t !== UI && t !== RCurly;
+        },
+        ALT: () => this.SUBRULE(this.rawContent)
+      },
     ]));
     this.CONSUME(RCurly);
   });
@@ -94,14 +119,139 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier);
     this.CONSUME(LCurly);
     this.MANY(() => this.OR([
-      { ALT: () => this.CONSUME3(Identifier) },
-      { ALT: () => this.CONSUME3(StringLiteral) },
-      { ALT: () => this.CONSUME3(NumberLiteral) },
-      { ALT: () => this.CONSUME3(LCurly) },
-      { ALT: () => this.CONSUME3(Colon) },
-      { ALT: () => this.CONSUME3(Comma) },
+      { ALT: () => this.SUBRULE(this.stateBlock) },
+      { ALT: () => this.SUBRULE(this.actionDecl) },
+      {
+        GATE: () => {
+          const t = this.LA(1).tokenType;
+          return t !== State && t !== Action && t !== RCurly;
+        },
+        ALT: () => this.SUBRULE(this.rawContent)
+      },
     ]));
     this.CONSUME(RCurly);
+  });
+
+  // --- Feature internals ---
+  private stateBlock = this.RULE('stateBlock', () => {
+    this.CONSUME(State);
+    this.CONSUME(LCurly);
+  this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private onLoadBlock = this.RULE('onLoadBlock', () => {
+    this.CONSUME(On);
+    this.CONSUME(Load);
+    this.CONSUME(LCurly);
+  this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private actionDecl = this.RULE('actionDecl', () => {
+    this.CONSUME(Action);
+    this.CONSUME(Identifier); // name
+    this.CONSUME(LParen);
+    this.OPTION(() => {
+      this.CONSUME1(Identifier);
+      this.MANY(() => {
+        this.CONSUME(Comma);
+        this.CONSUME2(Identifier);
+      });
+    });
+    this.CONSUME(RParen);
+    this.CONSUME(LCurly);
+  this.OPTION1(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private paramDecl = this.RULE('paramDecl', () => {
+    this.CONSUME(Param);
+    this.CONSUME(Identifier);
+    this.CONSUME(Colon);
+    // type like: list of Identifier|BuiltinType | Identifier|BuiltinType [Question]
+    this.OR([
+      { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.typeNameFeature); } },
+      { ALT: () => this.SUBRULE1(this.typeNameFeature) },
+    ]);
+    this.OPTION(() => this.CONSUME(Question));
+    this.OPTION1(() => { this.CONSUME(Equals); this.SUBRULE(this.rawContent); });
+  });
+
+  private typeNameFeature = this.RULE('typeNameFeature', () => {
+    this.OR([
+      { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => this.CONSUME(StringT) },
+      { ALT: () => this.CONSUME(TextT) },
+      { ALT: () => this.CONSUME(IntegerT) },
+      { ALT: () => this.CONSUME(DecimalT) },
+      { ALT: () => this.CONSUME(BooleanT) },
+      { ALT: () => this.CONSUME(DateTimeT) },
+      { ALT: () => this.CONSUME(JsonT) },
+    ]);
+  });
+
+  private uiBlock = this.RULE('uiBlock', () => {
+    this.CONSUME(UI);
+    this.CONSUME(LCurly);
+  this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private rawContent = this.RULE('rawContent', () => {
+    // Consume any tokens except the top-level closing '}', supporting nested {...} blocks
+  this.AT_LEAST_ONE(() => this.OR([
+      { ALT: () => { this.CONSUME(LCurly); this.SUBRULE(this.rawContent); this.CONSUME(RCurly); } },
+      { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(NumberLiteral) },
+  { ALT: () => this.CONSUME(StringT) },
+  { ALT: () => this.CONSUME(TextT) },
+  { ALT: () => this.CONSUME(IntegerT) },
+  { ALT: () => this.CONSUME(DecimalT) },
+  { ALT: () => this.CONSUME(BooleanT) },
+  { ALT: () => this.CONSUME(DateTimeT) },
+  { ALT: () => this.CONSUME(JsonT) },
+  { ALT: () => this.CONSUME(List) },
+  { ALT: () => this.CONSUME(Of) },
+      { ALT: () => this.CONSUME(On) },
+      { ALT: () => this.CONSUME(Load) },
+      { ALT: () => this.CONSUME(Page) },
+      { ALT: () => this.CONSUME(Component) },
+      { ALT: () => this.CONSUME(Store) },
+      { ALT: () => this.CONSUME(State) },
+      { ALT: () => this.CONSUME(Action) },
+      { ALT: () => this.CONSUME(UI) },
+      { ALT: () => this.CONSUME(Unique) },
+      { ALT: () => this.CONSUME(Default) },
+      { ALT: () => this.CONSUME(MapTok) },
+      { ALT: () => this.CONSUME(Database) },
+      { ALT: () => this.CONSUME(DesignSystem) },
+      { ALT: () => this.CONSUME(Colors) },
+      { ALT: () => this.CONSUME(Typography) },
+      { ALT: () => this.CONSUME(Spacing) },
+      { ALT: () => this.CONSUME(Radii) },
+      { ALT: () => this.CONSUME(Shadows) },
+      { ALT: () => this.CONSUME(Weights) },
+      { ALT: () => this.CONSUME(HasMany) },
+      { ALT: () => this.CONSUME(BelongsTo) },
+      { ALT: () => this.CONSUME(HasOne) },
+      { ALT: () => this.CONSUME(LParen) },
+      { ALT: () => this.CONSUME(RParen) },
+      { ALT: () => this.CONSUME(Colon) },
+      { ALT: () => this.CONSUME(Comma) },
+      { ALT: () => this.CONSUME(Equals) },
+      { ALT: () => this.CONSUME(Question) },
+  { ALT: () => this.CONSUME(Less) },
+  { ALT: () => this.CONSUME(Greater) },
+  { ALT: () => this.CONSUME(SlashTok) },
+  { ALT: () => this.CONSUME(DotTok) },
+  { ALT: () => this.CONSUME(PlusTok) },
+  { ALT: () => this.CONSUME(LBracketTok) },
+  { ALT: () => this.CONSUME(RBracketTok) },
+  { ALT: () => this.CONSUME(SingleQuoteTok) },
+  { ALT: () => this.CONSUME(Unknown) },
+  ]));
   });
 
   private designSystemBlock = this.RULE('designSystemBlock', () => {

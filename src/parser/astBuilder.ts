@@ -12,7 +12,7 @@ import {
   LocusFileAST,
   Relation,
 } from '../ast';
-import { extractFeatureBlocks } from './preprocess';
+// Preprocess no longer needed; grammar covers features.
 import { UINode, ElementNode, TextNode, UIAttr } from './uiAst';
 
 function getText(tok?: IToken | IToken[]): string | undefined {
@@ -232,72 +232,175 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFi
       designSystems.push(dsc);
     }
 
-    // page/component/store names (minimal)
+    // page/component/store using CST
     const pageNodes = (blkCh['pageBlock'] as CstNode[]) || [];
     for (const pn of pageNodes) {
       const ch = pn.children as CstChildrenDictionary;
       const name = (ch['Identifier'] as IToken[])[0].image;
-      pages.push({ type: 'page', name });
+      const page: any = { type: 'page', name };
+      enrichPageFromCst(page, pn, originalSource || '');
+      pages.push(page);
     }
     const compNodes = (blkCh['componentBlock'] as CstNode[]) || [];
     for (const cn of compNodes) {
       const ch = cn.children as CstChildrenDictionary;
       const name = (ch['Identifier'] as IToken[])[0].image;
-      components.push({ type: 'component', name });
+      const comp: any = { type: 'component', name };
+      enrichComponentFromCst(comp, cn, originalSource || '');
+      components.push(comp);
     }
     const storeNodes = (blkCh['storeBlock'] as CstNode[]) || [];
     for (const sn of storeNodes) {
       const ch = sn.children as CstChildrenDictionary;
       const name = (ch['Identifier'] as IToken[])[0].image;
-      stores.push({ type: 'store', name });
+      const store: any = { type: 'store', name };
+      enrichStoreFromCst(store, sn, originalSource || '');
+      stores.push(store);
     }
   }
 
-  // Heuristic extraction of feature contents (state/params/actions/ui) from original source
-  if (originalSource) {
-    const fb = extractFeatureBlocks(originalSource);
-    for (const p of pages) {
-      const body = fb.pages[p.name];
-  if (body) enrichPageLike(p, body);
-    }
-    for (const c of components) {
-      const body = fb.components[c.name];
-  if (body) enrichComponent(c, body);
-    }
-    for (const s of stores) {
-      const body = fb.stores[s.name];
-  if (body) enrichStore(s, body);
-    }
-  }
+  // No regex fallback; CST extraction is now authoritative.
 
   return { databases, designSystems, pages, components, stores };
 }
 
-function enrichPageLike(node: any, body: string) {
-  // state block
-  const stateMatch = /\bstate\s*\{([\s\S]*?)\}/m.exec(body);
-  if (stateMatch) {
-    node.state = parseStateDecls(stateMatch[1]);
+// Regex-based enrichers removed; replaced by CST-driven enrichers below.
+
+function enrichPageFromCst(node: any, cst: CstNode, source: string) {
+  const ch = cst.children as CstChildrenDictionary;
+  // state
+  const stateBlocks = (ch['stateBlock'] as CstNode[]) || [];
+  if (stateBlocks.length) {
+  const raw = (stateBlocks[0].children as CstChildrenDictionary)['rawContent'] as CstNode[] | undefined;
+  const inner = raw?.[0] ? sliceFrom(raw[0], source) : '';
+  node.state = parseStateDecls(inner);
   }
   // on load
-  const onLoadMatch = /\bon\s+load\s*\{([\s\S]*?)\}/m.exec(body);
-  if (onLoadMatch) node.onLoad = onLoadMatch[1];
-  // actions (names only)
-  node.actions = [] as any[];
-  const actionRe = /\baction\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{([\s\S]*?)\}/g;
-  let m: RegExpExecArray | null;
-  while ((m = actionRe.exec(body)) !== null) {
-    node.actions.push({ name: m[1], params: m[2].trim() ? m[2].split(/\s*,\s*/) : [], body: m[3] });
+  const onLoads = (ch['onLoadBlock'] as CstNode[]) || [];
+  if (onLoads.length) {
+    const raw = (onLoads[0].children as CstChildrenDictionary)['rawContent'] as CstNode[];
+    node.onLoad = raw?.[0] ? sliceFrom(raw[0], source) : '';
   }
-  // ui (raw string)
-  const uiBlk = extractUiBlock(body);
-  if (uiBlk) {
-    node.ui = uiBlk.full;
-    node.uiAst = parseUi(uiBlk.inner);
+  // actions
+  node.actions = [];
+  const actions = (ch['actionDecl'] as CstNode[]) || [];
+  for (const a of actions) {
+    const ach = a.children as CstChildrenDictionary;
+    const ids = (ach['Identifier'] as IToken[]) || [];
+    const name = ids[0]?.image;
+    const params = ids.slice(1).map(t => t.image);
+    const raw = (ach['rawContent'] as CstNode[]) || [];
+    const body = raw[0] ? sliceFrom(raw[0], source) : '';
+    node.actions.push({ name, params, body });
   }
-  else {
-    node.ui = body;
+  // ui
+  const uis = (ch['uiBlock'] as CstNode[]) || [];
+  if (uis.length) {
+    const uch = uis[0].children as CstChildrenDictionary;
+    const raw = (uch['rawContent'] as CstNode[]) || [];
+    const inner = raw[0] ? sliceFrom(raw[0], source) : '';
+    node.ui = `ui {${inner}}`;
+    node.uiAst = parseUi(inner);
   }
+}
+
+function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
+  const ch = cst.children as CstChildrenDictionary;
+  // params
+  const params: any[] = [];
+  const decls = (ch['paramDecl'] as CstNode[]) || [];
+  for (const d of decls) {
+    const dch = d.children as CstChildrenDictionary;
+    const ids = (dch['Identifier'] as IToken[]) || [];
+    const name = ids[0]?.image;
+    // extract type from nested typeNameFeature
+    const tfNodes = ((dch['typeNameFeature'] as CstNode[]) || (dch['typeNameFeature1'] as CstNode[]) || []) as CstNode[];
+    let typeName: string | undefined;
+    if (tfNodes.length) {
+      const tfch = tfNodes[0].children as CstChildrenDictionary;
+      if (tfch['Identifier']) typeName = (tfch['Identifier'] as IToken[])[0].image;
+      else if (tfch['StringT']) typeName = 'String';
+      else if (tfch['TextT']) typeName = 'Text';
+      else if (tfch['IntegerT']) typeName = 'Integer';
+      else if (tfch['DecimalT']) typeName = 'Decimal';
+      else if (tfch['BooleanT']) typeName = 'Boolean';
+      else if (tfch['DateTimeT']) typeName = 'DateTime';
+      else if (tfch['JsonT']) typeName = 'Json';
+    }
+    const isList = !!dch['List'];
+    const optional = !!dch['Question'];
+    const type: any = isList ? { kind: 'list', of: typeName } : { kind: 'primitive', name: typeName };
+    if (optional) type.optional = true;
+    const defaultRaw = (dch['rawContent'] as CstNode[] | undefined)?.[0];
+    const def = defaultRaw ? sliceFrom(defaultRaw, source) : undefined;
+    params.push({ name, type, default: def });
+  }
+  if (params.length) node.params = params;
+  // ui
+  const uis = (ch['uiBlock'] as CstNode[]) || [];
+  if (uis.length) {
+    const uch = uis[0].children as CstChildrenDictionary;
+    const raw = (uch['rawContent'] as CstNode[]) || [];
+    const inner = raw[0] ? sliceFrom(raw[0], source) : '';
+    node.ui = `ui {${inner}}`;
+    node.uiAst = parseUi(inner);
+  }
+}
+
+function enrichStoreFromCst(node: any, cst: CstNode, source: string) {
+  const ch = cst.children as CstChildrenDictionary;
+  const stateBlocks = (ch['stateBlock'] as CstNode[]) || [];
+  if (stateBlocks.length) {
+  const raw = (stateBlocks[0].children as CstChildrenDictionary)['rawContent'] as CstNode[] | undefined;
+  const inner = raw?.[0] ? sliceFrom(raw[0], source) : '';
+  node.state = parseStateDecls(inner);
+  }
+  const actions = (ch['actionDecl'] as CstNode[]) || [];
+  if (actions.length) {
+    node.actions = [];
+    for (const a of actions) {
+      const ach = a.children as CstChildrenDictionary;
+      const ids = (ach['Identifier'] as IToken[]) || [];
+      const name = ids[0]?.image;
+      const params = ids.slice(1).map(t => t.image);
+      const raw = (ach['rawContent'] as CstNode[]) || [];
+      const body = raw[0] ? sliceFrom(raw[0], source) : '';
+      node.actions.push({ name, params, body });
+    }
+  }
+  // support bare store variables without a 'state { }' block
+  if (!node.state) {
+    const raws = (ch['rawContent'] as CstNode[]) || [];
+    if (raws.length) {
+      const body = raws.map(r => sliceFrom(r, source)).join('\n');
+      const state = parseStateDecls(body);
+      if (state.length) node.state = state;
+    }
+  }
+}
+
+function sliceFrom(node: CstNode, source: string): string {
+  const tokens = collectTokens(node);
+  if (!tokens.length) return '';
+  const start = Math.min(...tokens.map(t => (t.startOffset ?? 0)));
+  const end = Math.max(...tokens.map(t => (t.endOffset ?? t.startOffset ?? 0)));
+  return source.slice(start, end + 1);
+}
+
+function collectTokens(node: CstNode): IToken[] {
+  const out: IToken[] = [];
+  const ch = node.children as CstChildrenDictionary;
+  for (const key of Object.keys(ch)) {
+    const arr = (ch as any)[key] as Array<IToken | CstNode>;
+    if (!Array.isArray(arr)) continue;
+    if (!arr.length) continue;
+    if ((arr[0] as any).image !== undefined) {
+      out.push(...(arr as IToken[]));
+    } else {
+      for (const n of arr as CstNode[]) out.push(...collectTokens(n));
+    }
+  }
+  return out;
 }
 
 function enrichComponent(node: any, body: string) {

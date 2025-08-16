@@ -2,13 +2,11 @@ import { LocusFileAST } from '../ast';
 import { LocusLexer } from './tokens';
 import { DatabaseCstParser } from './databaseParser';
 import { buildDatabaseAst } from './astBuilder';
-import { preprocessSource } from './preprocess';
 
 export class LocusParserError extends Error {}
 
 export function parseLocus(source: string): LocusFileAST {
-  const pre = preprocessSource(source);
-  const lexResult = LocusLexer.tokenize(pre);
+  const lexResult = LocusLexer.tokenize(source);
   if (lexResult.errors.length) {
     throw new LocusParserError('Lexing errors: ' + lexResult.errors.map(e => e.message).join('; '));
   }
