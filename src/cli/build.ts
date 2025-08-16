@@ -21,7 +21,12 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
     }
   });
-  const merged = mergeAsts(asts);
+  let merged;
+  try {
+    merged = mergeAsts(asts);
+  } catch (e) {
+    throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
+  }
 
   // Prisma
   const schema = generatePrismaSchema(merged.database);
@@ -44,11 +49,14 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   const compsDir = join(reactBase, 'components');
   if (!existsSync(pagesDir)) mkdirSync(pagesDir, { recursive: true });
   if (!existsSync(compsDir)) mkdirSync(compsDir, { recursive: true });
-  for (const p of merged.pages as any[]) {
+  // ensure stable output ordering
+  const sortedPages = [...(merged.pages as any[])].sort((a, b) => a.name.localeCompare(b.name));
+  for (const p of sortedPages) {
     const code = generateReactPage(p);
     writeFileSync(join(pagesDir, `${p.name}.tsx`), code);
   }
-  for (const c of merged.components as any[]) {
+  const sortedComps = [...(merged.components as any[])].sort((a, b) => a.name.localeCompare(b.name));
+  for (const c of sortedComps) {
     const code = generateReactComponent(c);
     writeFileSync(join(compsDir, `${c.name}.tsx`), code);
   }

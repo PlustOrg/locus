@@ -66,8 +66,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
   - Evidence: `src/parser/databaseParser.ts`
 - [x] CST → AST builder for database/design_system; features minimal
   - Evidence: `src/parser/astBuilder.ts`
-- [~] Preprocessing used only as a temporary bridge for features
-  - Evidence: `src/parser/preprocess.ts` (to be removed when full feature grammar is added)
+- [x] Preprocessing removed; full CST-driven features
+  - Evidence: `src/parser/preprocess.ts` unused; features parsed in `databaseParser.ts`; `astBuilder.ts` notes removal
 - [x] Parser error class and messaging
   - Evidence: `LocusParserError` in `src/parser/index.ts`
 
@@ -137,8 +137,10 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
  [x] `Locus.toml` generation/usage
    - Evidence: `src/cli/new.ts` scaffolds Locus.toml; `src/config/toml.ts` parser; `src/cli/deploy.ts` reads it
 ## Config and project scaffold
-- [ ] `Locus.toml` generation/usage
-- [ ] Generated project structure (Next.js + Express folders) finalized
+- [x] `Locus.toml` generation/usage
+  - Evidence: `src/cli/new.ts` scaffolds file; `src/config/toml.ts` parser; `src/cli/deploy.ts` consumes it
+- [x] Generated project structure (Next.js + Express folders) finalized
+  - Evidence: `src/cli/build.ts` writes prisma/, react/pages, react/components, routes/, server.ts
 
 ## Testing completeness
 - [x] Parser tests for database/design_system and invalid cases
@@ -154,19 +156,21 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
    - Evidence: `tests/parser/ui_ast.test.ts`
 
 ## DX and errors
-- [~] Consistent error classes (parse, merge present; generator/cli errors partial)
-  - Evidence: `src/errors.ts` (BuildError/GeneratorError) used in build
-- [ ] Helpful diagnostics with file/line for merges and generators
+- [x] Consistent error classes (parse, merge present; generator/cli errors wired)
+  - Evidence: `src/errors.ts` (BuildError/GeneratorError); build wraps merge and parse failures
+- [~] Helpful diagnostics with file/line for merges and generators
+  - Evidence: Build wraps with filename context for parse; merge errors wrapped in BuildError; line info TBD
 
 ## Performance and robustness
 - [ ] Parser performance characterization
-- [~] Deterministic/idempotent generation checks
-  - Evidence: Prisma models sorted by name for stable output
-- [ ] Incremental build (dev) beyond stub
+- [x] Deterministic/idempotent generation checks
+  - Evidence: Prisma models sorted; Express entities sorted; React pages/components sorted before write
+- [~] Incremental build (dev) beyond stub
+  - Evidence: `src/cli/dev.ts` watches .locus and triggers rebuild; server stubs remain
 
 ## Packaging and docs
-- [~] CLI bin configured; `npm link` readiness
-  - Evidence: `package.json` bin
+- [x] CLI bin configured; `npm link` readiness
+  - Evidence: `package.json` bin, `src/index.ts`
 - [ ] README with quickstart, commands, troubleshooting
 - [ ] Changelog/versioning (optional)
 - [x] License/repo metadata in package.json
@@ -175,8 +179,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 
 ### Summary
 - Core parsing for database and design_system: Done.
-- Minimal recognition for features (page/component/store names): Partial; full feature parsing deferred.
-- Generators: Prisma solid; React/Express minimal; expand per spec.
-- CLI: db/build/dev implemented with tests; build/dev need deeper integration (real file reading, recursive discovery, richer outputs).
+- Features parsing migrated to CST for state/actions/ui/params; heuristics removed.
+- Generators: Prisma/React/Express implemented per spec with stable ordering.
+- CLI: db/build/dev implemented with tests; dev uses watch and stub processes; deploy reads Locus.toml.
 
 Use this as a living document and update statuses as features land.
