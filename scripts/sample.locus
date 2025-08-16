@@ -1,0 +1,3 @@
+database { entity User { email String (unique) name String } }
+page Home { state { greeting: String = "Hello" } on load { /* noop */ } action doThing() { /* noop */ } ui { <div>{greeting}</div> } }
+component Card { param title: String ui { <div>{title}</div> } }

@@ -162,17 +162,20 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
   - Evidence: Build wraps with filename context for parse; merge errors wrapped in BuildError; line info TBD
 
 ## Performance and robustness
-- [ ] Parser performance characterization
+- [~] Parser performance characterization
+  - Evidence: `docs/PERF.md`, `scripts/bench_parser.ts`, `npm run bench:parser`; baseline added, thresholds TBD
 - [x] Deterministic/idempotent generation checks
   - Evidence: Prisma models sorted; Express entities sorted; React pages/components sorted before write
-- [~] Incremental build (dev) beyond stub
-  - Evidence: `src/cli/dev.ts` watches .locus and triggers rebuild; server stubs remain
+- [x] Incremental build (dev) beyond stub
+  - Evidence: `src/cli/incremental.ts` cache + merge; `src/cli/dev.ts` uses incremental update on file change
 
 ## Packaging and docs
 - [x] CLI bin configured; `npm link` readiness
   - Evidence: `package.json` bin, `src/index.ts`
-- [ ] README with quickstart, commands, troubleshooting
-- [ ] Changelog/versioning (optional)
+- [x] README with quickstart, commands, troubleshooting
+  - Evidence: `README.md`
+- [x] Changelog/versioning (optional)
+  - Evidence: `CHANGELOG.md`
 - [x] License/repo metadata in package.json
 
 ---

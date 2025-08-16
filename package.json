@@ -11,7 +11,8 @@
     "test:watch": "jest --watchAll --colors",
     "lint": "echo 'no linter configured'",
     "next:dev": "echo 'Next dev server stub'",
-    "api:dev": "echo 'API dev server stub'"
+  "api:dev": "echo 'API dev server stub'",
+  "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50"
   },
   "bin": {
     "locus": "dist/index.js"
