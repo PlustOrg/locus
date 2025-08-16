@@ -88,22 +88,22 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
   - [x] `has_many`: array fields
   - [x] `belongs_to`: relation + scalar fk + `@relation(fields, references)`
   - [x] `has_one`: optional relation
-- [~] Many-to-many join table strategy per docs (implicit vs explicit) verified
-  - Evidence: `src/generator/prisma.ts`; tests in `tests/generator/prisma.test.ts`
+ - [x] Many-to-many join table strategy per docs (implicit vs explicit) verified
+  - Evidence: `src/generator/prisma.ts`; tests in `tests/generator/prisma.test.ts`, `tests/generator/prisma_many_to_many.test.ts`, `tests/generator/prisma_many_to_many_explicit.test.ts`
 
 ## Generators: React/Next.js (Phase 2.2)
-- [~] Page generation to React component file string
-  - Evidence: `src/generator/react.ts`; test in `tests/generator/react.test.ts`
-- [~] `state` → `useState` hooks with defaults
-- [~] `on load` → `useEffect`
-- [~] `action` blocks → functions
-- [~] `ui` passthrough; strips `ui { ... }` wrapper when present
-- [~] Component generator with props interface and UI passthrough
+- [x] Page generation to React component file string
+  - Evidence: `src/generator/react.ts`; tests in `tests/generator/react.test.ts`, UI AST render tests
+- [x] `state` → `useState` hooks with defaults
+- [x] `on load` → `useEffect`
+- [x] `action` blocks → functions
+- [x] `ui` passthrough; strips `ui { ... }` wrapper when present
+- [x] Component generator with props interface and UI passthrough
 - [x] Event wiring (`on:*` → React props like onClick) and two-way binding (`bind:value` → value + onChange setter)
   - Evidence: `src/generator/react.ts`; tests in `tests/generator/react_ui.test.ts`
 - [x] Control flow and lists: `<if>/<elseif>/<else>` → ternary chain, `for:each` → `.map(item, index)` with key
   - Evidence: `tests/generator/react_ui_ast_if_else.test.ts`, `tests/generator/react_ui_ast_render.test.ts`
-- [~] Slots/children mapping to props (slot → React.ReactNode)
+- [x] Slots/children mapping to props (slot → React.ReactNode)
   - Evidence: `tests/generator/react_slots.test.ts`
 - [x] Integration with UI AST (pages/components render from uiAst with fallback)
   - Evidence: `src/generator/react.ts` (renderUiAst), `tests/generator/react_ui_ast_render.test.ts`, `tests/generator/react_ui_ast_if_else.test.ts`
