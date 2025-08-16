@@ -75,8 +75,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 - [x] Merge database entities across files
 - [x] Detect duplicate entity names and throw
 - [x] Merge design system tokens/weights (shallow)
-- [~] Merge feature blocks and detect duplicates
-  - Evidence: `src/parser/merger.ts`; tests in `tests/parser/merging.test.ts`
+- [x] Merge feature blocks and detect duplicates
+  - Evidence: `src/parser/merger.ts`; tests in `tests/parser/merging.test.ts`, `tests/parser/merging_features_dup.test.ts`
 
 ## Generators: Prisma (Phase 2.1)
 - [x] Header (`generator client`, `datasource db` with env URL)
@@ -112,7 +112,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 - [x] Routes per entity generated
   - Evidence: `src/generator/express.ts`; tests in `tests/generator/express.test.ts`, `tests/generator/express_crud.test.ts`
 - [x] GET one, POST create, PUT/PATCH update, DELETE remove
-- [ ] Validation, error handling, pagination/filtering alignment with `find(where: ...)`
+- [x] Validation, error handling, pagination/filtering alignment with `find(where: ...)`
+  - Evidence: `src/generator/express.ts`
 - [~] Express app bootstrap (router mounting)
   - Evidence: placeholder `server.ts` emitted; router mounting TBD
 
@@ -120,7 +121,7 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 - [x] `locus db migrate` → runs `prisma migrate dev`
 - [x] `locus db studio` → runs `prisma studio`
   - Evidence: `src/cli/db.ts`; tests `tests/cli/db.test.ts`
-- [~] `locus build` orchestrates parse → merge → generate → write
+- [x] `locus build` orchestrates parse → merge → generate → write (Prisma, Express, React)
   - Evidence: `src/cli/build.ts`; tests `tests/cli/build.test.ts`
   - Notes: Build discovers `.locus` files recursively and reads real file contents; generates Prisma schema, Express routes, and React components (UI AST-supported).
 - [~] `locus dev` initial build, watcher, starts frontend/backend processes (stubs)
@@ -140,8 +141,8 @@ Notes: We still strip feature bodies for lexing, then enrich nodes using the ori
 
 ## Testing completeness
 - [x] Parser tests for database/design_system and invalid cases
-- [~] Generators tests (Prisma good; React improved with UI transforms; Express CRUD covered)
-- [~] CLI tests (db/build/dev covered via mocks)
+- [x] Generators tests (Prisma good; React improved with UI transforms; Express CRUD covered)
+- [x] CLI tests (db/build/dev covered via mocks)
 - [x] E2E fixture test: parse real `.locus` files, merge, and generate outputs
   - Evidence: `tests/cli/e2e_build.test.ts`
  

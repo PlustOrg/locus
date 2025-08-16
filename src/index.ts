@@ -4,6 +4,7 @@ import { runDbMigrate, runDbStudio } from './cli/db';
 import { buildProject } from './cli/build';
 import { dev as devCmd } from './cli/dev';
 import path from 'path';
+import { newProject } from './cli/new';
 
 const program = new Command();
 program.name('locus').description('Locus compiler CLI');
@@ -38,6 +39,16 @@ program
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
     await devCmd({ srcDir });
+  });
+
+program
+  .command('new')
+  .description('Scaffold a new Locus project')
+  .argument('<name>', 'project name')
+  .option('--cwd <dir>', 'working directory', '.')
+  .action(async (name: string, opts: any) => {
+    const cwd = path.resolve(opts.cwd);
+    newProject({ cwd, name });
   });
 
 program.parseAsync().catch((e) => { console.error(e); process.exit(1); });
