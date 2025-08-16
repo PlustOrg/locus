@@ -303,10 +303,20 @@ function enrichPageLike(node: any, body: string) {
 function enrichComponent(node: any, body: string) {
   // params
   const params: any[] = [];
-  const paramRe = /\bparam\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/g;
+  const paramRe = /\bparam\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=\n]+?)(?:\s*=\s*([^\n]+))?(?=\n|$)/g;
   let m: RegExpExecArray | null;
   while ((m = paramRe.exec(body)) !== null) {
-    params.push({ name: m[1], type: { kind: 'primitive', name: m[2] }, default: undefined });
+    const name = m[1];
+    let typeStr = m[2].trim();
+    const defVal = m[3]?.trim();
+    let optional = false;
+    if (typeStr.endsWith('?')) { optional = true; typeStr = typeStr.slice(0, -1).trim(); }
+    const listMatch = /^list\s+of\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(typeStr);
+    let type: any;
+    if (listMatch) type = { kind: 'list', of: listMatch[1] };
+    else type = { kind: 'primitive', name: typeStr };
+    if (optional) type.optional = true;
+    params.push({ name, type, default: defVal });
   }
   if (params.length) node.params = params;
   // ui
@@ -325,19 +335,27 @@ function enrichStore(node: any, body: string) {
 }
 
 function parseStateDecls(src: string) {
-  const lines = src.split(/\n/).map(s => s.trim()).filter(Boolean);
+  const lines = src.split(/\n|;+/).map(s => s.trim()).filter(Boolean);
   const out: any[] = [];
   for (const line of lines) {
-    const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+?)\s*=\s*(.+)$/.exec(line);
+    const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*([\s\S]+)$/.exec(line);
     if (!m) continue;
     const name = m[1];
-    const typeStr = m[2];
+    let typeStr = m[2].trim();
     const def = m[3];
-    if (/^list\s+of\s+([A-Za-z_][A-Za-z0-9_]*)$/.test(typeStr)) {
-      const of = typeStr.replace(/^list\s+of\s+/, '').trim();
-      out.push({ name, type: { kind: 'list', of }, default: def });
+    // Optional marker support (e.g., String? or list of X?)
+    let optional = false;
+    if (typeStr.endsWith('?')) { optional = true; typeStr = typeStr.slice(0, -1).trim(); }
+    const listMatch = /^list\s+of\s+([A-Za-z_][A-Za-z0-9_]*)$/.exec(typeStr);
+    if (listMatch) {
+      const of = listMatch[1];
+      const type = { kind: 'list', of } as any;
+      if (optional) type.optional = true;
+      out.push({ name, type, default: def });
     } else {
-      out.push({ name, type: { kind: 'primitive', name: typeStr }, default: def });
+      const type: any = { kind: 'primitive', name: typeStr };
+      if (optional) type.optional = true;
+      out.push({ name, type, default: def });
     }
   }
   return out;

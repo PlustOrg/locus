@@ -47,17 +47,17 @@ Legend: [x] Done • [~] Partial • [ ] Deferred/Not Implemented
 ## Language: features (docs/language/features.md, ui-syntax.md)
 - [x] `page`, `component`, `store` blocks recognized by parser
   - Evidence: rules and extraction in `databaseParser.ts`, `astBuilder.ts`; tests: `tests/parser/features.test.ts`, `tests/parser/features_full.test.ts`
-- [~] `state` block parsed (heuristic from original source; supports `list of X` and defaults)
-- [~] `param` block parsed for components (name/type)
-- [~] `action` blocks parsed (name/params/body captured as strings)
-- [~] Lifecycle hooks parsed: `on load` body captured
+- [x] `state` block parsed (heuristic from original source; supports `list of X`, optionals `?`, and defaults)
+- [x] `param` block parsed for components (name/type, `list of X`, optionals `?`, default values)
+- [x] `action` blocks parsed (name/params/body captured as strings)
+- [x] Lifecycle hooks parsed: `on load` body captured
 - [x] `ui` block parsed to a structured UI AST (tags, props, expressions)
   - Evidence: `src/parser/uiAst.ts`, `src/parser/astBuilder.ts` (parseUi, transformUiTreeToStructured), tests: `tests/parser/ui_ast.test.ts`, `tests/parser/ui_ast_bind.test.ts`, `tests/parser/ui_ast_if_else_parse.test.ts`
 - [x] Event directives `on:*` and `bind:value`
   - Evidence: normalized in AST builder; verified in parser and generator tests
 - [x] Control flow `<if>/<elseif>/<else>` and lists `for:each`
   - Evidence: structured IfNode/ForEachNode; tests for parse and generation
-Notes: We still strip feature bodies for lexing, then enrich nodes using the original source; migrate to full grammar later.
+Notes: We still strip feature bodies for lexing, then enrich nodes using the original source; migrate to full grammar later. Heuristics now support optionals and defaults.
 
 ## Parser implementation details
 - [x] Lexer tokens for keywords, punctuation, literals, comments/whitespace
