@@ -2,7 +2,7 @@
 
 Last audited: 2025-08-16
 
-Legend: [~] Partial • [ ] Planned/Not Implemented
+Legend: [x] Done [~] Partial • [ ] Planned/Not Implemented
 
 This file tracks only incomplete items and enhancements. Completed items have been removed for focus.
 
