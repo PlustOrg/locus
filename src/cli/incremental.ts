@@ -64,6 +64,10 @@ export function createIncrementalBuilder(opts: { srcDir: string; outDir: string 
       try { cache.set(filePath, parseLocus(readFileSync(filePath, 'utf8'))); }
       catch (e) { throw new BuildError(`Failed to parse ${filePath}: ${(e as any)?.message || e}`, e); }
       rebuildAll();
+    },
+    async remove(filePath: string) {
+      cache.delete(filePath);
+      rebuildAll();
     }
   };
 }

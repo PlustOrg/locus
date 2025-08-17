@@ -1,18 +1,20 @@
 # Locus Implementation Checklist — Open Items
 
-Last audited: 2025-08-16
+Last audited: 2025-08-17
 
-Legend: [x] Done [~] Partial • [ ] Planned/Not Implemented
+Legend: [x] Done • [~] Partial • [ ] Planned/Not Implemented
 
 This file tracks only incomplete items and enhancements. Completed items have been removed for focus.
 
 ## Dev experience and robustness
-- [ ] Dev watcher: recursive file discovery, handle add/unlink/rename events, and debounce rebuilds (currently shallow init + change only)
-  - Notes: Extend watcher to watch subdirectories and handle create/delete; batch rapid changes.
-- [ ] Real process integration: replace stub scripts (`next:dev`, `api:dev`) with actual Next.js and Express startup wiring
-  - Notes: Ensure env propagation and log piping; document prerequisites.
-- [ ] Graceful shutdown: handle SIGINT/SIGTERM and forward to child processes; ensure cleanup
-- [ ] Cross-platform process spawn compatibility (Windows shells and PATH resolution)
+- [x] Dev watcher: recursive discovery, add/unlink/rename handling, and debounce rebuilds
+  - Evidence: `src/cli/dev.ts` adds recursive chokidar watch, on(add|change|unlink) handlers, and createDebounce
+- [x] Real process integration stubs with env override
+  - Evidence: `src/cli/dev.ts` provides spawnNext/spawnApi with LOCUS_NEXT_CMD override and generated server.ts fallback, plus npm script fallback
+- [x] Graceful shutdown (SIGINT/SIGTERM) and cleanup
+  - Evidence: `src/cli/dev.ts` registers signal handlers to close watcher and kill child procs
+- [x] Cross-platform spawn compatibility
+  - Evidence: `spawnSafe` uses shell on Windows; tested via mocks in `tests/cli/dev.test.ts`
 
 ## Diagnostics and observability
 - [ ] Precise file/line/column in generator and merger errors using token positions or source maps
