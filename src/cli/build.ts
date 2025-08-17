@@ -1,4 +1,5 @@
 import { readdirSync, writeFileSync, mkdirSync, existsSync, readFileSync, statSync } from 'fs';
+import { promises as fsp } from 'fs';
 import { join } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
@@ -7,26 +8,31 @@ import { generateExpressApi } from '../generator/express';
 import { BuildError, GeneratorError } from '../errors';
 import { generateReactComponent, generateReactPage } from '../generator/react';
 
-export async function buildProject(opts: { srcDir: string; outDir?: string }) {
+export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
+  const debug = !!opts.debug;
+  const t0 = Date.now();
 
   let files: string[];
   try { files = findLocusFiles(srcDir); } catch (e) { throw new BuildError(`Failed to read source directory: ${srcDir}`, e); }
+  const tParse0 = Date.now();
   const asts = files.map(fp => {
     try {
       const content = typeof readFileSync === 'function' ? readFileSync(fp, 'utf8') : String(fp);
-      return parseLocus(content as any);
+      return parseLocus(content as any, fp);
     } catch (e) {
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
     }
   });
+  const tParse1 = Date.now();
   let merged;
   try {
     merged = mergeAsts(asts);
   } catch (e) {
     throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
   }
+  const tMerge1 = Date.now();
 
   // Prisma
   try {
@@ -41,12 +47,14 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   // Express
   try {
     const routes = generateExpressApi(merged.database.entities as any);
-    for (const [p, c] of Object.entries(routes)) {
+    const entries = Object.entries(routes).sort(([a], [b]) => a.localeCompare(b));
+    const limit = pLimit(4);
+    await Promise.all(entries.map(([p, c]) => limit(async () => {
       const full = join(outDir, p);
       const dir = full.split('/').slice(0, -1).join('/');
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      writeFileSync(full, c);
-    }
+      await safeMkdir(dir);
+      await safeWrite(full, c);
+    })));
   } catch (e) {
     throw new GeneratorError('Failed generating Express API', e);
   }
@@ -59,22 +67,41 @@ export async function buildProject(opts: { srcDir: string; outDir?: string }) {
   if (!existsSync(compsDir)) mkdirSync(compsDir, { recursive: true });
   // ensure stable output ordering
   const sortedPages = [...(merged.pages as any[])].sort((a, b) => a.name.localeCompare(b.name));
-  for (const p of sortedPages) {
-    try {
-      const code = generateReactPage(p);
-      writeFileSync(join(pagesDir, `${p.name}.tsx`), code);
-    } catch (e) {
-      throw new GeneratorError(`Failed generating React page '${p.name}'`, e);
-    }
+  {
+  const limit = pLimit(4);
+  await Promise.all(sortedPages.map(p => limit(async () => {
+      try {
+    const code = generateReactPage(p);
+    await safeWrite(join(pagesDir, `${p.name}.tsx`), code);
+      } catch (e) {
+        throw new GeneratorError(`Failed generating React page '${p.name}'`, e);
+      }
+    })));
   }
   const sortedComps = [...(merged.components as any[])].sort((a, b) => a.name.localeCompare(b.name));
-  for (const c of sortedComps) {
-    try {
-      const code = generateReactComponent(c);
-      writeFileSync(join(compsDir, `${c.name}.tsx`), code);
-    } catch (e) {
-      throw new GeneratorError(`Failed generating React component '${c.name}'`, e);
-    }
+  {
+  const limit = pLimit(4);
+  await Promise.all(sortedComps.map(c => limit(async () => {
+      try {
+    const code = generateReactComponent(c);
+    await safeWrite(join(compsDir, `${c.name}.tsx`), code);
+      } catch (e) {
+        throw new GeneratorError(`Failed generating React component '${c.name}'`, e);
+      }
+    })));
+  }
+
+  if (debug) {
+    const t1 = Date.now();
+    const timings = {
+      files: files.length,
+      parseMs: tParse1 - tParse0,
+      mergeMs: tMerge1 - tParse1,
+      generateMs: t1 - tMerge1,
+      totalMs: t1 - t0,
+    };
+    // eslint-disable-next-line no-console
+    console.log('[locus][build][timings]', JSON.stringify(timings));
   }
 
   return { outDir };
@@ -113,4 +140,42 @@ function findLocusFiles(dir: string): string[] {
     }
   }
   return results;
+}
+
+function pLimit(concurrency: number) {
+  let active = 0;
+  const queue: Array<() => void> = [];
+  const next = () => {
+    if (active >= concurrency) return;
+    const job = queue.shift();
+    if (!job) return;
+    active++;
+    job();
+  };
+  return function <T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const run = () => {
+        Promise.resolve(fn()).then(
+          (v) => { active--; resolve(v); next(); },
+          (e) => { active--; reject(e); next(); }
+        );
+      };
+      queue.push(run);
+      next();
+    });
+  };
+}
+
+async function safeMkdir(dir: string) {
+  try {
+    if ((fsp as any)?.mkdir) return await (fsp as any).mkdir(dir, { recursive: true });
+  } catch {/* ignore */}
+  try { mkdirSync(dir, { recursive: true }); } catch {/* ignore */}
+}
+
+async function safeWrite(path: string, content: string) {
+  try {
+    if ((fsp as any)?.writeFile) return await (fsp as any).writeFile(path, content, 'utf8');
+  } catch {/* fall through to sync */}
+  writeFileSync(path, content);
 }

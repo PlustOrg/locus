@@ -4,9 +4,9 @@ import { readdirSync, statSync, existsSync } from 'fs';
 import { join } from 'path';
 import { createIncrementalBuilder } from './incremental';
 
-export async function dev(opts: { srcDir: string }) {
+export async function dev(opts: { srcDir: string; debug?: boolean }) {
   // initial build
-  try { await buildProject({ srcDir: opts.srcDir }); } catch { /* ignore in dev startup */ }
+  try { await buildProject({ srcDir: opts.srcDir, debug: opts.debug }); } catch { /* ignore in dev startup */ }
   // start next.js and express servers (stubbed)
   const nextProc = spawnNext();
   const apiProc = spawnApi(opts.srcDir);
@@ -20,9 +20,17 @@ export async function dev(opts: { srcDir: string }) {
   const initialFiles = collectLocusFiles(opts.srcDir);
   await inc.init(initialFiles);
   const debounce = createDebounce(100);
-  watcher.on('add', (rel: string) => debounce(() => inc.update(join(opts.srcDir, rel)).catch(() => {})));
-  watcher.on('change', (rel: string) => debounce(() => inc.update(join(opts.srcDir, rel)).catch(() => {})));
-  watcher.on('unlink', (rel: string) => debounce(() => inc.remove(join(opts.srcDir, rel)).catch(() => {})));
+  const timed = async (label: string, fn: () => Promise<void>) => {
+    const s = Date.now();
+    await fn();
+    if (opts.debug) {
+      // eslint-disable-next-line no-console
+      console.log(`[locus][dev][${label}]`, { ms: Date.now() - s });
+    }
+  };
+  watcher.on('add', (rel: string) => debounce(() => timed('add', () => inc.update(join(opts.srcDir, rel))).catch(() => {})));
+  watcher.on('change', (rel: string) => debounce(() => timed('change', () => inc.update(join(opts.srcDir, rel))).catch(() => {})));
+  watcher.on('unlink', (rel: string) => debounce(() => timed('unlink', () => inc.remove(join(opts.srcDir, rel))).catch(() => {})));
   watcher.on('addDir', () => {});
   watcher.on('unlinkDir', () => {});
   watcher.on('error', () => {});

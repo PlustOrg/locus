@@ -6,6 +6,8 @@ export interface LocusFileAST {
   pages: PageBlock[];
   components: ComponentBlock[];
   stores: StoreBlock[];
+  // optional: file this AST came from (for diagnostics)
+  sourceFile?: string;
 }
 
 export interface DatabaseBlock {
@@ -17,6 +19,7 @@ export interface Entity {
   name: string;
   fields: Field[];
   relations: Relation[];
+  nameLoc?: { line: number; column: number };
 }
 
 export type FieldTypeName =
@@ -75,9 +78,9 @@ export interface DesignSystemBlock {
 }
 
 // Features (Phase 1.3) - keep minimal placeholders for now
-export interface PageBlock { type: 'page'; name: string }
-export interface ComponentBlock { type: 'component'; name: string }
-export interface StoreBlock { type: 'store'; name: string }
+export interface PageBlock { type: 'page'; name: string; nameLoc?: { line: number; column: number } }
+export interface ComponentBlock { type: 'component'; name: string; nameLoc?: { line: number; column: number } }
+export interface StoreBlock { type: 'store'; name: string; nameLoc?: { line: number; column: number } }
 
 export interface ProjectAST {
   files: LocusFileAST[];

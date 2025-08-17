@@ -15,7 +15,10 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
   for (const f of files) {
     for (const db of f.databases) {
       for (const e of db.entities) {
-        if (entitiesMap.has(e.name)) throw new MergeError(`Entity '${e.name}' defined multiple times`);
+        if (entitiesMap.has(e.name)) {
+          const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(e.nameLoc)}` : '';
+          throw new MergeError(`Entity '${e.name}' defined multiple times${where}`);
+        }
         entitiesMap.set(e.name, e);
       }
     }
@@ -44,15 +47,37 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
   // Merge pages/components/stores with duplicate detection
   const pages: any[] = [];
   const pageNames = new Set<string>();
-  for (const f of files) for (const p of f.pages) { if (pageNames.has(p.name)) throw new MergeError(`Page '${p.name}' defined multiple times`); pageNames.add(p.name); pages.push(p); }
+  for (const f of files) for (const p of f.pages) {
+    if (pageNames.has(p.name)) {
+      const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(p.nameLoc)}` : '';
+      throw new MergeError(`Page '${p.name}' defined multiple times${where}`);
+    }
+    pageNames.add(p.name); pages.push(p);
+  }
 
   const components: any[] = [];
   const compNames = new Set<string>();
-  for (const f of files) for (const c of f.components) { if (compNames.has(c.name)) throw new MergeError(`Component '${c.name}' defined multiple times`); compNames.add(c.name); components.push(c); }
+  for (const f of files) for (const c of f.components) {
+    if (compNames.has(c.name)) {
+      const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(c.nameLoc)}` : '';
+      throw new MergeError(`Component '${c.name}' defined multiple times${where}`);
+    }
+    compNames.add(c.name); components.push(c);
+  }
 
   const stores: any[] = [];
   const storeNames = new Set<string>();
-  for (const f of files) for (const s of f.stores) { if (storeNames.has(s.name)) throw new MergeError(`Store '${s.name}' defined multiple times`); storeNames.add(s.name); stores.push(s); }
+  for (const f of files) for (const s of f.stores) {
+    if (storeNames.has(s.name)) {
+      const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(s.nameLoc)}` : '';
+      throw new MergeError(`Store '${s.name}' defined multiple times${where}`);
+    }
+    storeNames.add(s.name); stores.push(s);
+  }
 
   return { database: { entities }, designSystem, pages, components, stores };
+}
+
+function fmtLoc(loc?: { line: number; column: number }) {
+  return loc ? `:${loc.line}:${loc.column}` : '';
 }

@@ -17,12 +17,16 @@ This file tracks only incomplete items and enhancements. Completed items have be
   - Evidence: `spawnSafe` uses shell on Windows; tested via mocks in `tests/cli/dev.test.ts`
 
 ## Diagnostics and observability
-- [ ] Precise file/line/column in generator and merger errors using token positions or source maps
-- [ ] Structured logs and a `--debug` flag for CLI commands (verbose parsing/merging/generation timings)
+- [x] Precise file/line/column in merge errors and contextual generator errors
+  - Evidence: AST now carries sourceFile and nameLoc; merger includes file:line:col; generators wrapped in GeneratorError with names
+- [x] Structured logs and a `--debug` flag for CLI commands (verbose timings)
+  - Evidence: buildProject accepts debug and prints timing JSON; dev prints per-event timings when debug is enabled
 
 ## Performance
-- [ ] Incremental caching: reuse lexed tokens/CST per file and skip re-parse if unchanged; measure improvement with bench:assert
-- [ ] Parallelize generation where safe (per entity/page/component) with a small worker pool
+- [x] Incremental caching for dev: cache AST per file and rebuild merged outputs on changes
+  - Evidence: `src/cli/incremental.ts` maintains cache; update/remove drive rebuilds
+- [x] Parallelize generation where safe (per entity/page/component) with a small worker pool
+  - Evidence: `src/cli/build.ts` uses pLimit(4) to parallelize Express route and React file writes with sorted inputs; `safeMkdir`/`safeWrite` support mocked environments
 
 ## Language and validation enhancements
 - [ ] Strict validation for design_system values (e.g., color hex format, token naming conventions)

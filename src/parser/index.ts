@@ -5,7 +5,7 @@ import { buildDatabaseAst } from './astBuilder';
 
 export class LocusParserError extends Error {}
 
-export function parseLocus(source: string): LocusFileAST {
+export function parseLocus(source: string, filePath?: string): LocusFileAST {
   const lexResult = LocusLexer.tokenize(source);
   if (lexResult.errors.length) {
     throw new LocusParserError('Lexing errors: ' + lexResult.errors.map(e => e.message).join('; '));
@@ -19,5 +19,5 @@ export function parseLocus(source: string): LocusFileAST {
     throw new LocusParserError('Parsing errors: ' + parser.errors.map(e => e.message).join('; '));
   }
 
-  return buildDatabaseAst(cst, source);
+  return buildDatabaseAst(cst, source, filePath);
 }

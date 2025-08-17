@@ -21,7 +21,7 @@ function getText(tok?: IToken | IToken[]): string | undefined {
   return tok.image;
 }
 
-export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFileAST {
+export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath?: string): LocusFileAST {
   const databases: DatabaseBlock[] = [];
   const designSystems: DesignSystemBlock[] = [];
   const pages: any[] = [];
@@ -42,7 +42,8 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFi
       const entityDecls = (dbBlockChildren['entityDecl'] as CstNode[]) || [];
       for (const ent of entityDecls) {
         const entChildren = ent.children as CstChildrenDictionary;
-        const name = (entChildren['Identifier'] as IToken[])[0].image;
+  const nameTok = (entChildren['Identifier'] as IToken[])[0];
+  const name = nameTok.image;
         const fields: Field[] = [];
         const relations: Relation[] = [];
 
@@ -145,7 +146,9 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFi
           relations.push({ name: relName, kind, target, attributes });
         }
 
-        entities.push({ name, fields, relations });
+  const entity: any = { name, fields, relations };
+  defineHidden(entity, 'nameLoc', posOf(nameTok));
+  entities.push(entity);
       }
       databases.push({ type: 'database', entities });
     }
@@ -236,24 +239,30 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFi
     const pageNodes = (blkCh['pageBlock'] as CstNode[]) || [];
     for (const pn of pageNodes) {
       const ch = pn.children as CstChildrenDictionary;
-      const name = (ch['Identifier'] as IToken[])[0].image;
-      const page: any = { type: 'page', name };
+  const nameTok = (ch['Identifier'] as IToken[])[0];
+  const name = nameTok.image;
+  const page: any = { type: 'page', name };
+  defineHidden(page, 'nameLoc', posOf(nameTok));
       enrichPageFromCst(page, pn, originalSource || '');
       pages.push(page);
     }
     const compNodes = (blkCh['componentBlock'] as CstNode[]) || [];
     for (const cn of compNodes) {
       const ch = cn.children as CstChildrenDictionary;
-      const name = (ch['Identifier'] as IToken[])[0].image;
-      const comp: any = { type: 'component', name };
+  const nameTok = (ch['Identifier'] as IToken[])[0];
+  const name = nameTok.image;
+  const comp: any = { type: 'component', name };
+  defineHidden(comp, 'nameLoc', posOf(nameTok));
       enrichComponentFromCst(comp, cn, originalSource || '');
       components.push(comp);
     }
     const storeNodes = (blkCh['storeBlock'] as CstNode[]) || [];
     for (const sn of storeNodes) {
       const ch = sn.children as CstChildrenDictionary;
-      const name = (ch['Identifier'] as IToken[])[0].image;
-      const store: any = { type: 'store', name };
+  const nameTok = (ch['Identifier'] as IToken[])[0];
+  const name = nameTok.image;
+  const store: any = { type: 'store', name };
+  defineHidden(store, 'nameLoc', posOf(nameTok));
       enrichStoreFromCst(store, sn, originalSource || '');
       stores.push(store);
     }
@@ -261,7 +270,9 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string): LocusFi
 
   // No regex fallback; CST extraction is now authoritative.
 
-  return { databases, designSystems, pages, components, stores };
+  const ast: LocusFileAST = { databases, designSystems, pages, components, stores };
+  if (filePath) defineHidden(ast as any, 'sourceFile', filePath);
+  return ast;
 }
 
 // Regex-based enrichers removed; replaced by CST-driven enrichers below.
@@ -401,6 +412,17 @@ function collectTokens(node: CstNode): IToken[] {
     }
   }
   return out;
+}
+
+function posOf(tok: IToken | undefined): { line: number; column: number } | undefined {
+  if (!tok) return undefined;
+  const line = (tok.startLine ?? 1);
+  const column = (tok.startColumn ?? 1);
+  return { line, column };
+}
+
+function defineHidden(obj: any, key: string, value: any) {
+  Object.defineProperty(obj, key, { value, enumerable: false, configurable: true, writable: true });
 }
 
 function enrichComponent(node: any, body: string) {
