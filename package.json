@@ -1,7 +1,7 @@
 {
   "name": "locus",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "directories": {
     "doc": "docs"
   },
@@ -14,7 +14,8 @@
     "next:dev": "echo 'Next dev server stub'",
   "api:dev": "echo 'API dev server stub'",
   "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50",
-  "bench:assert": "ts-node scripts/bench_assert.ts"
+  "bench:assert": "ts-node scripts/bench_assert.ts",
+    "prepare": "npm run build"
   },
   "bin": {
     "locus": "dist/index.js"
@@ -31,6 +32,12 @@
   },
   "homepage": "https://github.com/Jacques2Marais/locus#readme",
   "description": "",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
