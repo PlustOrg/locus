@@ -1,4 +1,4 @@
-import { CstParser, IToken } from 'chevrotain';
+import { CstParser, IToken as _IToken } from 'chevrotain';
 import {
   AllTokens,
   LCurly,
@@ -153,16 +153,25 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier); // name
     this.CONSUME(LParen);
     this.OPTION(() => {
-      this.CONSUME1(Identifier);
+      this.SUBRULE(this.actionParam);
       this.MANY(() => {
         this.CONSUME(Comma);
-        this.CONSUME2(Identifier);
+        this.SUBRULE1(this.actionParam);
       });
     });
     this.CONSUME(RParen);
     this.CONSUME(LCurly);
   this.OPTION1(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);
+  });
+
+  private actionParam = this.RULE('actionParam', () => {
+    this.CONSUME1(Identifier);
+    this.OPTION(() => {
+      this.CONSUME(Colon);
+      this.SUBRULE(this.typeNameFeature);
+      this.OPTION1(() => this.CONSUME(Question));
+    });
   });
 
   private paramDecl = this.RULE('paramDecl', () => {

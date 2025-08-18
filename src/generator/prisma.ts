@@ -8,7 +8,7 @@ export function generatePrismaSchema(db: { entities: Entity[] }): string {
   return header + models + '\n';
 }
 
-function renderModel(entity: Entity, all: Entity[]): string {
+function renderModel(entity: Entity, _all: Entity[]): string {
   const fields: string[] = [];
   // default id
   fields.push('id Int @id @default(autoincrement())');

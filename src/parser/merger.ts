@@ -1,4 +1,4 @@
-import { DatabaseBlock, DesignSystemBlock, Entity, LocusFileAST } from '../ast';
+import { DesignSystemBlock, Entity, LocusFileAST } from '../ast';
 
 export class MergeError extends Error {}
 

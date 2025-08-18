@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { spawn } from 'child_process';
 import { buildProject } from './build';
 import { readdirSync, statSync, existsSync } from 'fs';
@@ -24,7 +26,6 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
     const s = Date.now();
     await fn();
     if (opts.debug) {
-      // eslint-disable-next-line no-console
       console.log(`[locus][dev][${label}]`, { ms: Date.now() - s });
     }
   };
@@ -88,7 +89,6 @@ function spawnApi(srcDir: string) {
   // If generated server exists and express is available, run it with ts-node
   const serverTs = join(srcDir, 'generated', 'server.ts');
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     require.resolve('express');
     if (existsSync(serverTs)) {
       const code = `require('ts-node/register/transpile-only'); require('${serverTs.replace(/\\/g, '\\\\')}')`;

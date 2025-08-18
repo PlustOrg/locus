@@ -1,25 +1,20 @@
-import { Entity } from '../ast';
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
-export function generateExpressApi(entities: Entity[]): Record<string, string> {
-  const files: Record<string, string> = {};
-  const mounts: string[] = [];
-  const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
-  for (const e of sorted) {
-    const lc = e.name.charAt(0).toLowerCase() + e.name.slice(1);
-    const route = `import { Router } from 'express'
+exports[`Generator snapshots Express routes snapshot 1`] = `
+"import { Router } from 'express'
 import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 export const router = Router()
 
 // route declarations
-router.get('/${lc}')
-router.get('/${lc}/:id')
-router.post('/${lc}')
-router.put('/${lc}/:id')
-router.delete('/${lc}/:id')
+router.get('/user')
+router.get('/user/:id')
+router.post('/user')
+router.put('/user/:id')
+router.delete('/user/:id')
 
 // handlers
-router.get('/${lc}', async (req, res) => {
+router.get('/user', async (req, res) => {
   try {
   const skip = req.query.skip !== undefined ? Number(req.query.skip) : undefined
   const take = req.query.take !== undefined ? Number(req.query.take) : undefined
@@ -29,17 +24,17 @@ router.get('/${lc}', async (req, res) => {
     }
   if (skip !== undefined && Number.isNaN(skip)) return res.status(400).json({ error: 'skip must be a number' })
   if (take !== undefined && Number.isNaN(take)) return res.status(400).json({ error: 'take must be a number' })
-  const rows = await prisma.${lc}.findMany({ where, skip, take })
+  const rows = await prisma.user.findMany({ where, skip, take })
     res.json(rows)
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Server error' })
   }
 })
 
-router.get('/${lc}/:id', async (req, res) => {
+router.get('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
-    const row = await prisma.${lc}.findUnique({ where: { id } })
+    const row = await prisma.user.findUnique({ where: { id } })
     if (!row) return res.status(404).end()
     res.json(row)
   } catch (err: any) {
@@ -47,45 +42,54 @@ router.get('/${lc}/:id', async (req, res) => {
   }
 })
 
-router.post('/${lc}', async (req, res) => {
+router.post('/user', async (req, res) => {
   try {
   // TODO: add schema validation (Zod/Joi) derived from entity
-  const created = await prisma.${lc}.create({ data: req.body })
+  const created = await prisma.user.create({ data: req.body })
     res.status(201).json(created)
   } catch (err: any) {
     res.status(400).json({ error: err?.message || 'Create failed' })
   }
 })
 
-router.put('/${lc}/:id', async (req, res) => {
+router.put('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
   // TODO: add schema validation (Zod/Joi) derived from entity
-  const updated = await prisma.${lc}.update({ where: { id }, data: req.body })
+  const updated = await prisma.user.update({ where: { id }, data: req.body })
     res.json(updated)
   } catch (err: any) {
     res.status(400).json({ error: err?.message || 'Update failed' })
   }
 })
 
-router.delete('/${lc}/:id', async (req, res) => {
+router.delete('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
-    await prisma.${lc}.delete({ where: { id } })
+    await prisma.user.delete({ where: { id } })
     res.status(204).end()
   } catch (err: any) {
     res.status(400).json({ error: err?.message || 'Delete failed' })
   }
 })
+"
 `;
-    files[`routes/${lc}.ts`] = route;
-    mounts.push(lc);
-  }
-  // Optional: basic app bootstrap
-  const imports = mounts.map(n => `import { router as ${n}Router } from './routes/${n}'`).join('\n');
-  const uses = mounts.map(n => `app.use('/${n}', ${n}Router)`).join('\n');
-  files['server.ts'] = `import express from 'express'\nimport bodyParser from 'body-parser'\n${imports}\nconst app = express()\napp.use(bodyParser.json())\n${uses}\nexport default app\n`;
-  return files;
+
+exports[`Generator snapshots React page snapshot 1`] = `
+"import React, { useEffect, useState } from 'react';
+
+export default function Home() {
+
+  const [greeting, setGreeting] = useState("Hello");
+
+
+
+  return (
+     <div>{greeting}</div> 
+  );
+
 }
+"
+`;

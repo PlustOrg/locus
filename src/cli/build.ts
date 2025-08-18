@@ -3,10 +3,13 @@ import { promises as fsp } from 'fs';
 import { join } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
+import { validateUnifiedAst } from '../validator/validate';
 import { generatePrismaSchema } from '../generator/prisma';
 import { generateExpressApi } from '../generator/express';
 import { BuildError, GeneratorError } from '../errors';
 import { generateReactComponent, generateReactPage } from '../generator/react';
+import { generateCssVariables } from '../generator/theme';
+import { generateNextApp } from '../generator/next';
 
 export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean }) {
   const srcDir = opts.srcDir;
@@ -32,6 +35,8 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   } catch (e) {
     throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
   }
+  // Validate unified AST
+  try { validateUnifiedAst(merged); } catch (e) { throw e; }
   const tMerge1 = Date.now();
 
   // Prisma
@@ -78,6 +83,24 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       }
     })));
   }
+
+  // Theme CSS from design_system
+  try {
+    const css = generateCssVariables(merged.designSystem);
+    // Write to outDir root (Next app will import from /theme.css)
+    writeFileSync(join(outDir, 'theme.css'), css);
+  } catch {/* ignore optional */}
+
+  // Next.js minimal app scaffolding (app/ directory routing)
+  try {
+    const nextFiles = generateNextApp(merged.pages as any);
+    for (const [rel, content] of Object.entries(nextFiles)) {
+      const full = join(outDir, rel);
+      const dir = full.split('/').slice(0, -1).join('/');
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      writeFileSync(full, content);
+    }
+  } catch {/* optional */}
   const sortedComps = [...(merged.components as any[])].sort((a, b) => a.name.localeCompare(b.name));
   {
   const limit = pLimit(4);
@@ -100,8 +123,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       generateMs: t1 - tMerge1,
       totalMs: t1 - t0,
     };
-    // eslint-disable-next-line no-console
-    console.log('[locus][build][timings]', JSON.stringify(timings));
+  process.stdout.write('[locus][build][timings] ' + JSON.stringify(timings) + '\n');
   }
 
   return { outDir };

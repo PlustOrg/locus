@@ -52,7 +52,7 @@ program
     newProject({ cwd, name });
   });
 
-program.parseAsync().catch((e) => { console.error(e); process.exit(1); });
+program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });
 
 program
   .command('deploy')

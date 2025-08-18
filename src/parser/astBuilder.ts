@@ -15,7 +15,7 @@ import {
 // Preprocess no longer needed; grammar covers features.
 import { UINode, ElementNode, TextNode, UIAttr } from './uiAst';
 
-function getText(tok?: IToken | IToken[]): string | undefined {
+function _getText(tok?: IToken | IToken[]): string | undefined {
   if (!tok) return undefined;
   if (Array.isArray(tok)) return tok[0]?.image;
   return tok.image;
@@ -297,9 +297,10 @@ function enrichPageFromCst(node: any, cst: CstNode, source: string) {
   const actions = (ch['actionDecl'] as CstNode[]) || [];
   for (const a of actions) {
     const ach = a.children as CstChildrenDictionary;
-    const ids = (ach['Identifier'] as IToken[]) || [];
-    const name = ids[0]?.image;
-    const params = ids.slice(1).map(t => t.image);
+  const ids = (ach['Identifier'] as IToken[]) || [];
+  const name = ids[0]?.image;
+  // extract only parameter identifiers (odd: includes name first, so slice)
+  const params = ids.slice(1).map(t => t.image);
     const raw = (ach['rawContent'] as CstNode[]) || [];
     const body = raw[0] ? sliceFrom(raw[0], source) : '';
     node.actions.push({ name, params, body });
@@ -425,7 +426,7 @@ function defineHidden(obj: any, key: string, value: any) {
   Object.defineProperty(obj, key, { value, enumerable: false, configurable: true, writable: true });
 }
 
-function enrichComponent(node: any, body: string) {
+function _enrichComponent(node: any, body: string) {
   // params
   const params: any[] = [];
   const paramRe = /\bparam\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=\n]+?)(?:\s*=\s*([^\n]+))?(?=\n|$)/g;
@@ -455,7 +456,7 @@ function enrichComponent(node: any, body: string) {
   }
 }
 
-function enrichStore(node: any, body: string) {
+function _enrichStore(node: any, body: string) {
   node.state = parseStateDecls(body);
 }
 
@@ -498,7 +499,7 @@ function parseUi(src: string): UINode {
         // closing
   const end = src.indexOf('>', i + 2);
   if (end === -1) { i++; continue; }
-        const tag = src.slice(i + 2, end).trim();
+  const _tag = src.slice(i + 2, end).trim();
         const node = stack.pop();
         i = end + 1;
         if (!stack.length && node) root = node;
@@ -509,8 +510,8 @@ function parseUi(src: string): UINode {
         const raw = src.slice(i + 1, end);
         const selfClose = raw.endsWith('/');
         const parts = raw.replace(/\/\s*$/, '').trim().split(/\s+/);
-        const tag = parts.shift() as string;
-        const attrs = parseAttrs(raw.slice(tag.length));
+  const tag = parts.shift() as string;
+  const attrs = parseAttrs(raw.slice(tag.length));
     const el: ElementNode = { type: 'element', tag, attrs, children: [] };
   if (stack.length) stack[stack.length - 1].children.push(el);
         stack.push(el);

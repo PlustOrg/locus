@@ -32,13 +32,20 @@ function stripUiWrapper(ui?: string): string | undefined {
 function mapPropType(t: any): string {
   if (!t) return 'any';
   if (t.kind === 'primitive') {
-    if ((t.name || '').toLowerCase() === 'slot') return 'React.ReactNode';
+    const n = String(t.name || '').toLowerCase();
+    if (n === 'string' || n === 'text') return 'string';
+    if (n === 'integer' || n === 'decimal' || n === 'number') return 'number';
+    if (n === 'boolean') return 'boolean';
+    if (n === 'datetime' || n === 'date') return 'string';
+    if (n === 'json' || n === 'any') return 'any';
+    if (n === 'slot' || n === 'node' || n === 'children') return 'React.ReactNode';
     return 'any';
   }
+  if (t.kind === 'list') return 'any[]';
   return 'any';
 }
 
-function transformUi(ui: string, state: any[]): string {
+function transformUi(ui: string, _state: any[]): string {
   let out = ui;
   // events: on:click -> onClick, on:submit -> onSubmit, etc.
   out = out.replace(/on:([a-zA-Z]+)/g, (_, ev) => `on${capitalize(ev)}`);
@@ -124,7 +131,7 @@ function renderUiAst(node: UINode): string {
   return renderElement(el.tag, el.attrs || {}, el.children || [], false);
 }
 
-function renderElement(tag: string, attrs: Record<string, UIAttr>, children: UINode[], alreadyHasKey: boolean): string {
+function renderElement(tag: string, attrs: Record<string, UIAttr>, children: UINode[], _alreadyHasKey: boolean): string {
   const attrStrs: string[] = [];
   for (const [k, v] of Object.entries(attrs)) {
     if (k === 'forEach') continue;

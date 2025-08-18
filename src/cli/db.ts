@@ -1,10 +1,10 @@
 import { exec } from 'child_process';
 
-export async function runDbMigrate(opts: { cwd?: string }) {
+export async function runDbMigrate(_opts: { cwd?: string }) {
   await execAsync('npx prisma migrate dev');
 }
 
-export async function runDbStudio(opts: { cwd?: string }) {
+export async function runDbStudio(_opts: { cwd?: string }) {
   await execAsync('npx prisma studio');
 }
 
