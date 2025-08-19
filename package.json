@@ -1,5 +1,5 @@
 {
-  "name": "locus",
+  "name": "@plustorg/locus",
   "version": "0.1.0",
   "main": "dist/index.js",
   "directories": {
@@ -23,15 +23,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Jacques2Marais/locus.git"
+    "url": "git+https://github.com/PlustOrg/locus.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Jacques2Marais/locus/issues"
+    "url": "https://github.com/PlustOrg/locus/issues"
   },
-  "homepage": "https://github.com/Jacques2Marais/locus#readme",
+  "homepage": "https://github.com/PlustOrg/locus#readme",
   "description": "",
   "files": [
     "dist",
