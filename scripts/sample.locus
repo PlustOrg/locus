@@ -1,3 +1,15 @@
-database { entity User { email String (unique) name String } }
-page Home { state { greeting: String = "Hello" } on load { /* noop */ } action doThing() { /* noop */ } ui { <div>{greeting}</div> } }
-component Card { param title: String ui { <div>{title}</div> } }
+database {
+	entity User {
+        email: String (unique)
+        name: String
+        age: Integer (default: 0)
+        active: Boolean (default: true)
+        bio: Text
+	}
+	entity Post {
+        title: String
+        content: Text
+        createdAt: DateTime (default: now())
+        draft: Boolean (default: false)
+	}
+}
