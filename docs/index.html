@@ -6,6 +6,9 @@
   <title>Locus — Generate full‑stack apps from a single source</title>
   <meta name="description" content="Locus is a source‑to‑source compiler that turns .locus files into a full‑stack web app (Next.js + Express)." />
   <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0b0c0f;
@@ -13,54 +16,66 @@
       --panel-2: #1a1d24;
       --txt: #e9eef5;
       --muted: #a7b0be;
-      --brand: #7c5cff;
+      --brand: #8a70ff; /* Lighter for more pop */
       --brand-2: #38b6ff;
       --ok: #00d68f;
       --warn: #ffd166;
       --danger: #ff6b6b;
-      --ring: rgba(124,92,255,.45);
+      --ring: rgba(138, 112, 255, .3);
       --shadow: 0 10px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
-      --radius: 14px;
+      --radius: 16px; /* Slightly larger radius */
       --code-bg: #0f1218;
-      --grid-gap: 20px;
+      --grid-gap: 24px; /* Increased gap */
+      --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+      --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     [data-theme="light"] {
-      --bg: #f6f7fb;
+      --bg: #f8f9fc;
       --panel: #ffffff;
       --panel-2: #f3f5fb;
       --txt: #0c1320;
       --muted: #556070;
       --brand: #5b34ff;
       --brand-2: #0077ff;
-      --ring: rgba(91,52,255,.28);
+      --ring: rgba(91,52,255,.2);
       --code-bg: #0e1116;
       --shadow: 0 8px 24px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.06);
     }
 
     html,body { height: 100%; }
     body {
-      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+      margin: 0; font-family: var(--font-sans);
       background: radial-gradient(1200px 800px at 85% -10%, var(--brand-2) 0%, transparent 60%),
                   radial-gradient(1000px 700px at -10% -10%, var(--brand) 0%, transparent 60%),
                   var(--bg);
       color: var(--txt);
+      transition: background .3s ease, color .3s ease;
     }
-    a { color: var(--brand); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    a { color: var(--brand); text-decoration: none; transition: color .2s ease; }
+    a:hover { text-decoration: none; color: var(--brand-2); }
 
     .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
 
     /* Nav */
     .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: .2px; }
-    .brand .logo { width: 36px; height: 36px; border-radius: 10px; background:
-      conic-gradient(from 210deg at 50% 50%, var(--brand) 0 40%, var(--brand-2) 43% 70%, #00d68f 73% 100%);
+    .brand .logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: conic-gradient(from 210deg at 50% 50%, var(--brand) 0 40%, var(--brand-2) 43% 70%, #00d68f 73% 100%);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 10px 22px rgba(0,0,0,.25);
+      transition: transform .4s ease;
     }
+    .brand:hover .logo { transform: rotate(180deg); }
     .nav-cta { display: flex; gap: 10px; align-items: center; }
     .btn, button {
       appearance: none; border: 0; background: var(--brand); color: #fff; padding: 10px 14px; border-radius: 10px;
       font-weight: 600; letter-spacing: .2px; box-shadow: 0 6px 18px rgba(124,92,255,.35);
+      transition: transform .2s ease, box-shadow .2s ease;
+      cursor: pointer;
+    }
+    .btn:hover, button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(124,92,255,.45);
     }
     .btn.secondary { background: var(--panel); color: var(--txt); box-shadow: var(--shadow); }
     .btn.ghost { background: transparent; color: var(--txt); border: 1px solid rgba(124,92,255,.35); }
@@ -81,7 +96,11 @@
     }
 
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gap); margin-top: 36px; }
-    .card { padding: 18px 18px; }
+    .card { padding: 22px; transition: transform .3s ease, box-shadow .3s ease; }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow), 0 0 20px var(--ring);
+    }
     .card h3 { margin: 6px 0 8px; font-size: 16px; letter-spacing: .3px; }
     .card p { margin: 0; color: var(--muted); font-size: 14px; }
     .card .icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; background: rgba(124,92,255,.18); color: #fff; }
@@ -91,7 +110,14 @@
     .code { background: var(--code-bg); border-radius: var(--radius); border: 1px solid rgba(124,92,255,.18); box-shadow: var(--shadow); }
     .code-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; color: var(--muted); font-size: 13px; border-bottom: 1px solid rgba(124,92,255,.18); }
     .copy { font-size: 12px; background: transparent; border: 1px solid rgba(255,255,255,.2); padding: 6px 8px; border-radius: 8px; color: var(--txt); cursor: pointer; }
-    .code pre { padding: 14px; overflow: auto; color: #e6edf3; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.5; font-size: 13.5px; }
+    .code pre { padding: 14px; overflow: auto; color: #e6edf3; font-family: var(--font-mono); line-height: 1.5; font-size: 13.5px; }
+    .code .token-keyword { color: #c678dd; }
+    .code .token-type { color: #56b6c2; }
+    .code .token-string { color: #98c379; }
+    .code .token-number { color: #d19a66; }
+    .code .token-comment { color: #7f848e; font-style: italic; }
+    .code .token-punct { color: #abb2bf; }
+    .code .token-attr { color: #e06c75; }
 
     /* Sections */
     .section { margin-top: 56px; }
@@ -103,6 +129,16 @@
 
     .footer { margin-top: 64px; padding: 22px; text-align: center; color: var(--muted); }
 
+    .animated {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .animated.fade-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     @media (max-width: 980px) {
       .hero { grid-template-columns: 1fr; }
       .grid { grid-template-columns: 1fr; }
@@ -112,18 +148,20 @@
 </head>
 <body>
   <div class="container">
-    <nav class="nav">
+    <nav class="nav animated">
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <span>Locus</span>
       </div>
       <div class="nav-cta">
         <a class="btn ghost" href="https://github.com/PlustOrg/locus" target="_blank" rel="noreferrer">GitHub</a>
-        <button class="theme-toggle" id="themeBtn" aria-label="Toggle theme">Toggle theme</button>
+        <button class="theme-toggle" id="themeBtn" aria-label="Toggle theme">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
       </div>
     </nav>
 
-    <header class="hero">
+    <header class="hero animated">
       <div>
         <h1 class="h-title">Generate full‑stack apps from a single source.</h1>
         <p class="h-sub">Locus is a source‑to‑source compiler that turns <code>.locus</code> files into a production‑ready Next.js frontend and an Express API. Typed entities, declarative UI, and design tokens—compiled.</p>
@@ -132,29 +170,29 @@
           <a class="btn secondary" href="https://www.npmjs.com/package/locus" target="_blank" rel="noreferrer">npm i locus</a>
         </div>
         <div class="section kpis">
-          <div class="panel kpi"><strong>TypeScript</strong><span>First‑class toolchain</span></div>
-          <div class="panel kpi"><strong>Next.js</strong><span>App router scaffolding</span></div>
-          <div class="panel kpi"><strong>Express</strong><span>CRUD routes and validation</span></div>
-          <div class="panel kpi"><strong>Design System</strong><span>CSS variables generated</span></div>
+          <div class="panel kpi animated"><strong>TypeScript</strong><span>First‑class toolchain</span></div>
+          <div class="panel kpi animated" style="transition-delay: .1s"><strong>Next.js</strong><span>App router scaffolding</span></div>
+          <div class="panel kpi animated" style="transition-delay: .2s"><strong>Express</strong><span>CRUD routes and validation</span></div>
+          <div class="panel kpi animated" style="transition-delay: .3s"><strong>Design System</strong><span>CSS variables generated</span></div>
         </div>
       </div>
-      <div>
+      <div class="animated" style="transition-delay: .1s">
         <div class="code panel">
           <div class="code-header">
             <span>locus example</span>
             <button class="copy" data-copy>Copy</button>
           </div>
-<pre><code>database {
-  entity Post {
-    title: String @unique
-    published: Boolean @default(false)
-  }
-}
+<pre><code><span class="token-keyword">database</span> <span class="token-punct">{</span>
+  <span class="token-keyword">entity</span> <span class="token-type">Post</span> <span class="token-punct">{</span>
+    <span class="token-attr">title</span><span class="token-punct">:</span> <span class="token-type">String</span> <span class="token-attr">@unique</span>
+    <span class="token-attr">published</span><span class="token-punct">:</span> <span class="token-type">Boolean</span> <span class="token-attr">@default</span><span class="token-punct">(</span><span class="token-number">false</span><span class="token-punct">)</span>
+  <span class="token-punct">}</span>
+<span class="token-punct">}</span>
 
-page Home {
-  state { greeting: String = "Hello, Locus!" }
-  ui { <div>{greeting}</div> }
-}
+<span class="token-keyword">page</span> <span class="token-type">Home</span> <span class="token-punct">{</span>
+  <span class="token-keyword">state</span> <span class="token-punct">{</span> <span class="token-attr">greeting</span><span class="token-punct">:</span> <span class="token-type">String</span> <span class="token-punct">=</span> <span class="token-string">"Hello, Locus!"</span> <span class="token-punct">}</span>
+  <span class="token-keyword">ui</span> <span class="token-punct">{</span> <span class="token-punct">&lt;</span>div<span class="token-punct">&gt;</span><span class="token-punct">{</span>greeting<span class="token-punct">}</span><span class="token-punct">&lt;/</span>div<span class="token-punct">&gt;</span> <span class="token-punct">}</span>
+<span class="token-punct">}</span>
 </code></pre>
         </div>
         <div class="section" style="margin-top:14px">
@@ -163,49 +201,49 @@ page Home {
               <span>CLI</span>
               <button class="copy" data-copy>Copy</button>
             </div>
-<pre><code># Build from .locus files to /generated
-locus build --src . --out generated
+<pre><code><span class="token-comment"># Build from .locus files to /generated</span>
+<span class="token-keyword">locus</span> build <span class="token-attr">--src</span> . <span class="token-attr">--out</span> generated
 
-# Dev mode with watch
-locus dev --src .
+<span class="token-comment"># Dev mode with watch</span>
+<span class="token-keyword">locus</span> dev <span class="token-attr">--src</span> .
 
-# New project
-locus new my-app
+<span class="token-comment"># New project</span>
+<span class="token-keyword">locus</span> new my-app
 </code></pre>
           </div>
         </div>
       </div>
     </header>
 
-    <section class="section" id="getting-started">
+    <section class="section animated" id="getting-started">
       <h2>Why Locus?</h2>
       <div class="grid">
-        <div class="card panel">
+        <div class="card panel animated">
           <div class="icon">🧠</div>
           <h3>Declarative and typed</h3>
           <p>Entities, UI, and actions are strongly‑typed. The compiler validates and generates predictable code.</p>
         </div>
-        <div class="card panel">
+        <div class="card panel animated" style="transition-delay: .1s">
           <div class="icon">⚡</div>
           <h3>Fast toolchain</h3>
           <p>Chevrotain parser + Jest tests + incremental builds. Designed for speed and iteration.</p>
         </div>
-        <div class="card panel">
+        <div class="card panel animated" style="transition-delay: .2s">
           <div class="icon">🧩</div>
           <h3>Full‑stack output</h3>
           <p>Next.js pages/components, Express routes, Prisma schema, and theme CSS tokens—all generated.</p>
         </div>
-        <div class="card panel">
+        <div class="card panel animated" style="transition-delay: .3s">
           <div class="icon">🎛️</div>
           <h3>Design system aware</h3>
           <p>Colors, spacing, radii, and typography become CSS variables your app can consume directly.</p>
         </div>
-        <div class="card panel">
+        <div class="card panel animated" style="transition-delay: .4s">
           <div class="icon">🧪</div>
           <h3>TDD‑friendly</h3>
           <p>Generators return strings—easy to snapshot test for stable outputs and safe refactors.</p>
         </div>
-        <div class="card panel">
+        <div class="card panel animated" style="transition-delay: .5s">
           <div class="icon">🚀</div>
           <h3>CLI that scales</h3>
           <p>Build, dev, new, db, deploy—scriptable commands that fit CI and local workflows.</p>
@@ -213,31 +251,31 @@ locus new my-app
       </div>
     </section>
 
-    <section class="section">
+    <section class="section animated">
       <h2>Install</h2>
       <div class="code panel">
         <div class="code-header"><span>npm</span><button class="copy" data-copy>Copy</button></div>
-<pre><code>npm i -g locus
-# or project‑local
-npm i -D locus
+<pre><code><span class="token-keyword">npm</span> i <span class="token-attr">-g</span> locus
+<span class="token-comment"># or project‑local</span>
+<span class="token-keyword">npm</span> i <span class="token-attr">-D</span> locus
 </code></pre>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section animated">
       <h2>Quickstart</h2>
       <div class="code panel">
         <div class="code-header"><span>commands</span><button class="copy" data-copy>Copy</button></div>
-<pre><code># From your project root with .locus files
-locus build --src . --out generated
+<pre><code><span class="token-comment"># From your project root with .locus files</span>
+<span class="token-keyword">locus</span> build <span class="token-attr">--src</span> . <span class="token-attr">--out</span> generated
 
-# Start dev mode with watch
-locus dev --src .
+<span class="token-comment"># Start dev mode with watch</span>
+<span class="token-keyword">locus</span> dev <span class="token-attr">--src</span> .
 </code></pre>
       </div>
     </section>
 
-    <footer class="footer">
+    <footer class="footer animated">
       <div>© <span id="year"></span> Locus • Built by the community • <a href="https://github.com/PlustOrg/locus" target="_blank" rel="noreferrer">GitHub</a></div>
     </footer>
   </div>
@@ -249,7 +287,14 @@ locus dev --src .
     // Theme toggle
     const themeBtn = $('#themeBtn');
     const getPref = () => localStorage.getItem('locus-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    const setTheme = (t) => { document.documentElement.setAttribute('data-theme', t); localStorage.setItem('locus-theme', t); };
+    const setTheme = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      localStorage.setItem('locus-theme', t);
+      const icon = t === 'light'
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+      if (themeBtn) themeBtn.innerHTML = icon;
+    };
     setTheme(getPref());
     themeBtn?.addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
 
@@ -267,6 +312,17 @@ locus dev --src .
 
     // Year
     $('#year').textContent = new Date().getFullYear();
+
+    // Scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('fade-in');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    $$('.animated').forEach(el => observer.observe(el));
   </script>
 </body>
 </html>
