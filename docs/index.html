@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Locus — Generate full‑stack apps from a single source</title>
-  <meta name="description" content="Locus is a source‑to‑source compiler that turns .locus files into a full‑stack web app (Next.js + Express)." />
+  <title>Locus — Generate full-stack apps from a single source</title>
+  <meta name="description" content="Locus is a source-to-source compiler that turns .locus files into a full-stack web app (Next.js + Express)." />
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -78,7 +78,9 @@
     .btn.primary { background: var(--brand); color: #fff; box-shadow: 0 6px 18px rgba(124,92,255,.35); }
     .btn.primary:hover { background: var(--brand-2); }
     .btn.secondary { background: var(--panel); border: 1px solid rgba(124,92,255,.2); color: var(--txt); }
+    .btn.secondary:hover { border-color: var(--brand); color: var(--brand); }
     .btn.ghost { background: transparent; border: 1px solid rgba(124,92,255,.35); color: var(--txt); }
+    .btn.ghost:hover { border-color: var(--brand-2); color: var(--brand-2); }
 
     /* Hero */
     .hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--grid-gap); align-items: center; margin-top: 48px; }
@@ -116,6 +118,15 @@
     .copy { font-size: 12px; background: transparent; border: 1px solid rgba(255,255,255,.2); padding: 6px 10px; border-radius: 8px; color: var(--txt); cursor: pointer; transition: all .2s ease; }
     .copy:hover { background: rgba(255,255,255,.05); }
 
+    /* Syntax highlighting */
+    .token-keyword { color: #c678dd; }
+    .token-type { color: #56b6c2; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #7f848e; font-style: italic; }
+    .token-punct { color: #abb2bf; }
+    .token-attr { color: #e06c75; }
+
     /* Footer */
     .footer { margin-top: 80px; padding: 28px; text-align: center; color: var(--muted); font-size: 14px; }
 
@@ -143,17 +154,33 @@
 
     <header class="hero animated fade-in">
       <div>
-        <h1 class="h-title">Generate full‑stack apps from a single source.</h1>
-        <p class="h-sub">Locus compiles <code>.locus</code> files into a production‑ready Next.js frontend and Express API. Typed entities, declarative UI, and design tokens—compiled automatically.</p>
+        <h1 class="h-title">Generate full-stack apps from a single source.</h1>
+        <p class="h-sub">Locus compiles <code>.locus</code> files into a production-ready Next.js frontend and Express API. Typed entities, declarative UI, and design tokens—compiled automatically.</p>
         <div class="h-cta">
           <a class="btn primary" href="#getting-started">Get started</a>
           <a class="btn secondary" href="https://www.npmjs.com/package/@plustorg/locus" target="_blank">npm i @plustorg/locus</a>
         </div>
         <div class="kpis">
-          <div class="panel kpi"><strong>TypeScript</strong><span>First‑class toolchain</span></div>
+          <div class="panel kpi"><strong>TypeScript</strong><span>First-class toolchain</span></div>
           <div class="panel kpi"><strong>Next.js</strong><span>App router scaffolding</span></div>
           <div class="panel kpi"><strong>Express</strong><span>CRUD routes & validation</span></div>
           <div class="panel kpi"><strong>Design System</strong><span>CSS tokens generated</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="code panel">
+          <div class="code-header"><span>locus</span><button class="copy" data-copy>Copy</button></div>
+<pre><code><span class="token-keyword">database</span> <span class="token-punct">{</span>
+  <span class="token-keyword">entity</span> <span class="token-type">Post</span> <span class="token-punct">{</span>
+    <span class="token-attr">title</span>: <span class="token-type">String</span> <span class="token-attr">@unique</span>
+    <span class="token-attr">published</span>: <span class="token-type">Boolean</span> <span class="token-attr">@default</span>(<span class="token-number">false</span>)
+  <span class="token-punct">}</span>
+<span class="token-punct">}</span>
+
+<span class="token-keyword">page</span> <span class="token-type">Home</span> <span class="token-punct">{</span>
+  <span class="token-keyword">state</span> { <span class="token-attr">greeting</span>: <span class="token-type">String</span> = <span class="token-string">"Hello, Locus!"</span> }
+  <span class="token-keyword">ui</span> { <span class="token-punct">&lt;</span>div<span class="token-punct">&gt;</span>{greeting}<span class="token-punct">&lt;/</span>div<span class="token-punct">&gt;</span> }
+<span class="token-punct">}</span></code></pre>
         </div>
       </div>
     </header>
@@ -163,9 +190,9 @@
       <div class="grid">
         <div class="card panel"><div class="icon">🧠</div><h3>Declarative & typed</h3><p>Entities, UI, and actions are strongly typed. The compiler validates and generates predictable code.</p></div>
         <div class="card panel"><div class="icon">⚡</div><h3>Fast toolchain</h3><p>Chevrotain parser, Jest tests, and incremental builds. Designed for speed and iteration.</p></div>
-        <div class="card panel"><div class="icon">🧩</div><h3>Full‑stack output</h3><p>Next.js components, Express routes, Prisma schema, and CSS tokens—all generated.</p></div>
+        <div class="card panel"><div class="icon">🧩</div><h3>Full-stack output</h3><p>Next.js components, Express routes, Prisma schema, and CSS tokens—all generated.</p></div>
         <div class="card panel"><div class="icon">🎛️</div><h3>Design system aware</h3><p>Colors, spacing, radii, and typography become CSS variables your app consumes directly.</p></div>
-        <div class="card panel"><div class="icon">🧪</div><h3>TDD‑friendly</h3><p>Generators return strings—easy to snapshot test for stable outputs and safe refactors.</p></div>
+        <div class="card panel"><div class="icon">🧪</div><h3>TDD-friendly</h3><p>Generators return strings—easy to snapshot test for stable outputs and safe refactors.</p></div>
         <div class="card panel"><div class="icon">🚀</div><h3>CLI that scales</h3><p>Build, dev, new, db, deploy—scriptable commands that fit CI and local workflows.</p></div>
       </div>
     </section>
@@ -174,9 +201,9 @@
       <h2>Install</h2>
       <div class="code panel">
         <div class="code-header"><span>npm</span><button class="copy" data-copy>Copy</button></div>
-        <pre><code>npm i -g @plustorg/locus
-# or project‑local
-npm i -D @plustorg/locus</code></pre>
+        <pre><code><span class="token-keyword">npm</span> i <span class="token-attr">-g</span> @plustorg/locus
+<span class="token-comment"># or project-local</span>
+<span class="token-keyword">npm</span> i <span class="token-attr">-D</span> @plustorg/locus</code></pre>
       </div>
     </section>
 
@@ -184,11 +211,11 @@ npm i -D @plustorg/locus</code></pre>
       <h2>Quickstart</h2>
       <div class="code panel">
         <div class="code-header"><span>commands</span><button class="copy" data-copy>Copy</button></div>
-        <pre><code># From your project root with .locus files
-locus build --src . --out generated
+        <pre><code><span class="token-comment"># From your project root with .locus files</span>
+<span class="token-keyword">locus</span> build <span class="token-attr">--src</span> . <span class="token-attr">--out</span> generated
 
-# Start dev mode with watch
-locus dev --src .</code></pre>
+<span class="token-comment"># Start dev mode with watch</span>
+<span class="token-keyword">locus</span> dev <span class="token-attr">--src</span> .</code></pre>
       </div>
     </section>
 
