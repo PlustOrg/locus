@@ -1,6 +1,6 @@
 import { readdirSync, writeFileSync, mkdirSync, existsSync, readFileSync, statSync } from 'fs';
 import { promises as fsp } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { validateUnifiedAst } from '../validator/validate';
@@ -56,7 +56,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     const limit = pLimit(4);
     await Promise.all(entries.map(([p, c]) => limit(async () => {
       const full = join(outDir, p);
-      const dir = full.split('/').slice(0, -1).join('/');
+      const dir = dirname(full);
       await safeMkdir(dir);
       await safeWrite(full, c);
     })));
@@ -96,7 +96,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     const nextFiles = generateNextApp(merged.pages as any);
     for (const [rel, content] of Object.entries(nextFiles)) {
       const full = join(outDir, rel);
-      const dir = full.split('/').slice(0, -1).join('/');
+      const dir = dirname(full);
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       writeFileSync(full, content);
     }
