@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Locus — Generate full‑stack apps from a single source</title>
+  <meta name="description" content="Locus is a source‑to‑source compiler that turns .locus files into a full‑stack web app (Next.js + Express)." />
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    :root {
+      --bg: #0b0c0f;
+      --panel: #12141a;
+      --panel-2: #1a1d24;
+      --txt: #e9eef5;
+      --muted: #a7b0be;
+      --brand: #7c5cff;
+      --brand-2: #38b6ff;
+      --ok: #00d68f;
+      --warn: #ffd166;
+      --danger: #ff6b6b;
+      --ring: rgba(124,92,255,.45);
+      --shadow: 0 10px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+      --radius: 14px;
+      --code-bg: #0f1218;
+      --grid-gap: 20px;
+    }
+    [data-theme="light"] {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel-2: #f3f5fb;
+      --txt: #0c1320;
+      --muted: #556070;
+      --brand: #5b34ff;
+      --brand-2: #0077ff;
+      --ring: rgba(91,52,255,.28);
+      --code-bg: #0e1116;
+      --shadow: 0 8px 24px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.06);
+    }
+
+    html,body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+      background: radial-gradient(1200px 800px at 85% -10%, var(--brand-2) 0%, transparent 60%),
+                  radial-gradient(1000px 700px at -10% -10%, var(--brand) 0%, transparent 60%),
+                  var(--bg);
+      color: var(--txt);
+    }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+
+    /* Nav */
+    .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: .2px; }
+    .brand .logo { width: 36px; height: 36px; border-radius: 10px; background:
+      conic-gradient(from 210deg at 50% 50%, var(--brand) 0 40%, var(--brand-2) 43% 70%, #00d68f 73% 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.2), 0 10px 22px rgba(0,0,0,.25);
+    }
+    .nav-cta { display: flex; gap: 10px; align-items: center; }
+    .btn, button {
+      appearance: none; border: 0; background: var(--brand); color: #fff; padding: 10px 14px; border-radius: 10px;
+      font-weight: 600; letter-spacing: .2px; box-shadow: 0 6px 18px rgba(124,92,255,.35);
+    }
+    .btn.secondary { background: var(--panel); color: var(--txt); box-shadow: var(--shadow); }
+    .btn.ghost { background: transparent; color: var(--txt); border: 1px solid rgba(124,92,255,.35); }
+
+    .theme-toggle { background: var(--panel); color: var(--txt); border: 1px solid rgba(124,92,255,.2); box-shadow: var(--shadow); }
+
+    /* Hero */
+    .hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--grid-gap); align-items: center; margin-top: 36px; }
+    .h-title { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; margin: 0 0 14px; }
+    .h-sub { font-size: clamp(16px, 1.8vw, 19px); color: var(--muted); margin: 0 0 22px; }
+    .h-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)) , var(--panel);
+      border: 1px solid rgba(124,92,255,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--grid-gap); margin-top: 36px; }
+    .card { padding: 18px 18px; }
+    .card h3 { margin: 6px 0 8px; font-size: 16px; letter-spacing: .3px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; }
+    .card .icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; background: rgba(124,92,255,.18); color: #fff; }
+
+    /* Code block */
+    pre { margin: 0; }
+    .code { background: var(--code-bg); border-radius: var(--radius); border: 1px solid rgba(124,92,255,.18); box-shadow: var(--shadow); }
+    .code-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; color: var(--muted); font-size: 13px; border-bottom: 1px solid rgba(124,92,255,.18); }
+    .copy { font-size: 12px; background: transparent; border: 1px solid rgba(255,255,255,.2); padding: 6px 8px; border-radius: 8px; color: var(--txt); cursor: pointer; }
+    .code pre { padding: 14px; overflow: auto; color: #e6edf3; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.5; font-size: 13.5px; }
+
+    /* Sections */
+    .section { margin-top: 56px; }
+    .section h2 { margin: 0 0 12px; font-size: clamp(22px, 3vw, 28px); }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--grid-gap); }
+    .kpi { text-align: center; padding: 16px; }
+    .kpi strong { font-size: 28px; display: block; }
+    .kpi span { color: var(--muted); font-size: 13px; }
+
+    .footer { margin-top: 64px; padding: 22px; text-align: center; color: var(--muted); }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <span>Locus</span>
+      </div>
+      <div class="nav-cta">
+        <a class="btn ghost" href="https://github.com/PlustOrg/locus" target="_blank" rel="noreferrer">GitHub</a>
+        <button class="theme-toggle" id="themeBtn" aria-label="Toggle theme">Toggle theme</button>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <h1 class="h-title">Generate full‑stack apps from a single source.</h1>
+        <p class="h-sub">Locus is a source‑to‑source compiler that turns <code>.locus</code> files into a production‑ready Next.js frontend and an Express API. Typed entities, declarative UI, and design tokens—compiled.</p>
+        <div class="h-cta">
+          <a class="btn" href="#getting-started">Get started</a>
+          <a class="btn secondary" href="https://www.npmjs.com/package/locus" target="_blank" rel="noreferrer">npm i locus</a>
+        </div>
+        <div class="section kpis">
+          <div class="panel kpi"><strong>TypeScript</strong><span>First‑class toolchain</span></div>
+          <div class="panel kpi"><strong>Next.js</strong><span>App router scaffolding</span></div>
+          <div class="panel kpi"><strong>Express</strong><span>CRUD routes and validation</span></div>
+          <div class="panel kpi"><strong>Design System</strong><span>CSS variables generated</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="code panel">
+          <div class="code-header">
+            <span>locus example</span>
+            <button class="copy" data-copy>Copy</button>
+          </div>
+<pre><code>database {
+  entity Post {
+    title: String @unique
+    published: Boolean @default(false)
+  }
+}
+
+page Home {
+  state { greeting: String = "Hello, Locus!" }
+  ui { <div>{greeting}</div> }
+}
+</code></pre>
+        </div>
+        <div class="section" style="margin-top:14px">
+          <div class="code panel">
+            <div class="code-header">
+              <span>CLI</span>
+              <button class="copy" data-copy>Copy</button>
+            </div>
+<pre><code># Build from .locus files to /generated
+locus build --src . --out generated
+
+# Dev mode with watch
+locus dev --src .
+
+# New project
+locus new my-app
+</code></pre>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="section" id="getting-started">
+      <h2>Why Locus?</h2>
+      <div class="grid">
+        <div class="card panel">
+          <div class="icon">🧠</div>
+          <h3>Declarative and typed</h3>
+          <p>Entities, UI, and actions are strongly‑typed. The compiler validates and generates predictable code.</p>
+        </div>
+        <div class="card panel">
+          <div class="icon">⚡</div>
+          <h3>Fast toolchain</h3>
+          <p>Chevrotain parser + Jest tests + incremental builds. Designed for speed and iteration.</p>
+        </div>
+        <div class="card panel">
+          <div class="icon">🧩</div>
+          <h3>Full‑stack output</h3>
+          <p>Next.js pages/components, Express routes, Prisma schema, and theme CSS tokens—all generated.</p>
+        </div>
+        <div class="card panel">
+          <div class="icon">🎛️</div>
+          <h3>Design system aware</h3>
+          <p>Colors, spacing, radii, and typography become CSS variables your app can consume directly.</p>
+        </div>
+        <div class="card panel">
+          <div class="icon">🧪</div>
+          <h3>TDD‑friendly</h3>
+          <p>Generators return strings—easy to snapshot test for stable outputs and safe refactors.</p>
+        </div>
+        <div class="card panel">
+          <div class="icon">🚀</div>
+          <h3>CLI that scales</h3>
+          <p>Build, dev, new, db, deploy—scriptable commands that fit CI and local workflows.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Install</h2>
+      <div class="code panel">
+        <div class="code-header"><span>npm</span><button class="copy" data-copy>Copy</button></div>
+<pre><code>npm i -g locus
+# or project‑local
+npm i -D locus
+</code></pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Quickstart</h2>
+      <div class="code panel">
+        <div class="code-header"><span>commands</span><button class="copy" data-copy>Copy</button></div>
+<pre><code># From your project root with .locus files
+locus build --src . --out generated
+
+# Start dev mode with watch
+locus dev --src .
+</code></pre>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>© <span id="year"></span> Locus • Built by the community • <a href="https://github.com/PlustOrg/locus" target="_blank" rel="noreferrer">GitHub</a></div>
+    </footer>
+  </div>
+
+  <script>
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    // Theme toggle
+    const themeBtn = $('#themeBtn');
+    const getPref = () => localStorage.getItem('locus-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const setTheme = (t) => { document.documentElement.setAttribute('data-theme', t); localStorage.setItem('locus-theme', t); };
+    setTheme(getPref());
+    themeBtn?.addEventListener('click', () => setTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
+
+    // Copy buttons
+    $$('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code').querySelector('pre');
+        const text = pre?.innerText || '';
+        navigator.clipboard.writeText(text).then(() => {
+          const old = btn.textContent; btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = old, 1200);
+        });
+      });
+    });
+
+    // Year
+    $('#year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
