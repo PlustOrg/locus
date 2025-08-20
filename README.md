@@ -135,7 +135,7 @@ Design system tokens (e.g., colors, fonts) are defined directly within `.locus` 
 Interested in contributing to the Locus compiler itself?
 
 *   **Technology Stack:** TypeScript, Jest, Chevrotain, Commander.js
-*   **Development Plan:** The project follows a strict, test-driven development process outlined in `docs/development-plan.md`.
+*   **Development Plan:** The project follows a strict, test-driven development process outlined in `planning/development-plan.md`.
 
 To get started:
 1.  Clone the repository.
@@ -144,16 +144,16 @@ To get started:
 
 ## Documentation
 
-All documentation is located in the `docs/` directory.
+All documentation is located in the `planning/` directory.
 
-*   **Language Reference:** `docs/language/`
-*   **Toolchain & CLI:** `docs/toolchain/`
-*   **Design System:** `docs/design-system/`
-*   **Architecture:** `docs/architecture.md`
+*   **Language Reference:** `planning/language/`
+*   **Toolchain & CLI:** `planning/toolchain/`
+*   **Design System:** `planning/design-system/`
+*   **Architecture:** `planning/architecture.md`
 
 ## Contributing
 
-We welcome contributions! Please see the open items in `docs/implementation-checklist.md`. When contributing, please ensure you add tests for new features and that code generation remains deterministic.
+We welcome contributions! Please see the open items in `planning/implementation-checklist.md`. When contributing, please ensure you add tests for new features and that code generation remains deterministic.
 
 ## License
 
