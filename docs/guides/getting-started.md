@@ -1,4 +1,3 @@
-````markdown
 # Getting Started with Locus
 
 This guide will walk you through the entire process of installing the Locus CLI, creating a new project, and running the development server. By the end, you'll have a running full-stack application generated from just a few lines of Locus code.
@@ -113,4 +112,3 @@ From here, you can explore more advanced topics:
 *   **[Building UIs](./ui-syntax.md):** Learn how to create pages and components.
 *   **[Data Relationships](./data-relationships.md):** Define how your data models connect to each other.
 *   **[Theming](./theming.md):** Customize the look and feel of your application.
-````

@@ -1,4 +1,3 @@
-````markdown
 # Styling and Layout
 
 Locus provides a powerful and streamlined system for styling your application. It combines a token-based design system with a set of flexible layout components, allowing you to build beautiful, consistent, and responsive interfaces with minimal effort.
@@ -170,4 +169,3 @@ component SpecialButton {
   }
 }
 ```
-````

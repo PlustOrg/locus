@@ -1,4 +1,3 @@
-````markdown
 # Authentication Guide
 
 Locus is designed to make common web application patterns, like user authentication, as simple as possible. While Locus doesn't have a single "auth" command, it provides all the necessary building blocks to create a robust and secure authentication system.
@@ -217,4 +216,3 @@ page Dashboard {
 ```
 
 This guide provides the fundamental structure for authentication. For a production system, you would enhance this with a TypeScript plugin to handle secure password hashing and session management (e.g., using JWTs).
-````

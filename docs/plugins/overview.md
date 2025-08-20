@@ -1,4 +1,3 @@
-````markdown
 # Plugin System Overview
 
 While Locus is designed to be a powerful, all-in-one toolchain, it cannot anticipate every possible need or third-party integration. To prevent hitting a "glass ceiling," Locus is built with an extensible plugin architecture. Plugins allow you to enhance the Locus compiler and CLI with new capabilities, from adding support for new services to creating shareable code templates.
@@ -105,4 +104,3 @@ For a detailed guide, see **[Creating Blueprints](./blueprints.md)**.
 | Sharing a common feature pattern      | No                      | **Yes**                             |
 | Stamping out boilerplate Locus code   | No                      | **Yes**                             |
 | Creating a starter kit (e.g., blog)   | No                      | **Yes**                             |
-````

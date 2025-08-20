@@ -1,4 +1,3 @@
-````markdown
 # Authoring TypeScript Plugins
 
 TypeScript plugins provide the deepest level of integration with the Locus toolchain. They are the ideal solution for adding complex functionality, integrating with third-party services, or modifying the build process in ways that aren't possible with Blueprints alone.
@@ -173,4 +172,3 @@ To use your plugin, a developer would:
     ```
 
 The next time they run `locus dev` or any other command, Locus will load `locus-plugin-example` and execute its hooks.
-````

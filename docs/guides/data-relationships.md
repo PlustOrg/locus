@@ -1,4 +1,3 @@
-````markdown
 # Modeling Data Relationships
 
 A key strength of Locus is its simple yet powerful syntax for defining relationships between your data models. The compiler takes these high-level, readable declarations and automatically generates the correct database schema, including foreign keys and join tables, so you can focus on your application's logic instead of database internals.
@@ -120,4 +119,3 @@ database {
 ```
 
 This simple definition allows you to build a tree of comments, where each comment can have a parent and a list of children.
-````

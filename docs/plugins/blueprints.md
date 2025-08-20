@@ -1,4 +1,3 @@
-````markdown
 # Creating Blueprints
 
 Blueprints are the fastest way to create and share reusable features within the Locus ecosystem. A blueprint is a collection of `.locus` files that represent a complete, self-contained feature, like a blog, a user authentication system, or a contact form.
@@ -147,4 +146,3 @@ After they answer, the `src/contact.locus` file would be created in their projec
 *   **Use variables for customization:** Identify the parts of your feature that are most likely to change between projects and turn them into variables in `blueprint.toml`.
 *   **Provide good defaults:** For variables that have a common value, you can provide a `default` in the manifest.
 *   **Document your blueprint:** Include a `README.md` file in your blueprint's repository explaining what it does and how to use it.
-````
