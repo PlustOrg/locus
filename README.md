@@ -97,7 +97,6 @@ locus dev
 ## 🧑‍💻 Development & Contributing
 
 - **Tech Stack:** TypeScript, Jest, Chevrotain, Commander.js
-- **Development Plan:** Strict TDD, see [`docs/development/development-plan.md`](docs/development/development-plan.md)
 - **How to Contribute:**
   1. Fork and clone the repo
   2. Install dependencies: `npm install`
