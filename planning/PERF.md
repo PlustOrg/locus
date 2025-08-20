@@ -12,6 +12,6 @@ Run: npm run bench:parser
 ## Regression guard
 
 - Run: npm run bench:assert
-- Baseline config: docs/perf-baseline.json
+- Baseline config: planning/perf-baseline.json
 - If tokensPerSec falls below tokensPerSecMin, the script exits non-zero.
 - Update the baseline when making intended performance changes.

@@ -8,7 +8,7 @@ interface Baseline {
   tokensPerSecMinCi?: number;
 }
 
-const cfg = JSON.parse(readFileSync('docs/perf-baseline.json', 'utf8')) as Baseline;
+const cfg = JSON.parse(readFileSync('planning/perf-baseline.json', 'utf8')) as Baseline;
 // Allow environment overrides
 const iter = Number(process.env.BENCH_ITER || cfg.iterations);
 const minTps = Number(process.env.BENCH_MIN_TPS || (process.env.CI && cfg.tokensPerSecMinCi ? cfg.tokensPerSecMinCi : cfg.tokensPerSecMin));

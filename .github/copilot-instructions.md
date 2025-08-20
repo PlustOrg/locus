@@ -8,7 +8,7 @@ Your primary objective is to implement the Locus source-to-source compiler. This
 
 ## 2. The Golden Path: Your Development Plan
 
-**Your single most important file is `docs/development-plan.md`.**
+**Your single most important file is `planning/development-plan.md`.**
 
 *   **Follow it Strictly:** Execute the phases and steps in the exact order they are presented. Do not skip steps or work on features out of sequence.
 *   **Test-Driven Development (TDD) is Mandatory:** The plan requires a strict TDD workflow. For every new feature, you must:
@@ -19,11 +19,11 @@ Your primary objective is to implement the Locus source-to-source compiler. This
 
 ## 3. The Source of Truth: Documentation
 
-The `docs/` directory contains the complete specification for the Locus language. When implementing a feature, refer to the relevant documentation file to understand the required syntax, behavior, and semantics. The development plan provides direct links to the relevant documents at each step.
+The `planning/` directory contains the complete specification for the Locus language. When implementing a feature, refer to the relevant documentation file to understand the required syntax, behavior, and semantics. The development plan provides direct links to the relevant documents at each step.
 
-*   **Language Specs:** `docs/language/`
-*   **Toolchain Specs:** `docs/toolchain/`
-*   **Design System Specs:** `docs/design-system/`
+*   **Language Specs:** `planning/language/`
+*   **Toolchain Specs:** `planning/toolchain/`
+*   **Design System Specs:** `planning/design-system/`
 
 ## 4. Important Notes & Tips for Success
 
