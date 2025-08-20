@@ -16,9 +16,9 @@ describe('AST Merging', () => {
     const b = parseLocus(`design_system { spacing { md: "1rem" } radii { md: "0.375rem" } }`);
 
     const merged = mergeAsts([a, b]);
-    expect(merged.designSystem?.spacing?.sm).toBe('0.5rem');
-    expect(merged.designSystem?.spacing?.md).toBe('1rem');
-    expect(merged.designSystem?.radii?.md).toBe('0.375rem');
+    expect((merged.designSystem?.spacing?.sm as any)?.value).toBe('0.5rem');
+    expect((merged.designSystem?.spacing?.md as any)?.value).toBe('1rem');
+    expect((merged.designSystem?.radii?.md as any)?.value).toBe('0.375rem');
   });
 
   test('duplicate entity names throw', () => {

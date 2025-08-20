@@ -1,14 +1,14 @@
 import { LocusFileAST } from '../ast';
+import { PError } from '../errors';
 import { LocusLexer } from './tokens';
 import { DatabaseCstParser } from './databaseParser';
 import { buildDatabaseAst } from './astBuilder';
 
-export class LocusParserError extends Error {}
-
 export function parseLocus(source: string, filePath?: string): LocusFileAST {
   const lexResult = LocusLexer.tokenize(source);
   if (lexResult.errors.length) {
-    throw new LocusParserError('Lexing errors: ' + lexResult.errors.map(e => e.message).join('; '));
+    const err = lexResult.errors[0];
+    throw new PError(err.message, filePath, err.line, err.column, err.length);
   }
 
   const parser = new DatabaseCstParser();
@@ -16,7 +16,10 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   const cst = parser.file();
 
   if (parser.errors.length) {
-    throw new LocusParserError('Parsing errors: ' + parser.errors.map(e => e.message).join('; '));
+    const err = parser.errors[0];
+    const tok = err.token;
+    const length = tok.endOffset && tok.startOffset ? tok.endOffset - tok.startOffset + 1 : 1;
+    throw new PError(err.message, filePath, tok.startLine, tok.startColumn, length);
   }
 
   return buildDatabaseAst(cst, source, filePath);

@@ -1,4 +1,5 @@
-import { parseLocus, LocusParserError } from '../../src/parser';
+import { parseLocus } from '../../src/parser';
+import { PError } from '../../src/errors';
 import { LocusFileAST } from '../../src/ast';
 
 describe('Parser: database blocks', () => {
@@ -133,6 +134,6 @@ describe('Parser: database blocks', () => {
         }
       }
     `;
-    expect(() => parseLocus(src)).toThrow(LocusParserError);
+    expect(() => parseLocus(src)).toThrow(PError);
   });
 });
