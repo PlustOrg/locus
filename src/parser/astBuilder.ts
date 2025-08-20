@@ -177,7 +177,7 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
             const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
             const valTok = lit![0];
             const val = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
-            dsc.colors[themeName][key] = val as any;
+            dsc.colors[themeName][key] = { value: val, loc: posOf(valTok) } as any;
           }
         }
       }
@@ -193,8 +193,11 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
           const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
           const valTok = lit![0];
           const valStr = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
-          if (key === 'fontFamily') dsc.typography.fontFamily = valStr;
-          else if (key === 'baseSize') dsc.typography.baseSize = valStr;
+          if (key === 'fontFamily') {
+            dsc.typography.fontFamily = valStr;
+          } else if (key === 'baseSize') {
+            dsc.typography.baseSize = { value: valStr, loc: posOf(valTok) };
+          }
         }
         const weightsBlocks = (tbc['weightsBlock'] as CstNode[]) || [];
         for (const wb of weightsBlocks) {
@@ -204,8 +207,8 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
           for (const ta of wToks) {
             const ach = ta.children as CstChildrenDictionary;
             const key = (ach['Identifier'] as IToken[])[0].image;
-            const num = (ach['NumberLiteral'] as IToken[])[0].image;
-            dsc.typography.weights[key] = Number(num);
+            const numTok = (ach['NumberLiteral'] as IToken[])[0];
+            dsc.typography.weights[key] = { value: Number(numTok.image), loc: posOf(numTok) };
           }
         }
       }
@@ -227,7 +230,7 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
             const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
             const valTok = lit![0];
             const val = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
-            (dsc as any)[prop][key] = val as any;
+            (dsc as any)[prop][key] = { value: val, loc: posOf(valTok) };
           }
         }
       }

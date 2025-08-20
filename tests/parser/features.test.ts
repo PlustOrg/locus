@@ -1,4 +1,4 @@
-import { parseLocus, LocusParserError } from '../../src/parser';
+import { parseLocus } from '../../src/parser';
 import { LocusFileAST } from '../../src/ast';
 
 describe('Parser: page, component, store, and ui', () => {

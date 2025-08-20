@@ -29,7 +29,7 @@ describe('Incremental builder', () => {
     });
 
     const outDir = '/out';
-    const inc = createIncrementalBuilder({ srcDir: '/src', outDir });
+    const inc = createIncrementalBuilder({ srcDir: '/src', outDir, fileMap: new Map() });
 
     // Add one file with an entity
     files['/src/a.locus'] = `database { entity User { id: Integer } }`;
@@ -56,10 +56,16 @@ describe('Incremental builder', () => {
     (fs.existsSync as unknown as jest.Mock).mockImplementation(() => true);
     (fs.mkdirSync as unknown as jest.Mock).mockImplementation(() => undefined as any);
   (fs.writeFileSync as unknown as jest.Mock).mockImplementation(() => undefined as any);
-    const inc = createIncrementalBuilder({ srcDir: '/src', outDir: '/out' });
+    const inc = createIncrementalBuilder({
+      srcDir: '/src',
+      outDir: '/out',
+      fileMap: new Map(),
+    });
 
     // invalid content to trigger parser error
     files['/src/bad.locus'] = `database { entity { } }`;
-    await expect(inc.update('/src/bad.locus')).rejects.toThrow(/Failed to parse/);
+    await expect(inc.update('/src/bad.locus')).rejects.toThrow(
+      /Expecting token of type --> Identifier <-- but found --> '{' <--/
+    );
   });
 });

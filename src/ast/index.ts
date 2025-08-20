@@ -66,15 +66,16 @@ export interface Relation {
 // Design System (Phase 1.2)
 export interface DesignSystemBlock {
   type: 'design_system';
-  colors?: Record<string, Record<string, string>>; // theme -> token -> value
+  colors?: Record<string, Record<string, string | { value: string; loc: any }>>; // theme -> token -> value
   typography?: {
     fontFamily?: string;
-    baseSize?: string;
-    weights?: Record<string, number>;
+    baseSize?: string | { value: string; loc: any };
+    weights?: Record<string, number | { value: number; loc: any }>;
   };
-  spacing?: Record<string, string>;
-  radii?: Record<string, string>;
-  shadows?: Record<string, string>;
+  spacing?: Record<string, string | { value: string; loc: any }>;
+  radii?: Record<string, string | { value: string; loc: any }>;
+  shadows?: Record<string, string | { value: string; loc: any }>;
+  loc?: any;
 }
 
 // Features (Phase 1.3) - keep minimal placeholders for now

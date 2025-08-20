@@ -3,12 +3,21 @@
 import { spawn } from 'child_process';
 import { buildProject } from './build';
 import { readdirSync, statSync, existsSync } from 'fs';
+import { LocusError } from '../errors';
+import { reportError } from './reporter';
 import { join } from 'path';
 import { createIncrementalBuilder } from './incremental';
 
 export async function dev(opts: { srcDir: string; debug?: boolean }) {
+  const fileMap = new Map<string, string>();
   // initial build
-  try { await buildProject({ srcDir: opts.srcDir, debug: opts.debug }); } catch { /* ignore in dev startup */ }
+  try {
+    await buildProject({ srcDir: opts.srcDir, debug: opts.debug });
+  } catch (e) {
+    if (e instanceof LocusError) {
+      reportError(e, fileMap);
+    }
+  }
   // start next.js and express servers (stubbed)
   const nextProc = spawnNext();
   const apiProc = spawnApi(opts.srcDir);
@@ -18,20 +27,30 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
   // watch .locus files to trigger incremental rebuilds
   const chokidar = require('chokidar');
   const watcher = chokidar.watch('**/*.locus', { cwd: opts.srcDir, ignoreInitial: false, persistent: true, depth: 99 });
-  const inc = createIncrementalBuilder({ srcDir: opts.srcDir, outDir: join(opts.srcDir, 'generated') });
+  const inc = createIncrementalBuilder({
+    srcDir: opts.srcDir,
+    outDir: join(opts.srcDir, 'generated'),
+    fileMap,
+  });
   const initialFiles = collectLocusFiles(opts.srcDir);
   await inc.init(initialFiles);
   const debounce = createDebounce(100);
   const timed = async (label: string, fn: () => Promise<void>) => {
     const s = Date.now();
-    await fn();
+    try {
+      await fn();
+    } catch (e) {
+      if (e instanceof LocusError) {
+        reportError(e, fileMap);
+      }
+    }
     if (opts.debug) {
       console.log(`[locus][dev][${label}]`, { ms: Date.now() - s });
     }
   };
-  watcher.on('add', (rel: string) => debounce(() => timed('add', () => inc.update(join(opts.srcDir, rel))).catch(() => {})));
-  watcher.on('change', (rel: string) => debounce(() => timed('change', () => inc.update(join(opts.srcDir, rel))).catch(() => {})));
-  watcher.on('unlink', (rel: string) => debounce(() => timed('unlink', () => inc.remove(join(opts.srcDir, rel))).catch(() => {})));
+  watcher.on('add', (rel: string) => debounce(() => timed('add', () => inc.update(join(opts.srcDir, rel)))));
+  watcher.on('change', (rel: string) => debounce(() => timed('change', () => inc.update(join(opts.srcDir, rel)))));
+  watcher.on('unlink', (rel: string) => debounce(() => timed('unlink', () => inc.remove(join(opts.srcDir, rel)))));
   watcher.on('addDir', () => {});
   watcher.on('unlinkDir', () => {});
   watcher.on('error', () => {});

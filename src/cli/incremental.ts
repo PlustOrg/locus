@@ -7,7 +7,11 @@ import { generateExpressApi } from '../generator/express';
 import { generateReactComponent, generateReactPage } from '../generator/react';
 import { BuildError } from '../errors';
 
-export function createIncrementalBuilder(opts: { srcDir: string; outDir: string }) {
+export function createIncrementalBuilder(opts: {
+  srcDir: string;
+  outDir: string;
+  fileMap: Map<string, string>;
+}) {
   const cache = new Map<string, ReturnType<typeof parseLocus>>();
 
   function ensureDir(p: string) {
@@ -55,14 +59,24 @@ export function createIncrementalBuilder(opts: { srcDir: string; outDir: string 
   return {
     async init(files: string[]) {
       for (const fp of files) {
-        try { cache.set(fp, parseLocus(readFileSync(fp, 'utf8'))); }
-        catch (e) { throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e); }
+        try {
+          const content = readFileSync(fp, 'utf8');
+          opts.fileMap.set(fp, content);
+          cache.set(fp, parseLocus(content, fp));
+        } catch (e) {
+          throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
+        }
       }
       rebuildAll();
     },
     async update(filePath: string) {
-      try { cache.set(filePath, parseLocus(readFileSync(filePath, 'utf8'))); }
-      catch (e) { throw new BuildError(`Failed to parse ${filePath}: ${(e as any)?.message || e}`, e); }
+      try {
+        const content = readFileSync(filePath, 'utf8');
+        opts.fileMap.set(filePath, content);
+        cache.set(filePath, parseLocus(content, filePath));
+      } catch (e) {
+        throw e;
+      }
       rebuildAll();
     },
     async remove(filePath: string) {

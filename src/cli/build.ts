@@ -6,11 +6,11 @@ import { mergeAsts } from '../parser/merger';
 import { validateUnifiedAst } from '../validator/validate';
 import { generatePrismaSchema } from '../generator/prisma';
 import { generateExpressApi } from '../generator/express';
-import { BuildError, GeneratorError } from '../errors';
+import { BuildError, GeneratorError, LocusError } from '../errors';
 import { generateReactComponent, generateReactPage } from '../generator/react';
 import { generateCssVariables } from '../generator/theme';
 import { generateNextApp } from '../generator/next';
-
+import { reportError } from './reporter';
 export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
@@ -18,13 +18,23 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   const t0 = Date.now();
 
   let files: string[];
-  try { files = findLocusFiles(srcDir); } catch (e) { throw new BuildError(`Failed to read source directory: ${srcDir}`, e); }
+  try {
+    files = findLocusFiles(srcDir);
+  } catch (e) {
+    throw new BuildError(`Failed to read source directory: ${srcDir}`, e);
+  }
+  const fileMap = new Map<string, string>();
   const tParse0 = Date.now();
   const asts = files.map(fp => {
     try {
       const content = typeof readFileSync === 'function' ? readFileSync(fp, 'utf8') : String(fp);
+      fileMap.set(fp, content);
       return parseLocus(content as any, fp);
     } catch (e) {
+      if (e instanceof LocusError) {
+        reportError(e, fileMap);
+        process.exit(1);
+      }
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
     }
   });
@@ -36,7 +46,15 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
   }
   // Validate unified AST
-  try { validateUnifiedAst(merged); } catch (e) { throw e; }
+  try {
+    validateUnifiedAst(merged);
+  } catch (e) {
+    if (e instanceof LocusError) {
+      reportError(e, fileMap);
+      process.exit(1);
+    }
+    throw e;
+  }
   const tMerge1 = Date.now();
 
   // Prisma
