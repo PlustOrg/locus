@@ -41,7 +41,7 @@ Locus is a source-to-source compiler and toolchain for building full-stack web a
 
 ### 1. Install the CLI
 ```bash
-npm install -g @plustorg/locus
+npm install -g @plust/locus
 ```
 
 ### 2. Create a New Project

@@ -25,7 +25,7 @@ A TypeScript plugin is an `npm` package that exports a specific function, `defin
 **Example Plugin Structure (`locus-stripe-plugin/index.ts`):**
 
 ```typescript
-import { defineLocusPlugin, LocusContext } from '@plustorg/locus-plugin-sdk';
+import { defineLocusPlugin, LocusContext } from '@plust/locus-plugin-sdk';
 
 export default defineLocusPlugin((context: LocusContext) => {
   return {

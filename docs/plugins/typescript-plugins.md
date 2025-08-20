@@ -26,7 +26,7 @@ A Locus plugin is a standard `npm` package.
 
 2.  **Install the Locus Plugin SDK** as a dependency. This package provides the necessary types and definitions for creating a plugin.
     ```bash
-    npm install @plustorg/locus-plugin-sdk
+    npm install @plust/locus-plugin-sdk
     ```
 
 3.  **Configure `package.json`:**
@@ -46,7 +46,7 @@ A Locus plugin is a standard `npm` package.
         "build": "tsc"
       },
       "dependencies": {
-        "@plustorg/locus-plugin-sdk": "^0.1.0"
+        "@plust/locus-plugin-sdk": "^0.1.0"
       },
       "devDependencies": {
         "typescript": "^5.0.0"
@@ -63,7 +63,7 @@ The main file of your plugin (e.g., `src/index.ts`) must have a default export t
 ```typescript
 // file: src/index.ts
 
-import { defineLocusPlugin, LocusContext, LocusPlugin } from '@plustorg/locus-plugin-sdk';
+import { defineLocusPlugin, LocusContext, LocusPlugin } from '@plust/locus-plugin-sdk';
 
 // The defineLocusPlugin function provides type safety and context.
 export default defineLocusPlugin((context: LocusContext): LocusPlugin => {

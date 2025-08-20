@@ -18,7 +18,7 @@ node --version
 The Locus command-line interface (CLI) is the primary tool for managing your projects. Install it globally on your system using `npm`.
 
 ```bash
-npm install -g @plustorg/locus
+npm install -g @plust/locus
 ```
 
 This makes the `locus` command available in your terminal. You can verify the installation by running:
