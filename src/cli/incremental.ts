@@ -2,9 +2,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
-import { generatePrismaSchema } from '../generator/prisma';
-import { generateExpressApi } from '../generator/express';
-import { generateReactComponent, generateReactPage } from '../generator/react';
+import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName } from '../generator/outputs';
 import { BuildError } from '../errors';
 
 export function createIncrementalBuilder(opts: {
@@ -29,6 +27,19 @@ export function createIncrementalBuilder(opts: {
     writeFileSync(p, content);
   }
 
+  function writePackageJson(hasPages: boolean) {
+    const pkgPath = join(opts.outDir, 'package.json');
+    if (existsSync(pkgPath)) return; // one-time
+    const appName = getAppName(opts.srcDir);
+    writeFileSafe(pkgPath, buildPackageJson(hasPages, appName));
+    const readmePath = join(opts.outDir, 'README.md');
+    if (!existsSync(readmePath)) writeFileSafe(readmePath, buildGeneratedReadme());
+  }
+
+  const lastWritten = new Map<string, string>();
+
+  // (previous listGeneratedFiles removed as unused)
+
   function rebuildAll() {
     // Merge
     let merged;
@@ -38,19 +49,24 @@ export function createIncrementalBuilder(opts: {
     const outDir = opts.outDir;
     // In mocked dev tests, outDir may not be writable; guard with try/catch
     try {
-    // Prisma
-    const schema = generatePrismaSchema(merged.database);
-    writeFileSafe(join(outDir, 'prisma', 'schema.prisma'), schema);
-    // Express
-    const routes = generateExpressApi(merged.database.entities as any);
-    for (const [p, c] of Object.entries(routes)) {
-      writeFileSafe(join(outDir, p), c);
+  const changed: string[] = [];
+    const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir: opts.srcDir });
+    for (const [rel, content] of Object.entries(artifacts)) {
+      const full = join(outDir, rel);
+      if (lastWritten.get(full) !== content) {
+        writeFileSafe(full, content);
+        lastWritten.set(full, content);
+        changed.push(full);
+      }
     }
-    // React
-    const pages = [...(merged.pages as any[])].sort((a, b) => a.name.localeCompare(b.name));
-    for (const p of pages) writeFileSafe(join(outDir, 'react', 'pages', `${p.name}.tsx`), generateReactPage(p));
-    const comps = [...(merged.components as any[])].sort((a, b) => a.name.localeCompare(b.name));
-    for (const c of comps) writeFileSafe(join(outDir, 'react', 'components', `${c.name}.tsx`), generateReactComponent(c));
+    writePackageJson(meta.hasPages);
+    if (changed.length) {
+      if (process.env.LOCUS_DEBUG) {
+        process.stdout.write('[locus][dev][changed] ' + changed.map(f => f.replace(opts.outDir + '/', '')).join(', ') + '\n');
+      } else {
+        process.stdout.write(`[locus][dev] regenerated ${changed.length} file${changed.length === 1 ? '' : 's'}\n`);
+      }
+    }
     } catch {
       // ignore write errors in dev watcher bootstrap
     }

@@ -30,10 +30,11 @@ program
   .option('--out <dir>', 'output dir', 'generated')
   .option('--errors <format>', 'error output format: pretty|json', 'pretty')
   .option('--prisma-generate', 'run prisma generate after build', false)
+  .option('--dry-run', 'show files that would be generated without writing them', false)
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
     const outDir = path.resolve(opts.out);
-    await buildProject({ srcDir, outDir, errorFormat: opts.errors as ErrorOutputFormat, prismaGenerate: !!opts.prismaGenerate });
+    await buildProject({ srcDir, outDir, errorFormat: opts.errors as ErrorOutputFormat, prismaGenerate: !!opts.prismaGenerate, dryRun: !!opts.dryRun });
   });
 
 program
