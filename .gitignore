@@ -1,2 +1,8 @@
 node_modules
 dist
+generated/
+generated/**
+prisma/*.db
+prisma/migrations/
+# Prisma client (can be regenerated)
+node_modules/.prisma

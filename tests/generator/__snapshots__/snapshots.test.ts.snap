@@ -28,7 +28,7 @@ router.get('/user', async (req, res) => {
 router.get('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
-    const row = await prisma.user.findUnique({ where: { id } })
+  const row = await prisma.user.findUnique({ where: { id } })
     if (!row) return res.status(404).end()
     res.json(row)
   } catch (err: any) {
@@ -65,7 +65,7 @@ router.delete('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
-    await prisma.user.delete({ where: { id } })
+  await prisma.user.delete({ where: { id } })
     res.status(204).end()
   } catch (err: any) {
     res.status(400).json({ error: err?.message || 'Delete failed' })

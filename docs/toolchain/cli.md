@@ -176,4 +176,33 @@ Dev mode stores last written contents and rewrites only when changed, minimizing
 
 Feedback or proposals welcome—open an issue or submit a design doc PR.
 
+## Troubleshooting
+
+Prisma client not found:
+- Run `locus build --prisma-generate` or inside generated dir run `npm run prisma:generate`.
+- Ensure `.env` has a valid `DATABASE_URL`.
+
+Port conflicts:
+- API defaults to `PORT` env var or 3001. Set a free port: `PORT=4001 locus dev`.
+- Next.js dev server (if present) uses 3000; set `PORT=4002` if you have another service at 3001.
+
+Missing theme.css in browser:
+- Confirm `theme.css` exists in output root and `next-app/public/theme.css`.
+- Ensure landing page `<head>` loads `globals.css` which imports `/theme.css`.
+
+CORS blocked requests:
+- Set `ENABLE_CORS=1` when running dev/build server to enable basic CORS middleware.
+
+Regeneration not triggering:
+- Check that file is within watched src directory passed to `--src`.
+- Use `LOCUS_DEBUG=1 locus dev` to print changed file list.
+
+## Route Naming Policy
+
+Generated Next routes use kebab-case derived from Locus page names (e.g., `UserProfile` -> `/user-profile`).
+
+API entity routes default to the lowerCamel entity name (e.g., `User` -> `/user`). An experimental pluralization option (internal flag) transforms route mounts to plural forms (`/users`, `Category` -> `/categories`). This will surface as a formal CLI/config option in a future release.
+
+Port selection precedence for the API server: `API_PORT` > `PORT` > 3001.
+
 See also: [Common Errors & Fixes](../guides/common-errors.md).

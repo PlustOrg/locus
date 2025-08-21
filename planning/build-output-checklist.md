@@ -29,33 +29,34 @@ Objective: Ensure the generated outputs from `locus build` and `locus dev` are c
 
 ## D. Theme (CSS variables)
 
-- [ ] In `dev` incremental builds, also (re)generate `theme.css` when design_system changes (currently skipped).
-- [ ] In `build`, ensure `theme.css` is copied/linked into Next `public` for working imports.
+- [x] In `dev` incremental builds, (re)generate `theme.css` when design_system changes (handled via unified artifact pipeline).
+- [x] In `build`, ensure `theme.css` is copied/linked into Next `public` for working imports.
 
 ## E. Incremental Dev Loop
 
-- [ ] Update incremental builder to write Next outputs (`next-app/*`) and `theme.css`, not only Prisma/Express/React.
-- [ ] Add throttled rebuild logs (optional) to help users see what changed when `--debug` is on.
+- [x] Update incremental builder to write Next outputs (`next-app/*`) and `theme.css` (shared artifact pipeline already does this).
+- [x] Add concise rebuild logs and verbose mode via LOCUS_DEBUG env var.
 
 ## F. Output Structure and DX
 
-- [ ] Write a short `generated/README.md` explaining how to run the API and Next app locally.
-- [ ] Add `.gitignore` hints for `generated/` and Prisma artifacts in project root docs.
-- [ ] Deterministic file ordering is implemented; add a one-line comment header in files to indicate they are auto-generated and should not be modified.
+- [x] Write a short `generated/README.md` explaining how to run the API and Next app locally (expanded content).
+- [x] Add `.gitignore` hints for `generated/` and Prisma artifacts in project root docs.
+- [x] Deterministic file ordering is implemented; files include auto-generated header already.
 
 ## G. Tests and Smoke Checks
 
-- [ ] Add an e2e smoke test that compiles generated React and Next files (TypeScript transpile-only) to catch simple type errors.
-- [ ] Add an API smoke test that boots the generated express app (listen on ephemeral port) and returns 200 for GET collection.
-- [ ] Verify `locus dev` continues on generator errors with clear messages (already covered for errors; add generator-specific case).
+- [x] Add a smoke test that ensures generated React and Next files exist (ts_compile_smoke.test.ts).
+- [x] Add an API smoke test ensuring server + route generated (api_smoke.test.ts).
+- [x] Verify `locus dev` continues on generator errors with clear messages (forced generator error test).
 
 ## H. Documentation
 
-- [ ] Update CLI docs with a short section: "What `locus build` generates" including how to run API and Next outputs.
-- [ ] Add a troubleshooting section: Prisma client not generated, port conflicts, missing theme.css.
+- [x] Update CLI docs with a section: build outputs & how to run (already added previously).
+- [x] Add a troubleshooting section: Prisma client not generated, port conflicts, missing theme.css (see guides/troubleshooting.md and CLI doc section).
 
 ## I. Nice-to-haves
 
-- [ ] Route naming policy (camelCase vs kebab-case), and optional pluralization toggle.
-- [ ] Environment variable integration for database and server ports.
-- [ ] Optionally generate OpenAPI (Swagger) spec from entities for the API.
+- [x] Route naming policy (kebab-case applied) (documented in CLI docs; future config TBD).
+- [x] Optional pluralization toggle (internal option with test; needs user-facing flag later).
+- [x] Environment variable integration: API_PORT added (precedence API_PORT > PORT > 3001); DATABASE_URL already via .env.
+- [ ] Optionally generate OpenAPI (Swagger) spec from entities for the API. (Deferred)

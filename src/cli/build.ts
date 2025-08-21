@@ -6,7 +6,7 @@ import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
-import { BuildError, GeneratorError, LocusError } from '../errors';
+import { BuildError, LocusError } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName } from '../generator/outputs';
 import { reportError, ErrorOutputFormat } from './reporter';
 export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean }) {
@@ -80,13 +80,15 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     if (!existsSync(pkgPath)) writeFileSync(pkgPath, buildPackageJson(meta.hasPages, appName));
     const readmePath = join(outDir, 'README.md');
     if (!existsSync(readmePath)) writeFileSync(readmePath, buildGeneratedReadme());
-  } catch (e) {
-    if (e instanceof LocusError || (e && (e as any).code)) {
-      reportError((e as any) as LocusError, fileMap, opts.errorFormat);
+    } catch (e) {
+      if (e instanceof LocusError || (e && (e as any).code)) {
+        reportError((e as any) as LocusError, fileMap, opts.errorFormat);
+        process.exit(1);
+      }
+      // raw generator error
+      process.stderr.write(String((e as any)?.message || e) + '\n');
       process.exit(1);
     }
-    throw new GeneratorError('Failed generating artifacts', e);
-  }
 
   if (debug) {
     const t1 = Date.now();
