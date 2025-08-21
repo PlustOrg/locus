@@ -117,16 +117,16 @@ function spawnNext() {
 }
 
 function spawnApi(srcDir: string) {
-  // If generated server exists and express is available, run it with ts-node
+  // If generated server exists: import and call startServer()
   const serverTs = join(srcDir, 'generated', 'server.ts');
   try {
     require.resolve('express');
     if (existsSync(serverTs)) {
-      const code = `require('ts-node/register/transpile-only'); require('${serverTs.replace(/\\/g, '\\\\')}')`;
+      const code = `require('ts-node/register/transpile-only'); const mod=require('${serverTs.replace(/\\/g, '\\\\')}'); (mod.startServer||(()=>{}))();`;
       return spawnSafe('node', ['-e', code]);
     }
   } catch {
-    // fall back to npm script
+    // fall back
   }
   return spawnSafe('npm', ['run', 'api:dev']);
 }

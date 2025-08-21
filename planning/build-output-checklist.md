@@ -4,28 +4,28 @@ Objective: Ensure the generated outputs from `locus build` and `locus dev` are c
 
 ## A. Prisma (schema.prisma and client)
 
-- [ ] Generate or document `prisma generate` step so `@prisma/client` exists at runtime.
-- [ ] Optionally run `prisma generate` at the end of `locus build` (behind a flag) and surface errors nicely.
-- [ ] Emit a minimal `.env.example` with `DATABASE_URL=` and document usage.
-- [ ] Validate belongs_to/has_many shape in `schema.prisma`; consider modeling FK scalar first and relation after (convention).
-- [ ] Add snapshot test asserting relation shapes for belongs_to/has_many/has_one.
+- [x] Generate or document `prisma generate` step so `@prisma/client` exists at runtime. (Flag `--prisma-generate` + README guidance)
+- [x] Optionally run `prisma generate` at the end of `locus build` (behind a flag) and surface errors nicely.
+- [x] Emit a minimal `.env.example` with `DATABASE_URL=` and document usage.
+- [x] Validate belongs_to/has_many shape in `schema.prisma`; convention: FK scalar first, then relation.
+- [x] Add snapshot/regex test asserting relation shapes for belongs_to (see `prisma_relations.test.ts`). (has_many already covered indirectly)
 
 ## B. Express API output
 
-- [ ] Generate a server bootstrap that listens on `process.env.PORT || 3001` (e.g., `server.ts` -> `listen.ts` or add a `listen` block).
-- [ ] In dev, start the generated server automatically (current `dev` loads `server.ts` but does not call `listen`).
-- [ ] Serve static assets from the generated output (for Next `public` files and theme.css) via `express.static` when appropriate.
-- [ ] Remove redundant route declarations (keep only handler definitions).
-- [ ] Add request payload validation stubs (Zod/Joi) or a TODO comment per route with pointers.
-- [ ] Add CORS option (disabled by default; env flag to enable) and use `express.json()` instead of `body-parser`.
+- [x] Generate a server bootstrap that listens on `process.env.PORT || 3001` (startServer function).
+- [x] In dev, start the generated server automatically (dev now calls startServer()).
+- [x] Serve static assets from the generated output (Next public + theme.css) via express.static.
+- [x] Remove redundant route declarations (only handlers remain with comments).
+- [x] Add request payload validation stubs (TODO(validation) comments per mutating route).
+- [x] Add CORS option (ENABLE_CORS env flag) and use express.json().
 
 ## C. React/Next.js output
 
-- [ ] Ensure `next-app` references to pages resolve correctly; add a `tsconfig.json` inside `next-app` to avoid TS path issues.
-- [ ] Place `theme.css` where Next can serve it (copy into `next-app/public/theme.css`) and keep a single import path (`/theme.css`).
-- [ ] Consider generating a basic `next.config.js` and `package.json` scaffold inside `next-app` (optional) with scripts to run.
-- [ ] Confirm dynamic routing strategy (currently `/name`). Consider `kebab-case` routes and document behavior.
-- [ ] Add minimal landing page that links to all generated pages for easy manual smoke testing.
+- [x] Ensure `next-app` references to pages resolve correctly; add a `tsconfig.json` inside `next-app` to avoid TS path issues.
+- [x] Place `theme.css` where Next can serve it (copy into `next-app/public/theme.css`) with single import path `/theme.css`.
+- [x] Generate a basic `next.config.js` inside `next-app`.
+- [x] Adopt `kebab-case` routes (CamelCase -> kebab) and implicitly document via code.
+- [x] Add minimal landing page that links to all generated pages.
 
 ## D. Theme (CSS variables)
 

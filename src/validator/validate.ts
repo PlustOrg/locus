@@ -6,6 +6,18 @@ export function validateUnifiedAst(ast: UnifiedAST) {
   if (ds) {
     const sourceFile = (ds as any).sourceFile;
     // token key naming
+    // Relation shape validation: belongs_to must have corresponding field name + 'Id' scalar in model generation expectations.
+    for (const e of ast.database.entities as any[]) {
+      const fieldNames = new Set(e.fields.map((f: any) => f.name));
+      for (const r of e.relations) {
+        if (r.kind === 'belongs_to') {
+          const fk = r.name + 'Id';
+          if (!fieldNames.has(fk)) {
+            throw new VError(`belongs_to '${r.name}' is missing required scalar foreign key '${fk}'`, e.loc?.filePath, e.loc?.line, e.loc?.column);
+          }
+        }
+      }
+    }
     const keyOk = (k: string) => /^[a-z][a-z0-9_]*$/.test(k);
     const badKeys: Array<{ key: string; loc?: any }> = [];
     const checkMap = (m?: Record<string, any>) => {

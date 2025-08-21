@@ -7,8 +7,8 @@ describe('Express API generation', () => {
       { name: 'Order', fields: [], relations: [] },
     ];
     const files = generateExpressApi(entities as any);
-    expect(files['routes/customer.ts']).toContain("router.get('/customer')");
-    expect(files['routes/order.ts']).toContain("router.get('/order')");
+  expect(files['routes/customer.ts']).toContain("router.get('/customer', async");
+  expect(files['routes/order.ts']).toContain("router.get('/order', async");
     expect(files['routes/customer.ts']).toContain('prisma.customer.findMany');
   });
 });

@@ -6,14 +6,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 export const router = Router()
 
-// route declarations
-router.get('/user')
-router.get('/user/:id')
-router.post('/user')
-router.put('/user/:id')
-router.delete('/user/:id')
-
-// handlers
+// GET /user
 router.get('/user', async (req, res) => {
   try {
   const skip = req.query.skip !== undefined ? Number(req.query.skip) : undefined
@@ -31,6 +24,7 @@ router.get('/user', async (req, res) => {
   }
 })
 
+// GET /user/:id
 router.get('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
@@ -42,9 +36,10 @@ router.get('/user/:id', async (req, res) => {
   }
 })
 
+// POST /user
 router.post('/user', async (req, res) => {
   try {
-  // TODO: add schema validation (Zod/Joi) derived from entity
+  // TODO(validation): derive schema from entity definition and validate body
   const created = await prisma.user.create({ data: req.body })
     res.status(201).json(created)
   } catch (err: any) {
@@ -52,11 +47,12 @@ router.post('/user', async (req, res) => {
   }
 })
 
+// PUT /user/:id
 router.put('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
-  // TODO: add schema validation (Zod/Joi) derived from entity
+  // TODO(validation): derive schema from entity definition and validate body
   const updated = await prisma.user.update({ where: { id }, data: req.body })
     res.json(updated)
   } catch (err: any) {
@@ -64,6 +60,7 @@ router.put('/user/:id', async (req, res) => {
   }
 })
 
+// DELETE /user/:id
 router.delete('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)

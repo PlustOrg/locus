@@ -7,11 +7,11 @@ describe('Express API generation - CRUD', () => {
     ];
     const files = generateExpressApi(entities as any);
     const route = files['routes/customer.ts'];
-    expect(route).toContain("router.get('/customer')");
-    expect(route).toContain("router.get('/customer/:id')");
-    expect(route).toContain("router.post('/customer')");
-    expect(route).toContain("router.put('/customer/:id')");
-    expect(route).toContain("router.delete('/customer/:id')");
+  expect(route).toContain("router.get('/customer', async");
+  expect(route).toContain("router.get('/customer/:id', async");
+  expect(route).toContain("router.post('/customer', async");
+  expect(route).toContain("router.put('/customer/:id', async");
+  expect(route).toContain("router.delete('/customer/:id', async");
     expect(route).toContain('prisma.customer.findMany');
     expect(route).toContain('prisma.customer.findUnique');
     expect(route).toContain('prisma.customer.create');

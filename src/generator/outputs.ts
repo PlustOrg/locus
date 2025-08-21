@@ -74,6 +74,8 @@ export function buildOutputArtifacts(merged: UnifiedLike, opts: BuildArtifactsOp
   const files: Record<string, string> = {};
   // Prisma
   files['prisma/schema.prisma'] = withHeader(generatePrismaSchema(merged.database), 'prisma schema');
+  // .env.example (only if not already present later; consumer decides to skip overwrite)
+  files['.env.example'] = 'DATABASE_URL=postgresql://user:password@localhost:5432/mydb?schema=public\n';
   // Express (routes + server)
   const routes = generateExpressApi(merged.database.entities as any);
   for (const [rel, content] of Object.entries(routes)) {

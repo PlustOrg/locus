@@ -6,19 +6,12 @@ export function generateExpressApi(entities: Entity[]): Record<string, string> {
   const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
   for (const e of sorted) {
     const lc = e.name.charAt(0).toLowerCase() + e.name.slice(1);
-    const route = `import { Router } from 'express'
+  const route = `import { Router } from 'express'
 import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 export const router = Router()
 
-// route declarations
-router.get('/${lc}')
-router.get('/${lc}/:id')
-router.post('/${lc}')
-router.put('/${lc}/:id')
-router.delete('/${lc}/:id')
-
-// handlers
+// GET /${lc}
 router.get('/${lc}', async (req, res) => {
   try {
   const skip = req.query.skip !== undefined ? Number(req.query.skip) : undefined
@@ -36,6 +29,7 @@ router.get('/${lc}', async (req, res) => {
   }
 })
 
+// GET /${lc}/:id
 router.get('/${lc}/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
@@ -47,9 +41,10 @@ router.get('/${lc}/:id', async (req, res) => {
   }
 })
 
+// POST /${lc}
 router.post('/${lc}', async (req, res) => {
   try {
-  // TODO: add schema validation (Zod/Joi) derived from entity
+  // TODO(validation): derive schema from entity definition and validate body
   const created = await prisma.${lc}.create({ data: req.body })
     res.status(201).json(created)
   } catch (err: any) {
@@ -57,11 +52,12 @@ router.post('/${lc}', async (req, res) => {
   }
 })
 
+// PUT /${lc}/:id
 router.put('/${lc}/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
-  // TODO: add schema validation (Zod/Joi) derived from entity
+  // TODO(validation): derive schema from entity definition and validate body
   const updated = await prisma.${lc}.update({ where: { id }, data: req.body })
     res.json(updated)
   } catch (err: any) {
@@ -69,6 +65,7 @@ router.put('/${lc}/:id', async (req, res) => {
   }
 })
 
+// DELETE /${lc}/:id
 router.delete('/${lc}/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
@@ -86,6 +83,29 @@ router.delete('/${lc}/:id', async (req, res) => {
   // Optional: basic app bootstrap
   const imports = mounts.map(n => `import { router as ${n}Router } from './routes/${n}'`).join('\n');
   const uses = mounts.map(n => `app.use('/${n}', ${n}Router)`).join('\n');
-  files['server.ts'] = `import express from 'express'\nimport bodyParser from 'body-parser'\n${imports}\nconst app = express()\napp.use(bodyParser.json())\n${uses}\nexport default app\n`;
+  files['server.ts'] = `import express from 'express'
+import cors from 'cors'
+import path from 'path'
+${imports}
+
+const app = express()
+// JSON body parsing
+app.use(express.json())
+// Conditional CORS (enable by setting ENABLE_CORS=1)
+if (process.env.ENABLE_CORS === '1') { app.use(cors()) }
+// Static assets (theme, public files)
+const publicDir = path.join(__dirname, 'next-app', 'public')
+app.use(express.static(publicDir))
+${uses}
+
+export function startServer(port: number = Number(process.env.PORT) || 3001) {
+  return app.listen(port, () => {
+    // eslint-disable-next-line no-console
+    console.log('[locus][api] listening on :' + port)
+  })
+}
+
+export default app
+`;
   return files;
 }

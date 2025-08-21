@@ -28,9 +28,9 @@ function renderModel(entity: Entity, _all: Entity[]): string {
     if (r.kind === 'has_many') {
       fields.push(`${r.name} ${r.target}[]`);
     } else if (r.kind === 'belongs_to') {
-      // foreign key scalar
-      fields.push(`${r.name} ${r.target} @relation(fields: [${r.name}Id], references: [id])`);
+      // Convention: scalar foreign key first, then relation field
       fields.push(`${r.name}Id Int`);
+      fields.push(`${r.name} ${r.target} @relation(fields: [${r.name}Id], references: [id])`);
     } else if (r.kind === 'has_one') {
       fields.push(`${r.name} ${r.target}?`);
     }
