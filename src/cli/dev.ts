@@ -4,20 +4,20 @@ import { spawn } from 'child_process';
 import { buildProject } from './build';
 import { readdirSync, statSync, existsSync } from 'fs';
 import { LocusError } from '../errors';
-import { reportError } from './reporter';
+import { reportError, ErrorOutputFormat } from './reporter';
 import { join } from 'path';
 import { createIncrementalBuilder } from './incremental';
 
-export async function dev(opts: { srcDir: string; debug?: boolean }) {
+export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat }) {
   const fileMap = new Map<string, string>();
   // initial build
   try {
     await buildProject({ srcDir: opts.srcDir, debug: opts.debug });
   } catch (e) {
     if (e instanceof LocusError) {
-      reportError(e, fileMap);
+  reportError(e, fileMap, opts.errorFormat);
     } else if (e && (e as any).cause instanceof LocusError) {
-      reportError((e as any).cause as LocusError, fileMap);
+  reportError((e as any).cause as LocusError, fileMap, opts.errorFormat);
     }
   }
   // start next.js and express servers (stubbed)
@@ -39,9 +39,9 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
     await inc.init(initialFiles);
   } catch (e) {
     if (e instanceof LocusError) {
-      reportError(e, fileMap);
+  reportError(e, fileMap, opts.errorFormat);
     } else if (e && (e as any).cause instanceof LocusError) {
-      reportError((e as any).cause as LocusError, fileMap);
+  reportError((e as any).cause as LocusError, fileMap, opts.errorFormat);
     }
   }
   const debounce = createDebounce(100);
@@ -51,9 +51,9 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
       await fn();
     } catch (e) {
       if (e instanceof LocusError) {
-        reportError(e, fileMap);
+        reportError(e, fileMap, opts.errorFormat);
       } else if (e && (e as any).cause instanceof LocusError) {
-        reportError((e as any).cause as LocusError, fileMap);
+        reportError((e as any).cause as LocusError, fileMap, opts.errorFormat);
       }
     }
     if (opts.debug) {

@@ -10,8 +10,8 @@ import { BuildError, GeneratorError, LocusError } from '../errors';
 import { generateReactComponent, generateReactPage } from '../generator/react';
 import { generateCssVariables } from '../generator/theme';
 import { generateNextApp } from '../generator/next';
-import { reportError } from './reporter';
-export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean }) {
+import { reportError, ErrorOutputFormat } from './reporter';
+export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
   const debug = !!opts.debug;
@@ -32,7 +32,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       return parseLocus(content as any, fp);
     } catch (e) {
       if (e instanceof LocusError || (e && (e as any).code)) {
-        reportError((e as any) as LocusError, fileMap);
+  reportError((e as any) as LocusError, fileMap, opts.errorFormat);
         process.exit(1);
       }
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
@@ -43,6 +43,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   try {
     merged = mergeAsts(asts);
   } catch (e) {
+    if (e instanceof LocusError || (e && (e as any).code)) {
+      reportError((e as any) as LocusError, fileMap, opts.errorFormat);
+      process.exit(1);
+    }
     throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
   }
   // Validate unified AST
@@ -50,7 +54,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     validateUnifiedAst(merged);
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
-      reportError((e as any) as LocusError, fileMap);
+  reportError((e as any) as LocusError, fileMap, opts.errorFormat);
       process.exit(1);
     }
     throw e;
@@ -64,6 +68,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     if (!existsSync(prismaDir)) mkdirSync(prismaDir, { recursive: true });
     writeFileSync(join(prismaDir, 'schema.prisma'), schema);
   } catch (e) {
+    if (e instanceof LocusError || (e && (e as any).code)) {
+      reportError((e as any) as LocusError, fileMap, opts.errorFormat);
+      process.exit(1);
+    }
     throw new GeneratorError('Failed generating Prisma schema', e);
   }
 
@@ -79,6 +87,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       await safeWrite(full, c);
     })));
   } catch (e) {
+    if (e instanceof LocusError || (e && (e as any).code)) {
+      reportError((e as any) as LocusError, fileMap);
+      process.exit(1);
+    }
     throw new GeneratorError('Failed generating Express API', e);
   }
 
@@ -97,6 +109,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     const code = generateReactPage(p);
     await safeWrite(join(pagesDir, `${p.name}.tsx`), code);
       } catch (e) {
+        if (e instanceof LocusError || (e && (e as any).code)) {
+          reportError((e as any) as LocusError, fileMap, opts.errorFormat);
+          process.exit(1);
+        }
         throw new GeneratorError(`Failed generating React page '${p.name}'`, e);
       }
     })));
@@ -107,7 +123,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     const css = generateCssVariables(merged.designSystem);
     // Write to outDir root (Next app will import from /theme.css)
     writeFileSync(join(outDir, 'theme.css'), css);
-  } catch {/* ignore optional */}
+  } catch {/* optional */}
 
   // Next.js minimal app scaffolding (app/ directory routing)
   try {
@@ -127,6 +143,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     const code = generateReactComponent(c);
     await safeWrite(join(compsDir, `${c.name}.tsx`), code);
       } catch (e) {
+        if (e instanceof LocusError || (e && (e as any).code)) {
+          reportError((e as any) as LocusError, fileMap, opts.errorFormat);
+          process.exit(1);
+        }
         throw new GeneratorError(`Failed generating React component '${c.name}'`, e);
       }
     })));

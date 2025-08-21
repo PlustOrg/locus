@@ -51,6 +51,7 @@ export interface Field {
   name: string;
   type: FieldType;
   attributes: FieldAttribute[];
+  nameLoc?: { line: number; column: number };
 }
 
 export type RelationKind = 'has_many' | 'belongs_to' | 'has_one';
@@ -61,6 +62,8 @@ export interface Relation {
   target: string; // entity name
   attributes: FieldAttribute[]; // e.g., unique on belongs_to for 1-1
   optional?: boolean; // for belongs_to ?
+  nameLoc?: { line: number; column: number };
+  targetLoc?: { line: number; column: number };
 }
 
 // Design System (Phase 1.2)

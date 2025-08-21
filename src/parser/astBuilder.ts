@@ -50,7 +50,8 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
         const fieldDecls = (entChildren['fieldDecl'] as CstNode[]) || [];
         for (const fd of fieldDecls) {
           const fdCh = fd.children as CstChildrenDictionary;
-          const fieldName = (fdCh['Identifier'] as IToken[])[0].image;
+          const fieldNameTok = (fdCh['Identifier'] as IToken[])[0];
+          const fieldName = fieldNameTok.image;
 
           const typeAlt = (fdCh['fieldType'] as CstNode[])[0];
           const typeCh = typeAlt.children as CstChildrenDictionary;
@@ -122,19 +123,24 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
             }
           }
 
-          fields.push({ name: fieldName, type: fieldType, attributes });
+          const fieldNode: any = { name: fieldName, type: fieldType, attributes };
+          defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
+          fields.push(fieldNode);
         }
 
         const relationDecls = (entChildren['relationDecl'] as CstNode[]) || [];
         for (const rd of relationDecls) {
           const rch = rd.children as CstChildrenDictionary;
-          const relName = (rch['Identifier'] as IToken[])[0].image; // first identifier
+          const idToks = (rch['Identifier'] as IToken[]);
+          const relNameTok = idToks[0];
+          const relName = relNameTok.image; // first identifier
           let kind: any = 'has_many';
           if (rch['BelongsTo']) kind = 'belongs_to';
           else if (rch['HasOne']) kind = 'has_one';
           else if (rch['HasMany']) kind = 'has_many';
           const targetTokens = rch['Identifier'] as IToken[];
-          const target = targetTokens[targetTokens.length - 1].image;
+          const targetTok = targetTokens[targetTokens.length - 1];
+          const target = targetTok.image;
           const attributes: FieldAttribute[] = [];
 
           const attrGroups = (rch['fieldAttributeGroup'] as CstNode[]) || [];
@@ -143,7 +149,10 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
             if (agCh['Unique']) attributes.push({ kind: 'unique' });
           }
 
-          relations.push({ name: relName, kind, target, attributes });
+          const relNode: any = { name: relName, kind, target, attributes };
+          defineHidden(relNode, 'nameLoc', posOf(relNameTok));
+          defineHidden(relNode, 'targetLoc', posOf(targetTok));
+          relations.push(relNode);
         }
 
   const entity: any = { name, fields, relations };

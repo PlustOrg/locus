@@ -10,6 +10,35 @@ Scaffold a new project with boilerplate files and configuration.
 ### `locus dev`
 Start the development server with hot-reloading for frontend and backend.
 
+#### Error Output Format
+
+Both `locus build` and `locus dev` support structured error output for editor/tool integrations:
+
+- `--errors pretty` (default): Human-friendly boxed messages with codeframes.
+- `--errors json`: One JSON object per error written to stderr.
+
+JSON schema (stable fields):
+
+```
+{
+	"code": "parse_error" | "lex_error" | "validation_error" | "merge_error",
+	"message": string,        // Friendly message, e.g., "Expected ':' but found 'String'"
+	"rawMessage": string,     // Underlying message from the parser/lexer/throw site
+	"filePath": string | null,
+	"line": number | null,
+	"column": number | null,
+	"length": number | null,  // Length of the highlighted span
+	"heading": string         // e.g., "Parse Error", "Validation Error"
+}
+```
+
+Example:
+
+```
+$ locus build --errors json
+{"code":"parse_error","message":"Expected ':' but found 'String'","rawMessage":"Expecting token of type --> Colon <-- but found --> 'String' <--","filePath":"src/db.locus","line":4,"column":12,"length":6,"heading":"Parse Error"}
+```
+
 ### `locus build`
 Compile and optimize your project for production.
 
@@ -34,3 +63,5 @@ Install npm packages into the generated frontend or backend.
 - The CLI supports plugins for new commands and integrations.
 
 See [Development Workflow](./development-workflow.md) and [Deployment](./deployment.md) for more details.
+
+See also: [Common Errors & Fixes](../guides/common-errors.md).

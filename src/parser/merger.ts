@@ -1,6 +1,11 @@
 import { DesignSystemBlock, Entity, LocusFileAST } from '../ast';
+import { LocusError } from '../errors';
 
-export class MergeError extends Error {}
+export class MergeError extends LocusError {
+  constructor(message: string, filePath?: string, line?: number, column?: number) {
+    super({ code: 'merge_error', message, filePath, line, column });
+  }
+}
 
 export interface UnifiedAST {
   database: { entities: Entity[] };
@@ -16,8 +21,8 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
     for (const db of f.databases) {
       for (const e of db.entities) {
         if (entitiesMap.has(e.name)) {
-          const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(e.nameLoc)}` : '';
-          throw new MergeError(`Entity '${e.name}' defined multiple times${where}`);
+          const loc = e.nameLoc;
+          throw new MergeError(`Entity '${e.name}' defined multiple times`, f.sourceFile, loc?.line, loc?.column);
         }
         entitiesMap.set(e.name, e);
       }
@@ -49,8 +54,8 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
   const pageNames = new Set<string>();
   for (const f of files) for (const p of f.pages) {
     if (pageNames.has(p.name)) {
-      const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(p.nameLoc)}` : '';
-      throw new MergeError(`Page '${p.name}' defined multiple times${where}`);
+      const loc = p.nameLoc;
+      throw new MergeError(`Page '${p.name}' defined multiple times`, f.sourceFile, loc?.line, loc?.column);
     }
     pageNames.add(p.name); pages.push(p);
   }
@@ -59,8 +64,8 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
   const compNames = new Set<string>();
   for (const f of files) for (const c of f.components) {
     if (compNames.has(c.name)) {
-      const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(c.nameLoc)}` : '';
-      throw new MergeError(`Component '${c.name}' defined multiple times${where}`);
+      const loc = c.nameLoc;
+      throw new MergeError(`Component '${c.name}' defined multiple times`, f.sourceFile, loc?.line, loc?.column);
     }
     compNames.add(c.name); components.push(c);
   }
@@ -69,8 +74,8 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
   const storeNames = new Set<string>();
   for (const f of files) for (const s of f.stores) {
     if (storeNames.has(s.name)) {
-      const where = f.sourceFile ? ` at ${f.sourceFile}${fmtLoc(s.nameLoc)}` : '';
-      throw new MergeError(`Store '${s.name}' defined multiple times${where}`);
+      const loc = s.nameLoc;
+      throw new MergeError(`Store '${s.name}' defined multiple times`, f.sourceFile, loc?.line, loc?.column);
     }
     storeNames.add(s.name); stores.push(s);
   }
@@ -78,6 +83,3 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
   return { database: { entities }, designSystem, pages, components, stores };
 }
 
-function fmtLoc(loc?: { line: number; column: number }) {
-  return loc ? `:${loc.line}:${loc.column}` : '';
-}

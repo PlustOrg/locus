@@ -7,18 +7,26 @@ export function validateUnifiedAst(ast: UnifiedAST) {
     const sourceFile = (ds as any).sourceFile;
     // token key naming
     const keyOk = (k: string) => /^[a-z][a-z0-9_]*$/.test(k);
-    const badKeys: string[] = [];
+    const badKeys: Array<{ key: string; loc?: any }> = [];
     const checkMap = (m?: Record<string, any>) => {
       if (!m) return;
-      for (const k of Object.keys(m)) if (!keyOk(k)) badKeys.push(k);
+      for (const k of Object.keys(m)) {
+        if (!keyOk(k)) badKeys.push({ key: k, loc: (m as any)[k]?.loc });
+      }
     };
     checkMap(ds.spacing);
     checkMap(ds.radii);
     checkMap(ds.shadows);
     if (ds.typography?.weights) checkMap(ds.typography.weights as any);
     if (badKeys.length) {
-      // No location info for this one
-      throw new VError(`Invalid design_system token names: ${badKeys.join(', ')}`);
+      // Report first offending key with loc if present
+      const first = badKeys[0];
+      throw new VError(
+        `Invalid design_system token name '${first.key}'. Use lower_snake_case starting with a letter.`,
+        sourceFile,
+        first.loc?.line,
+        first.loc?.column
+      );
     }
 
     // colors values must be hex (#rgb or #rrggbb)
@@ -64,6 +72,30 @@ export function validateUnifiedAst(ast: UnifiedAST) {
           }
         }
       }
+    }
+  }
+
+  // database-wide validations
+  validateDatabase(ast);
+}
+
+// Additional validations over unified database
+export function validateDatabase(ast: UnifiedAST) {
+  const entities = ast.database.entities || [];
+  for (const ent of entities) {
+    // duplicate field names within entity
+    const seen = new Map<string, any>();
+    for (const f of ent.fields) {
+      if (seen.has(f.name)) {
+        const loc = (f as any).nameLoc;
+        throw new VError(
+          `Duplicate field name '${f.name}' in entity '${ent.name}'.`,
+          (ent as any).sourceFile,
+          loc?.line,
+          loc?.column
+        );
+      }
+      seen.set(f.name, f);
     }
   }
 }

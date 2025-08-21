@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import { runDbMigrate, runDbStudio } from './cli/db';
 import { buildProject } from './cli/build';
 import { dev as devCmd } from './cli/dev';
+import type { ErrorOutputFormat } from './cli/reporter';
 import path from 'path';
 import { newProject } from './cli/new';
 import { deploy as deployCmd } from './cli/deploy';
@@ -27,19 +28,21 @@ program
   .description('Build the project outputs')
   .option('--src <dir>', 'source dir', '.')
   .option('--out <dir>', 'output dir', 'generated')
+  .option('--errors <format>', 'error output format: pretty|json', 'pretty')
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
     const outDir = path.resolve(opts.out);
-    await buildProject({ srcDir, outDir });
+    await buildProject({ srcDir, outDir, errorFormat: opts.errors as ErrorOutputFormat });
   });
 
 program
   .command('dev')
   .description('Run dev mode with file watching')
   .option('--src <dir>', 'source dir', '.')
+  .option('--errors <format>', 'error output format: pretty|json', 'pretty')
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
-    await devCmd({ srcDir });
+    await devCmd({ srcDir, errorFormat: opts.errors as ErrorOutputFormat });
   });
 
 program
