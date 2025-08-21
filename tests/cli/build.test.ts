@@ -1,6 +1,4 @@
 import { buildProject } from '../../src/cli/build';
-import { parseLocus } from '../../src/parser';
-import { mergeAsts } from '../../src/parser/merger';
 import * as fs from 'fs';
 import * as parser from '../../src/parser';
 import * as merger from '../../src/parser/merger';
@@ -8,15 +6,25 @@ import * as merger from '../../src/parser/merger';
 jest.mock('../../src/parser', () => ({ parseLocus: jest.fn() }));
 jest.mock('../../src/parser/merger', () => ({ mergeAsts: jest.fn() }));
 
-jest.mock('fs', () => ({
-  __esModule: true,
-  ...jest.requireActual('fs'),
-  writeFileSync: jest.fn(),
-  mkdirSync: jest.fn(),
-  existsSync: jest.fn(),
-  readdirSync: jest.fn(),
-  readFileSync: jest.fn(),
-}));
+jest.mock('fs', () => {
+  const actual = jest.requireActual('fs');
+  const mock: any = {
+    __esModule: true,
+    ...actual,
+    writeFileSync: jest.fn(),
+    mkdirSync: jest.fn(),
+    existsSync: jest.fn(),
+    readdirSync: jest.fn(),
+    readFileSync: jest.fn(),
+  };
+  // capture fs.promises.writeFile which build pipeline prefers on some platforms
+  mock.promises = {
+    ...actual.promises,
+    writeFile: jest.fn((p: any, c: any) => { mockFs[String(p)] = String(c); }),
+    mkdir: jest.fn(async () => void 0),
+  };
+  return mock;
+});
 
 const mockFs: Record<string, string> = {};
 
