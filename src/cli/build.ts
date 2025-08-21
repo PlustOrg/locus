@@ -31,8 +31,8 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       fileMap.set(fp, content);
       return parseLocus(content as any, fp);
     } catch (e) {
-      if (e instanceof LocusError) {
-        reportError(e, fileMap);
+      if (e instanceof LocusError || (e && (e as any).code)) {
+        reportError((e as any) as LocusError, fileMap);
         process.exit(1);
       }
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
@@ -49,8 +49,8 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   try {
     validateUnifiedAst(merged);
   } catch (e) {
-    if (e instanceof LocusError) {
-      reportError(e, fileMap);
+    if (e instanceof LocusError || (e && (e as any).code)) {
+      reportError((e as any) as LocusError, fileMap);
       process.exit(1);
     }
     throw e;

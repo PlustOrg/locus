@@ -1,5 +1,3 @@
-import { CustomError } from 'ts-custom-error';
-
 export type LocusErrorCode =
   //
   'lex_error' | 'parse_error' | 'merge_error' | 'validation_error';
@@ -14,20 +12,24 @@ export interface LocusErrorOptions {
   cause?: unknown;
 }
 
-export class LocusError extends CustomError {
+export class LocusError extends Error {
   public code: LocusErrorCode;
   public filePath?: string;
   public line?: number;
   public column?: number;
   public length?: number;
+  public cause?: unknown;
 
   constructor(opts: LocusErrorOptions) {
-    super(opts.message, { cause: opts.cause });
+    super(opts.message);
+    this.name = 'LocusError';
     this.code = opts.code;
     this.filePath = opts.filePath;
     this.line = opts.line;
     this.column = opts.column;
     this.length = opts.length;
+    this.cause = opts.cause;
+    (Error as any).captureStackTrace?.(this, LocusError);
   }
 }
 

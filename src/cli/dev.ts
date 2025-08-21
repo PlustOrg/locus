@@ -16,6 +16,8 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
   } catch (e) {
     if (e instanceof LocusError) {
       reportError(e, fileMap);
+    } else if (e && (e as any).cause instanceof LocusError) {
+      reportError((e as any).cause as LocusError, fileMap);
     }
   }
   // start next.js and express servers (stubbed)
@@ -33,7 +35,15 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
     fileMap,
   });
   const initialFiles = collectLocusFiles(opts.srcDir);
-  await inc.init(initialFiles);
+  try {
+    await inc.init(initialFiles);
+  } catch (e) {
+    if (e instanceof LocusError) {
+      reportError(e, fileMap);
+    } else if (e && (e as any).cause instanceof LocusError) {
+      reportError((e as any).cause as LocusError, fileMap);
+    }
+  }
   const debounce = createDebounce(100);
   const timed = async (label: string, fn: () => Promise<void>) => {
     const s = Date.now();
@@ -42,6 +52,8 @@ export async function dev(opts: { srcDir: string; debug?: boolean }) {
     } catch (e) {
       if (e instanceof LocusError) {
         reportError(e, fileMap);
+      } else if (e && (e as any).cause instanceof LocusError) {
+        reportError((e as any).cause as LocusError, fileMap);
       }
     }
     if (opts.debug) {

@@ -64,6 +64,8 @@ export function createIncrementalBuilder(opts: {
           opts.fileMap.set(fp, content);
           cache.set(fp, parseLocus(content, fp));
         } catch (e) {
+          // Preserve rich location info for parser/validation errors
+          if (e && (e as any).code) throw e;
           throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
         }
       }
