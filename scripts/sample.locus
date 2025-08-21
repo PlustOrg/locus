@@ -1,15 +1,15 @@
 database {
-	entity User {
+    entity User {
         email: String (unique)
         name: String
         age: Integer (default: 0)
         active: Boolean (default: true)
         bio: Text
-	}
-	entity Post {
+    }
+    entity Post {
         title: String
         content: Text
         createdAt: DateTime (default: now())
         draft: Boolean (default: false)
-	}
+    }
 }
