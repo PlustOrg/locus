@@ -211,6 +211,8 @@ The banner appears once after the initial build. Subsequent rebuilds log concise
 `--quiet` suppresses the banner and startup lines (only regeneration or error lines remain).
 `--log-file path/to/dev.log` mirrors all dev output (including child process stdout/stderr) to the chosen file, appending a session header.
 
+First run auto-install: If the chosen working directory (generated/ by default) has a `package.json` but no `node_modules`, `locus dev` will run `npm install --no-audit --no-fund` automatically before starting servers.
+
 With `LOCUS_DEBUG=1` each change batch prints an additional line:
 ```
 [locus][dev][timing] batch=2 total=15 dt=42ms

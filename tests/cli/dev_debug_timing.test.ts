@@ -22,6 +22,7 @@ test('LOCUS_DEBUG timing output present after change', async () => {
   const file = join(dir, 'file.locus');
   writeFileSync(file, '');
   process.env.LOCUS_DEBUG = '1';
+  process.env.LOCUS_TEST_DISABLE_SPAWN = '1';
   await dev({ srcDir: dir });
   expect(changeHandler).not.toBeNull();
   writeFileSync(file, 'updated');

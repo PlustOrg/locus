@@ -12,6 +12,7 @@ describe('dev banner', () => {
   let output = '';
   beforeEach(() => {
     output = '';
+  process.env.LOCUS_TEST_DISABLE_SPAWN = '1';
     (buildMod as any).buildProject.mockResolvedValue({ meta: { hasPages: true } });
     (process.stdout.write as any) = (chunk: any) => { output += String(chunk); return true; };
   });

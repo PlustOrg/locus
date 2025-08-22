@@ -5,7 +5,7 @@ import { buildProject } from './build';
 import { readdirSync, statSync, existsSync } from 'fs';
 import { LocusError } from '../errors';
 import { reportError, ErrorOutputFormat } from './reporter';
-import { join } from 'path';
+import { join, relative } from 'path';
 import chalk from 'chalk';
 // merged into upper import
 import { getAppName } from '../generator/outputs';
@@ -65,14 +65,23 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   }
   // start next.js and express servers (stubbed)
   const apiPort = Number(process.env.API_PORT || process.env.PORT) || 3001;
-  if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting API on :${apiPort}\n`));
-  logMirror(`[locus][dev] starting API on :${apiPort}\n`);
-  const apiProc = spawnApi(opts.srcDir);
+  const generatedDir = join(opts.srcDir, 'generated');
+  const pkgInGenerated = existsSync(join(generatedDir, 'package.json'));
+  const rootPkg = existsSync(join(opts.srcDir, 'package.json'));
+  // Choose working directory for spawning processes
+  const workDir = pkgInGenerated ? generatedDir : (rootPkg ? opts.srcDir : generatedDir);
+
+  // Auto install dependencies if needed (skip in tests or if node_modules exists)
+  await ensureDependencies(workDir, { quiet: opts.quiet, log: logMirror });
+
+  if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting API on :${apiPort} (cwd=${relative(opts.srcDir, workDir) || '.'})\n`));
+  logMirror(`[locus][dev] starting API on :${apiPort} (cwd=${workDir})\n`);
+  const apiProc = spawnApi(opts.srcDir, workDir, { quiet: opts.quiet, log: logMirror });
   let nextProc: any = { stdout: { on() {} }, kill() {} };
   if (buildMeta?.meta?.hasPages) {
-  if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting Next dev server on :3000\n`));
-  logMirror('[locus][dev] starting Next dev server on :3000\n');
-    nextProc = spawnNext();
+    if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting Next dev server on :3000 (cwd=${relative(opts.srcDir, workDir) || '.'})\n`));
+    logMirror('[locus][dev] starting Next dev server on :3000\n');
+    nextProc = spawnNext(workDir);
   }
   const markStarted = new Set<string>();
   const watchChild = (name: string, proc: any) => {
@@ -181,6 +190,24 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   } catch {/* ignore banner errors */}
 }
 
+async function ensureDependencies(dir: string, io: { quiet?: boolean; log: (s: string)=>void }) {
+  if (process.env.LOCUS_TEST_DISABLE_SPAWN === '1') return; // skip in tests
+  const pkgPath = join(dir, 'package.json');
+  if (!existsSync(pkgPath)) return;
+  const nm = join(dir, 'node_modules');
+  if (existsSync(nm)) return; // already installed
+  const line = '[locus][dev] installing dependencies (first run)...';
+  if (!io.quiet) process.stdout.write(chalk.gray(line + '\n'));
+  io.log(line + '\n');
+  await new Promise<void>((resolve) => {
+    const proc = spawnSafe('npm', ['install', '--no-audit', '--no-fund'], dir);
+    proc.stdout.on('data', (d: Buffer) => io.log(d.toString()));
+    proc.stderr.on('data', (d: Buffer) => io.log(d.toString()));
+    proc.on('exit', () => resolve());
+    proc.on('error', () => resolve());
+  });
+}
+
 function collectLocusFiles(dir: string): string[] {
   const results: string[] = [];
   const visit = (d: string) => {
@@ -198,9 +225,19 @@ function collectLocusFiles(dir: string): string[] {
   return results;
 }
 
-function spawnSafe(cmd: string, args: string[]) {
-  // Cross-platform process spawn helper
-  const proc = spawn(cmd, args, { stdio: 'pipe', shell: process.platform === 'win32' });
+function spawnSafe(cmd: string, args: string[], cwd?: string) {
+  // Cross-platform process spawn helper with optional cwd
+  if (process.env.LOCUS_TEST_DISABLE_SPAWN === '1') {
+    // Return a mock-like minimal event emitter object for tests
+    const { EventEmitter } = require('events');
+    const fake: any = new EventEmitter();
+    fake.stdout = new EventEmitter();
+    fake.stderr = new EventEmitter();
+    fake.kill = () => { fake.emit('exit', 0); };
+    setTimeout(() => fake.stdout.emit('data', Buffer.from('test')), 5);
+    return fake;
+  }
+  const proc = spawn(cmd, args, { stdio: 'pipe', cwd, shell: process.platform === 'win32' });
   return proc;
 }
 
@@ -212,25 +249,29 @@ function createDebounce(ms: number) {
   };
 }
 
-function spawnNext() {
-  // Use env override if provided
+function spawnNext(generatedDir: string) {
   const cmd = process.env.LOCUS_NEXT_CMD;
-  if (cmd) return spawnSafe(cmd, []);
-  // Default to npm script (may be stub or real next depending on project)
-  return spawnSafe('npm', ['run', 'next:dev']);
+  if (cmd) return spawnSafe(cmd, [], generatedDir);
+  // Use correct script name dev:next (generated package.json)
+  return spawnSafe('npm', ['run', 'dev:next'], generatedDir);
 }
 
-function spawnApi(srcDir: string) {
-  // If generated server exists: import and call startServer()
-  const serverTs = join(srcDir, 'generated', 'server.ts');
-  try {
-    require.resolve('express');
-    if (existsSync(serverTs)) {
-      const code = `require('ts-node/register/transpile-only'); const mod=require('${serverTs.replace(/\\/g, '\\\\')}'); (mod.startServer||(()=>{}))();`;
-      return spawnSafe('node', ['-e', code]);
+function spawnApi(srcDir: string, generatedDir: string, opts: { quiet?: boolean; log?: (s: string)=>void }) {
+  const serverTs = join(generatedDir, 'server.ts');
+  if (existsSync(serverTs)) {
+    // Attempt ts-node execution from generated dir
+    const tsNodeRegister = 'ts-node/register/transpile-only';
+    let tsNodeAvailable = true;
+    try { require.resolve(tsNodeRegister, { paths: [generatedDir] }); }
+    catch { tsNodeAvailable = false; }
+    if (tsNodeAvailable) {
+      return spawnSafe('node', ['-r', tsNodeRegister, 'server.ts'], generatedDir);
+    } else {
+      const msg = '[locus][dev] ts-node not installed in generated directory. Install with: (cd generated && npm i -D ts-node)';
+      if (!opts.quiet) process.stdout.write(msg + '\n');
+      opts.log?.(msg + '\n');
     }
-  } catch {
-    // fall back
   }
-  return spawnSafe('npm', ['run', 'api:dev']);
+  // Fallback: npm script dev:api from generated package.json (will fail if missing)
+  return spawnSafe('npm', ['run', 'dev:api'], generatedDir);
 }

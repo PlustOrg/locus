@@ -11,6 +11,7 @@ test('--quiet suppresses banner', async () => {
   let out = '';
   (process.stdout.write as any) = (c: any) => { out += String(c); return true; };
   const dir = mkdtempSync(join(tmpdir(), 'locus-dev-quiet-'));
+  process.env.LOCUS_TEST_DISABLE_SPAWN = '1';
   writeFileSync(join(dir, 'a.locus'), '');
   await dev({ srcDir: dir, quiet: true });
   expect(out).not.toMatch(/App:/);

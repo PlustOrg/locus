@@ -61,7 +61,7 @@ export function buildPackageJson(hasPages: boolean, appName: string): string {
       cors: '^2.8.5',
       ...(hasPages ? { react: '^18.3.1', 'react-dom': '^18.3.1', next: '^14.2.0' } : {})
     },
-    devDependencies: { prisma: '^5.15.0' }
+  devDependencies: { prisma: '^5.15.0', 'ts-node': '^10.9.2', typescript: '^5.4.0' }
   } as any;
   return JSON.stringify(pkg, null, 2);
 }
