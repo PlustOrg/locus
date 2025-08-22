@@ -61,7 +61,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
 
   // Generate artifacts using shared module
   try {
-    const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+  const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
       process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
@@ -111,7 +111,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     } catch {/* ignore */}
   }
 
-  return { outDir };
+  return { outDir, meta: { hasPages: (merged as any)?.pages?.length > 0 } } as any;
 }
 
 function findLocusFiles(dir: string): string[] {

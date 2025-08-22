@@ -6,13 +6,44 @@ import { readdirSync, statSync, existsSync } from 'fs';
 import { LocusError } from '../errors';
 import { reportError, ErrorOutputFormat } from './reporter';
 import { join } from 'path';
+import chalk from 'chalk';
+// merged into upper import
+import { getAppName } from '../generator/outputs';
 import { createIncrementalBuilder } from './incremental';
 
-export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat }) {
+function formatBanner(info: {
+  appName: string;
+  apiPort: number;
+  hasPages: boolean;
+  nextPort?: number;
+  theme: boolean;
+  prismaClient: boolean;
+  enableCors: boolean;
+  watchPattern: string;
+  routeCount: number;
+  prismaHint: boolean;
+}) {
+  const lines: string[] = [];
+  lines.push(`App: ${info.appName}`);
+  lines.push(`API:  http://localhost:${info.apiPort}  (routes: ${info.routeCount})`);
+  if (info.hasPages) lines.push(`Web:  http://localhost:${info.nextPort || 3000}`);
+  lines.push(`Theme: ${info.theme ? '✓' : '✗'}   Prisma: ${info.prismaClient ? '✓' : '✗'}${info.prismaHint ? ' (run prisma generate)' : ''}`);
+  lines.push(`Watching: ${info.watchPattern}`);
+  lines.push(`CORS: ${info.enableCors ? 'on' : 'off'}  NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+  lines.push(`Ctrl+C to stop`);
+  const width = Math.max(...lines.map(l => l.length)) + 2;
+  const top = '┌' + '─'.repeat(width) + '┐';
+  const bottom = '└' + '─'.repeat(width) + '┘';
+  const body = lines.map(l => '│ ' + l.padEnd(width - 2, ' ') + '│').join('\n');
+  return chalk.cyanBright(top + '\n' + body + '\n' + bottom);
+}
+
+export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean }) {
   const fileMap = new Map<string, string>();
   // initial build
+  let buildMeta: any = { meta: { hasPages: false } };
   try {
-    await buildProject({ srcDir: opts.srcDir, debug: opts.debug });
+    buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug });
   } catch (e) {
     if (e instanceof LocusError) {
   reportError(e, fileMap, opts.errorFormat);
@@ -21,8 +52,28 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     }
   }
   // start next.js and express servers (stubbed)
-  const nextProc = spawnNext();
+  const apiPort = Number(process.env.API_PORT || process.env.PORT) || 3001;
+  if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting API on :${apiPort}\n`));
   const apiProc = spawnApi(opts.srcDir);
+  let nextProc: any = { stdout: { on() {} }, kill() {} };
+  if (buildMeta?.meta?.hasPages) {
+  if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting Next dev server on :3000\n`));
+    nextProc = spawnNext();
+  }
+  const markStarted = new Set<string>();
+  const watchChild = (name: string, proc: any) => {
+    proc.stdout.on('data', () => {
+      if (!markStarted.has(name)) {
+        if (!opts.quiet) process.stdout.write(chalk.green(`[locus][dev] ${name} up`)+"\n");
+        markStarted.add(name);
+      }
+    });
+    proc.on('exit', (code: number) => {
+      if (!opts.quiet) process.stdout.write(chalk.red(`[locus][dev] ${name} exited code ${code}`)+"\n");
+    });
+  };
+  watchChild('api', apiProc);
+  if (buildMeta?.meta?.hasPages) watchChild('next', nextProc);
   nextProc.stdout.on('data', () => {});
   apiProc.stdout.on('data', () => {});
 
@@ -69,12 +120,39 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
 
   // graceful shutdown
   const shutdown = () => {
+  if (!opts.quiet) console.log(chalk.gray('[locus][dev] shutting down...'));
     try { watcher.close(); } catch {}
     try { nextProc.kill(); } catch {}
     try { apiProc.kill(); } catch {}
+  if (!opts.quiet) console.log(chalk.gray('[locus][dev] bye'));
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+
+  // After everything set up, print banner
+  try {
+    const appName = getAppName(opts.srcDir);
+    // route count: count generated/routes/*.ts (exclude server.ts)
+    let routeCount = 0;
+    const routesDir = join(opts.srcDir, 'generated', 'routes');
+    try { routeCount = readdirSync(routesDir).filter(f => f.endsWith('.ts')).length; } catch {}
+    const theme = existsSync(join(opts.srcDir, 'generated', 'theme.css'));
+    let prismaClient = true; let prismaHint = false;
+    try { require.resolve('@prisma/client'); } catch { prismaClient = false; prismaHint = true; }
+    const banner = formatBanner({
+      appName,
+      apiPort,
+      hasPages: !!buildMeta?.meta?.hasPages,
+      nextPort: 3000,
+      theme,
+      prismaClient,
+      prismaHint,
+      enableCors: process.env.ENABLE_CORS === '1',
+      watchPattern: '**/*.locus',
+      routeCount,
+    });
+  if (!opts.quiet) process.stdout.write(banner + '\n');
+  } catch {/* ignore banner errors */}
 }
 
 function collectLocusFiles(dir: string): string[] {

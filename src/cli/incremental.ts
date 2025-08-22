@@ -37,6 +37,8 @@ export function createIncrementalBuilder(opts: {
   }
 
   const lastWritten = new Map<string, string>();
+  let totalWrites = 0;
+  let lastChangeTime = Date.now();
 
   // (previous listGeneratedFiles removed as unused)
 
@@ -51,18 +53,22 @@ export function createIncrementalBuilder(opts: {
     try {
   const changed: string[] = [];
     const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir: opts.srcDir });
-    for (const [rel, content] of Object.entries(artifacts)) {
+  for (const [rel, content] of Object.entries(artifacts)) {
       const full = join(outDir, rel);
       if (lastWritten.get(full) !== content) {
         writeFileSafe(full, content);
         lastWritten.set(full, content);
         changed.push(full);
+    totalWrites++;
       }
     }
     writePackageJson(meta.hasPages);
     if (changed.length) {
+      const now = Date.now();
+      const delta = now - lastChangeTime;
+      lastChangeTime = now;
       if (process.env.LOCUS_DEBUG) {
-        process.stdout.write('[locus][dev][changed] ' + changed.map(f => f.replace(opts.outDir + '/', '')).join(', ') + '\n');
+        process.stdout.write('[locus][dev][changed] ' + changed.map(f => f.replace(opts.outDir + '/', '')).join(', ') + `\n[locus][dev][timing] batch=${changed.length} total=${totalWrites} dt=${delta}ms` + '\n');
       } else {
         process.stdout.write(`[locus][dev] regenerated ${changed.length} file${changed.length === 1 ? '' : 's'}\n`);
       }

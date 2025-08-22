@@ -42,9 +42,10 @@ program
   .description('Run dev mode with file watching')
   .option('--src <dir>', 'source dir', '.')
   .option('--errors <format>', 'error output format: pretty|json', 'pretty')
+  .option('--quiet', 'suppress banner and startup logs', false)
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
-    await devCmd({ srcDir, errorFormat: opts.errors as ErrorOutputFormat });
+    await devCmd({ srcDir, errorFormat: opts.errors as ErrorOutputFormat, quiet: !!opts.quiet });
   });
 
 program

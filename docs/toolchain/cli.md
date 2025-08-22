@@ -181,6 +181,40 @@ Feedback or proposals welcome—open an issue or submit a design doc PR.
 Prisma client not found:
 - Run `locus build --prisma-generate` or inside generated dir run `npm run prisma:generate`.
 - Ensure `.env` has a valid `DATABASE_URL`.
+## Dev Mode
+
+### Startup Banner
+
+Running `locus dev` now prints a concise banner summarizing the running environment:
+
+```
+┌────────────────────────────────────────────┐
+│ App: my-app                                │
+│ API:  http://localhost:3001  (routes: 3)   │
+│ Web:  http://localhost:3000                │
+│ Theme: ✓   Prisma: ✗ (run prisma generate) │
+│ Watching: **/*.locus                       │
+│ CORS: off  NODE_ENV: development           │
+│ Ctrl+C to stop                             │
+└────────────────────────────────────────────┘
+```
+
+Legend:
+- API/Web: Base URLs. API port precedence: `API_PORT` > `PORT` > 3001.
+- routes: Count of generated Express route files.
+- Theme: Whether `theme.css` was generated.
+- Prisma: Whether `@prisma/client` is resolvable (hint shown if missing).
+- Watching: Glob pattern for incremental rebuild.
+- CORS: Enabled when `ENABLE_CORS=1`.
+
+The banner appears once after the initial build. Subsequent rebuilds log concise `[locus][dev] regenerated N files` messages. Use `LOCUS_DEBUG=1` for extra timing details (future enhancement).
+`--quiet` suppresses the banner and startup lines (only regeneration or error lines remain).
+
+With `LOCUS_DEBUG=1` each change batch prints an additional line:
+```
+[locus][dev][timing] batch=2 total=15 dt=42ms
+```
+Meaning: last batch rewrote 2 files, cumulative rewrites 15, 42ms since previous batch.
 
 Port conflicts:
 - API defaults to `PORT` env var or 3001. Set a free port: `PORT=4001 locus dev`.
