@@ -7,7 +7,7 @@ import { mergeAsts } from '../parser/merger';
 import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
 import { BuildError, LocusError } from '../errors';
-import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName } from '../generator/outputs';
+import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
 import { reportError, ErrorOutputFormat } from './reporter';
 export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean }) {
   const srcDir = opts.srcDir;
@@ -79,7 +79,12 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     const pkgPath = join(outDir, 'package.json');
     if (!existsSync(pkgPath)) writeFileSync(pkgPath, buildPackageJson(meta.hasPages, appName));
     const readmePath = join(outDir, 'README.md');
-    if (!existsSync(readmePath)) writeFileSync(readmePath, buildGeneratedReadme());
+  if (!existsSync(readmePath)) writeFileSync(readmePath, buildGeneratedReadme());
+      // Ensure tsconfig.json exists (Next + ts-node friendliness)
+      const tsconfigPath = join(outDir, 'tsconfig.json');
+      if (!existsSync(tsconfigPath) && !opts.dryRun) {
+        writeFileSync(tsconfigPath, buildTsConfig());
+      }
     } catch (e) {
       if (e instanceof LocusError || (e && (e as any).code)) {
         reportError((e as any) as LocusError, fileMap, opts.errorFormat);

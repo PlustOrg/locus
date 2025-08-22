@@ -87,7 +87,7 @@ router.delete('/${routeBase}/:id', async (req, res) => {
   mounts.push(base);
   }
   // Optional: basic app bootstrap
-  const imports = mounts.map(n => `import { router as ${n}Router } from './routes/${n}'`).join('\n');
+  const imports = mounts.map(n => `import { router as ${n}Router } from './routes/${n}.ts'`).join('\n');
   const uses = mounts.map(n => `app.use('/${opts?.pluralizeRoutes ? pluralize(n) : n}', ${n}Router)`).join('\n');
   files['server.ts'] = `import express from 'express'
 import cors from 'cors'

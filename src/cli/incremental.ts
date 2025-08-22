@@ -2,7 +2,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
-import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName } from '../generator/outputs';
+import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
 import { BuildError } from '../errors';
 
 export function createIncrementalBuilder(opts: {
@@ -34,6 +34,8 @@ export function createIncrementalBuilder(opts: {
     writeFileSafe(pkgPath, buildPackageJson(hasPages, appName));
     const readmePath = join(opts.outDir, 'README.md');
     if (!existsSync(readmePath)) writeFileSafe(readmePath, buildGeneratedReadme());
+  const tsconfigPath = join(opts.outDir, 'tsconfig.json');
+  if (!existsSync(tsconfigPath)) writeFileSafe(tsconfigPath, buildTsConfig());
   }
 
   const lastWritten = new Map<string, string>();
