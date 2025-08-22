@@ -43,9 +43,10 @@ program
   .option('--src <dir>', 'source dir', '.')
   .option('--errors <format>', 'error output format: pretty|json', 'pretty')
   .option('--quiet', 'suppress banner and startup logs', false)
+  .option('--log-file <file>', 'write all dev output (including child stderr) to a log file')
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
-    await devCmd({ srcDir, errorFormat: opts.errors as ErrorOutputFormat, quiet: !!opts.quiet });
+    await devCmd({ srcDir, errorFormat: opts.errors as ErrorOutputFormat, quiet: !!opts.quiet, logFile: opts.logFile });
   });
 
 program

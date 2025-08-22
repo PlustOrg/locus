@@ -38,8 +38,20 @@ function formatBanner(info: {
   return chalk.cyanBright(top + '\n' + body + '\n' + bottom);
 }
 
-export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean }) {
+export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string }) {
   const fileMap = new Map<string, string>();
+  let logStream: import('fs').WriteStream | null = null;
+  if (opts.logFile) {
+    try {
+      const { createWriteStream, mkdirSync } = await import('fs');
+      const { dirname } = await import('path');
+      mkdirSync(dirname(opts.logFile), { recursive: true });
+      logStream = createWriteStream(opts.logFile, { flags: 'a' });
+      const stamp = new Date().toISOString();
+      logStream.write(`\n=== locus dev session ${stamp} ===\n`);
+    } catch {/* ignore log file errors */}
+  }
+  const logMirror = (chunk: string) => { if (logStream) logStream.write(chunk); };
   // initial build
   let buildMeta: any = { meta: { hasPages: false } };
   try {
@@ -54,22 +66,32 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   // start next.js and express servers (stubbed)
   const apiPort = Number(process.env.API_PORT || process.env.PORT) || 3001;
   if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting API on :${apiPort}\n`));
+  logMirror(`[locus][dev] starting API on :${apiPort}\n`);
   const apiProc = spawnApi(opts.srcDir);
   let nextProc: any = { stdout: { on() {} }, kill() {} };
   if (buildMeta?.meta?.hasPages) {
   if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting Next dev server on :3000\n`));
+  logMirror('[locus][dev] starting Next dev server on :3000\n');
     nextProc = spawnNext();
   }
   const markStarted = new Set<string>();
   const watchChild = (name: string, proc: any) => {
-    proc.stdout.on('data', () => {
+    proc.stdout.on('data', (d: Buffer) => {
+      logMirror(d.toString());
       if (!markStarted.has(name)) {
         if (!opts.quiet) process.stdout.write(chalk.green(`[locus][dev] ${name} up`)+"\n");
+        logMirror(`[locus][dev] ${name} up\n`);
         markStarted.add(name);
       }
     });
+    proc.stderr?.on('data', (d: Buffer) => {
+      logMirror(d.toString());
+      if (!opts.quiet) process.stderr.write(d.toString());
+    });
     proc.on('exit', (code: number) => {
-      if (!opts.quiet) process.stdout.write(chalk.red(`[locus][dev] ${name} exited code ${code}`)+"\n");
+      const line = `[locus][dev] ${name} exited code ${code}`;
+      if (!opts.quiet) process.stdout.write(chalk.red(line)+"\n");
+      logMirror(line + '\n');
     });
   };
   watchChild('api', apiProc);
@@ -121,10 +143,13 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   // graceful shutdown
   const shutdown = () => {
   if (!opts.quiet) console.log(chalk.gray('[locus][dev] shutting down...'));
+  logMirror('[locus][dev] shutting down...\n');
     try { watcher.close(); } catch {}
     try { nextProc.kill(); } catch {}
     try { apiProc.kill(); } catch {}
   if (!opts.quiet) console.log(chalk.gray('[locus][dev] bye'));
+  logMirror('[locus][dev] bye\n');
+  if (logStream) { try { logStream.end(); } catch {} }
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
@@ -152,6 +177,7 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
       routeCount,
     });
   if (!opts.quiet) process.stdout.write(banner + '\n');
+  logMirror(banner + '\n');
   } catch {/* ignore banner errors */}
 }
 

@@ -209,6 +209,7 @@ Legend:
 
 The banner appears once after the initial build. Subsequent rebuilds log concise `[locus][dev] regenerated N files` messages. Use `LOCUS_DEBUG=1` for extra timing details (future enhancement).
 `--quiet` suppresses the banner and startup lines (only regeneration or error lines remain).
+`--log-file path/to/dev.log` mirrors all dev output (including child process stdout/stderr) to the chosen file, appending a session header.
 
 With `LOCUS_DEBUG=1` each change batch prints an additional line:
 ```
