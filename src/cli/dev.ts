@@ -96,6 +96,11 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     proc.stderr?.on('data', (d: Buffer) => {
       logMirror(d.toString());
       if (!opts.quiet) process.stderr.write(d.toString());
+      if (/ERR_MODULE_NOT_FOUND/.test(d.toString()) && /routes\//.test(d.toString())) {
+        const hint = '[locus][dev] hint: route file missing. Try re-running `locus build` or check generated/routes contents.';
+        logMirror(hint + '\n');
+        if (!opts.quiet) process.stdout.write(chalk.yellow(hint) + '\n');
+      }
     });
     proc.on('exit', (code: number) => {
       const line = `[locus][dev] ${name} exited code ${code}`;
@@ -256,22 +261,12 @@ function spawnNext(generatedDir: string) {
   return spawnSafe('npm', ['run', 'dev:next'], generatedDir);
 }
 
-function spawnApi(srcDir: string, generatedDir: string, opts: { quiet?: boolean; log?: (s: string)=>void }) {
-  const serverTs = join(generatedDir, 'server.ts');
-  if (existsSync(serverTs)) {
-    // Attempt ts-node execution from generated dir
-    const tsNodeRegister = 'ts-node/register/transpile-only';
-    let tsNodeAvailable = true;
-    try { require.resolve(tsNodeRegister, { paths: [generatedDir] }); }
-    catch { tsNodeAvailable = false; }
-    if (tsNodeAvailable) {
-      return spawnSafe('node', ['-r', tsNodeRegister, 'server.ts'], generatedDir);
-    } else {
-      const msg = '[locus][dev] ts-node not installed in generated directory. Install with: (cd generated && npm i -D ts-node)';
-      if (!opts.quiet) process.stdout.write(msg + '\n');
-      opts.log?.(msg + '\n');
-    }
+function spawnApi(_srcDir: string, workDir: string, opts: { quiet?: boolean; log?: (s: string)=>void }) {
+  const serverTs = join(workDir, 'server.ts');
+  if (!existsSync(serverTs)) {
+    const msg = '[locus][dev] missing server.ts in ' + workDir;
+    if (!opts.quiet) process.stdout.write(msg + '\n');
+    opts.log?.(msg + '\n');
   }
-  // Fallback: npm script dev:api from generated package.json (will fail if missing)
-  return spawnSafe('npm', ['run', 'dev:api'], generatedDir);
+  return spawnSafe('npm', ['run', 'dev:api'], workDir);
 }

@@ -48,7 +48,7 @@ export function buildPackageJson(hasPages: boolean, appName: string): string {
     private: true,
     version: '0.0.0',
     scripts: {
-      'dev:api': 'node server.ts',
+      'dev:api': 'ts-node --transpile-only server.ts',
       ...(hasPages ? { 'dev:next': 'next dev next-app' } : {}),
       dev: hasPages ? 'npm run dev:api & npm run dev:next' : 'npm run dev:api',
       'prisma:generate': 'prisma generate',
@@ -61,7 +61,7 @@ export function buildPackageJson(hasPages: boolean, appName: string): string {
       cors: '^2.8.5',
       ...(hasPages ? { react: '^18.3.1', 'react-dom': '^18.3.1', next: '^14.2.0' } : {})
     },
-  devDependencies: { prisma: '^5.15.0', 'ts-node': '^10.9.2', typescript: '^5.4.0' }
+  devDependencies: { prisma: '^5.15.0', 'ts-node': '^10.9.2', typescript: '^5.4.0', '@types/node': '^20.11.0', '@types/react': '^18.2.0' }
   } as any;
   return JSON.stringify(pkg, null, 2);
 }
