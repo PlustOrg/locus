@@ -98,7 +98,7 @@ function mapPropType(t: any): string {
   if (!t) return 'any';
   if (t.kind === 'primitive') {
     const n = String(t.name || '').toLowerCase();
-    if (n === 'string' || n === 'text') return 'string';
+  if (n === 'string' || n === 'text') return 'string';
     if (n === 'integer' || n === 'decimal' || n === 'number') return 'number';
     if (n === 'boolean') return 'boolean';
     if (n === 'datetime' || n === 'date') return 'string';
@@ -112,26 +112,29 @@ function mapPropType(t: any): string {
 
 function transformUi(ui: string, _state: any[]): string {
   let out = ui;
-  // events: on:click -> onClick, on:submit -> onSubmit, etc.
+  // events: on:click -> onClick
   out = out.replace(/on:([a-zA-Z]+)/g, (_, ev) => `on${capitalize(ev)}`);
-
-  // bind:value={var} -> value={var} onChange={(e) => setVar(e.target.value)}
+  // bindings
   out = out.replace(/bind:value=\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_m, v) => {
     const setter = `set${capitalize(v)}`;
-    const onChange = `onChange={(e) => ${setter}(e.target.value)}`;
-    return `value={${v}} ${onChange}`;
+    return `value={${v}} onChange={(e) => ${setter}(e.target.value)}`;
   });
-
-  // <if condition={expr}> ... </if><elseif condition={expr2}> ... </elseif><else> ... </else>
-  out = transformIfElse(out);
-
-  // for:each={item in items} on a tag -> wrap with items.map
+  // block for:each with body
+  out = out.replace(/<([A-Za-z_][A-Za-z0-9_]*)\s+([^>]*?)for:each=\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([^}]+)\}\s*([^>]*)>([\s\S]*?)<\/\1>/g,
+    (_m, tag, preAttrs, item, arr, postAttrs, body) => {
+      // transform conditionals inside body first
+      const inner = transformIfElse(body.trim());
+      const open = `<${tag} ${preAttrs.trim()} ${postAttrs.trim()}`.replace(/\s+/g, ' ').trim();
+      return `{${arr}.map((${item}, index) => (\n  ${open} key={index}>${inner}</${tag}>\n))}`;
+    });
+  // self-closing for:each
   out = out.replace(/<([A-Za-z_][A-Za-z0-9_]*)\s+([^>]*?)for:each=\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([^}]+)\}\s*([^>]*)\/>/g,
     (_m, tag, preAttrs, item, arr, postAttrs) => {
       const open = `<${tag} ${preAttrs.trim()} ${postAttrs.trim()}`.replace(/\s+/g, ' ').trim();
       return `{${arr}.map((${item}, index) => (\n  ${open} key={index} />\n))}`;
     });
-
+  // top-level if/elseif/else (single chain)
+  out = transformIfElse(out);
   return out;
 }
 

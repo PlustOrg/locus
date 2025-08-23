@@ -70,6 +70,9 @@ export const Param = createToken({ name: 'Param', pattern: /param\b/ });
 export const List = createToken({ name: 'List', pattern: /list\b/ });
 export const Of = createToken({ name: 'Of', pattern: /of\b/ });
 export const Equals = createToken({ name: 'Equals', pattern: /=/ });
+// Style override keywords
+export const StyleKw = createToken({ name: 'StyleKw', pattern: /style\b/ });
+export const OverrideKw = createToken({ name: 'OverrideKw', pattern: /override\b/ });
 
 export const Unknown = createToken({ name: 'Unknown', pattern: /[\s\S]/ });
 
@@ -103,6 +106,8 @@ export const AllTokens = [
   List,
   Of,
   Equals,
+  StyleKw,
+  OverrideKw,
   // types
   StringT,
   TextT,

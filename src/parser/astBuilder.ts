@@ -371,25 +371,30 @@ function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
     node.ui = `ui {${inner}}`;
     node.uiAst = parseUi(inner);
   }
-  // style:override block (simple brace matching, non-nested assumption)
-  const styleIdx = fullBlockSrc.indexOf('style:override');
-  if (styleIdx !== -1) {
-    const braceStart = fullBlockSrc.indexOf('{', styleIdx);
-    if (braceStart !== -1) {
-      let depth = 1;
-      let i = braceStart + 1;
-      while (i < fullBlockSrc.length && depth > 0) {
-        const ch2 = fullBlockSrc[i];
-        if (ch2 === '{') depth++;
-        else if (ch2 === '}') depth--;
-        i++;
-      }
-      if (depth === 0) {
-  const inner = fullBlockSrc.slice(braceStart + 1, i - 1);
-  const trimmed = inner.trim();
-  if (trimmed) node.styleOverride = trimmed;
-      }
+  // style:override blocks (capture all, last wins). Simple regex approach.
+  // Prefer CST-captured styleOverrideBlock nodes if present
+  const styleOverrideNodes = (ch['styleOverrideBlock'] as CstNode[]) || [];
+  let extracted = false;
+  if (styleOverrideNodes.length) {
+    const lastNode = styleOverrideNodes[styleOverrideNodes.length - 1];
+    const sch = lastNode.children as CstChildrenDictionary;
+    const raw = (sch['rawContent'] as CstNode[] | undefined)?.[0];
+    const inner = raw ? sliceFrom(raw, source) : '';
+    if (inner.trim()) {
+      node.styleOverride = inner.trim();
+      extracted = true;
     }
+  }
+  if (!extracted) {
+    // Fallback regex (legacy or preprocessed path)
+    const styleRe = /style:override\s*{([\s\S]*?)}/g;
+    let m: RegExpExecArray | null;
+    let last: string | undefined;
+    while ((m = styleRe.exec(fullBlockSrc)) !== null) {
+      const content = m[1].trim();
+      if (content) last = content;
+    }
+    if (last) node.styleOverride = last;
   }
 }
 

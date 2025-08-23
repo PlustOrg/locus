@@ -68,7 +68,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
       process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
-      return { outDir, dryRun: true, filesPlanned: list } as any;
+  return { outDir, dryRun: true, filesPlanned: list, meta: { hasPages: meta.hasPages, warnings: meta.warnings } } as any;
     }
     const entries = Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b));
     const limit = pLimit(6);
@@ -131,7 +131,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     } catch {/* ignore */}
   }
 
-  return { outDir, meta: { hasPages: (merged as any)?.pages?.length > 0 } } as any;
+  return { outDir, meta: { hasPages: (merged as any)?.pages?.length > 0, warnings: genMeta.warnings || [] } } as any;
 }
 
 function findLocusFiles(dir: string): string[] {

@@ -56,6 +56,8 @@ import {
   SingleQuoteTok,
   HyphenTok,
   SemicolonTok,
+  StyleKw,
+  OverrideKw,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -105,14 +107,24 @@ export class DatabaseCstParser extends CstParser {
     this.MANY(() => this.OR([
       { ALT: () => this.SUBRULE(this.paramDecl) },
       { ALT: () => this.SUBRULE(this.uiBlock) },
+      { ALT: () => this.SUBRULE(this.styleOverrideBlock) },
       {
         GATE: () => {
           const t = this.LA(1).tokenType;
-          return t !== Param && t !== UI && t !== RCurly;
+          return t !== Param && t !== UI && t !== StyleKw && t !== RCurly;
         },
         ALT: () => this.SUBRULE(this.rawContent)
       },
     ]));
+    this.CONSUME(RCurly);
+  });
+
+  private styleOverrideBlock = this.RULE('styleOverrideBlock', () => {
+    // style:override { arbitrary css with nested braces }
+    this.CONSUME(StyleKw);
+    this.CONSUME(Colon);
+    this.CONSUME(OverrideKw);
+    this.CONSUME(LCurly);
     this.CONSUME(RCurly);
   });
 

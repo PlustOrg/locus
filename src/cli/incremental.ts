@@ -55,7 +55,7 @@ export function createIncrementalBuilder(opts: {
     // In mocked dev tests, outDir may not be writable; guard with try/catch
     try {
   const changed: string[] = [];
-    const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir: opts.srcDir });
+  const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir: opts.srcDir });
   for (const [rel, content] of Object.entries(artifacts)) {
       const full = join(outDir, rel);
       if (lastWritten.get(full) !== content) {
@@ -64,6 +64,13 @@ export function createIncrementalBuilder(opts: {
         changed.push(full);
     totalWrites++;
       }
+    }
+    // Clear stale warnings file if previously existed but no current warnings
+    const warningsPath = join(outDir, 'GENERATED_WARNINGS.txt');
+    if ((!meta.warnings || meta.warnings.length === 0) && lastWritten.has(warningsPath)) {
+      writeFileSafe(warningsPath, '');
+      lastWritten.set(warningsPath, '');
+      changed.push(warningsPath);
     }
     writePackageJson(meta.hasPages);
     if (changed.length) {
