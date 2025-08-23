@@ -111,6 +111,10 @@ export function startServer(port: number = Number(process.env.API_PORT || proces
   return app.listen(port, () => { console.log('[locus][api] listening on :' + port); console.log('[locus][api] ready'); })
 }
 export default app
+// Auto-start when run directly (dev:api script)
+if (require.main === module) {
+  startServer();
+}
 `;
   return files;
 }
