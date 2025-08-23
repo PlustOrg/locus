@@ -29,13 +29,14 @@ Status legend: [ ] not started, [P] planned (in repo), [Done] implemented.
 - [Done] Theme generation: typography weights ordering deterministic *(placeholder test; enhance once sorted logic added)*
 - [Done] Prisma: relation name collisions across entities
 - [Done] Prisma: optional belongs_to (foreign key nullable) generation correctness
-- [ ] Prisma: list of primitive types (when added) generation *(feature not yet implemented)*
+- [Done] Prisma: list of primitive types (when added) generation
+	- Includes validation rejecting optional marker and defaults on list fields.
 - [Done] Validation: invalid typography.baseSize units
 - [Done] Validation: color token case-insensitivity (#ABC vs #abc) accepted
-- [ ] Validation: reject out-of-range integer defaults (business rule?)
+- [Done] Validation: reject out-of-range integer defaults (business rule?)
 - [Done] Build: dry-run includes warning file listing
-- [ ] Build: emitJs path existence (dist/server.js) conditional run
-- [ ] CLI: --no-warn flag actually suppresses GENERATED_WARNINGS.txt file (currently still written?)
+- [Done] Build: emitJs path existence (dist/server.js) conditional run
+- [Done] CLI: --no-warn flag actually suppresses GENERATED_WARNINGS.txt file (currently still written?)
 - [Done] CLI: errorFormat=json outputs structured error for parse error
 - [Done] Incremental: editing component adding children removes warning (no stale warning)
 - [Done] Incremental: deleting .locus file removes generated outputs

@@ -64,13 +64,17 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   let genMeta: any = {};
   try {
   const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+    if (opts.suppressWarnings && meta.warnings?.length) {
+      // Remove warnings artifact if suppression requested
+      delete (artifacts as any)['GENERATED_WARNINGS.txt'];
+    }
     genMeta = meta;
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
       process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
   return { outDir, dryRun: true, filesPlanned: list, meta: { hasPages: meta.hasPages, warnings: meta.warnings } } as any;
     }
-    const entries = Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b));
+  const entries = Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b));
     const limit = pLimit(6);
     await Promise.all(entries.map(([rel, content]) => limit(async () => {
       const full = join(outDir, rel);

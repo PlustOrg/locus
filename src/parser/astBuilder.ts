@@ -55,6 +55,7 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
 
           const typeAlt = (fdCh['fieldType'] as CstNode[])[0];
           const typeCh = typeAlt.children as CstChildrenDictionary;
+          const isList = !!typeCh['List'];
           const typeTokenName = Object.keys(typeCh).find(k => [
             'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT'
           ].includes(k));
@@ -71,8 +72,13 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
               default: return 'String';
             }
           };
-          const fieldType: any = { kind: 'primitive', name: mapName(typeTokenName!) } as FieldType;
-          if (optional) fieldType.optional = true;
+          let fieldType: any;
+          if (isList) {
+            fieldType = { kind: 'list', of: mapName(typeTokenName!), optional };
+          } else {
+            fieldType = { kind: 'primitive', name: mapName(typeTokenName!) } as FieldType;
+            if (optional) fieldType.optional = true;
+          }
 
           const attributes: FieldAttribute[] = [];
           const attrGroups = (fdCh['fieldAttributeGroup'] as CstNode[]) || [];

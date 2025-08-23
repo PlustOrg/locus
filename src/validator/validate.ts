@@ -89,6 +89,40 @@ export function validateUnifiedAst(ast: UnifiedAST) {
 
   // database-wide validations
   validateDatabase(ast);
+
+  // Integer default value range validation (-2^31 .. 2^31-1)
+  const INT_MIN = -2147483648;
+  const INT_MAX = 2147483647;
+  for (const ent of ast.database.entities as any[]) {
+    for (const f of ent.fields) {
+      // list type validations
+      if (f.type?.kind === 'list') {
+        // reject explicit optional marker on list (not supported by Prisma)
+        if (f.type.optional) {
+          const loc = (f as any).nameLoc;
+          throw new VError(`List field '${f.name}' cannot be marked optional (arrays are non-nullable in Prisma).`, ent.loc?.filePath, loc?.line, loc?.column);
+        }
+        // reject default attributes on list fields for now
+        if ((f.attributes || []).some((a: any) => a.kind === 'default')) {
+          const loc = (f as any).nameLoc;
+          throw new VError(`List field '${f.name}' cannot have a default value.`, ent.loc?.filePath, loc?.line, loc?.column);
+        }
+      }
+      if (f.type?.name === 'Integer') {
+        for (const attr of f.attributes || []) {
+          if (attr.kind === 'default') {
+            const v = (attr as any).value;
+            if (typeof v === 'number') {
+              if (!Number.isInteger(v) || v < INT_MIN || v > INT_MAX) {
+                const loc = (f as any).nameLoc;
+                throw new VError(`Integer default for field '${f.name}' is out of range (${v}). Expected ${INT_MIN}..${INT_MAX}.`, ent.loc?.filePath, loc?.line, loc?.column);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 // Additional validations over unified database

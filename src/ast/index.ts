@@ -36,6 +36,11 @@ export interface FieldType {
   name: FieldTypeName;
   optional?: boolean; // if `?`
 }
+export interface ListFieldType {
+  kind: 'list';
+  of: FieldTypeName;
+  optional?: boolean; // optional list? (currently unused)
+}
 
 export interface FieldAttributeDefault {
   kind: 'default';
@@ -49,7 +54,7 @@ export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | Fiel
 
 export interface Field {
   name: string;
-  type: FieldType;
+  type: FieldType | ListFieldType;
   attributes: FieldAttribute[];
   nameLoc?: { line: number; column: number };
 }

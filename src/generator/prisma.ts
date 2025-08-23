@@ -13,8 +13,14 @@ function renderModel(entity: Entity, _all: Entity[]): string {
   // default id
   fields.push('id Int @id @default(autoincrement())');
   // scalar fields
-  for (const f of entity.fields) {
-    const type = mapType(f.type.name) + (f.type.optional ? '?' : '');
+  for (const f of entity.fields as any[]) {
+    let type: string;
+    if (f.type.kind === 'list') {
+      // Prisma list fields cannot be suffixed with ?; ignore optional flag for list kind
+      type = mapType(f.type.of) + '[]';
+    } else {
+      type = mapType(f.type.name) + (f.type.optional ? '?' : '');
+    }
     let line = `${f.name} ${type}`;
     for (const a of f.attributes) {
       if (a.kind === 'unique') line += ' @unique';

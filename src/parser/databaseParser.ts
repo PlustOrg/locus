@@ -415,6 +415,15 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(BooleanT) },
       { ALT: () => this.CONSUME(DateTimeT) },
       { ALT: () => this.CONSUME(JsonT) },
+  { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.OR1([
+          { ALT: () => this.CONSUME1(StringT) },
+          { ALT: () => this.CONSUME1(TextT) },
+          { ALT: () => this.CONSUME1(IntegerT) },
+          { ALT: () => this.CONSUME1(DecimalT) },
+          { ALT: () => this.CONSUME1(BooleanT) },
+          { ALT: () => this.CONSUME1(DateTimeT) },
+          { ALT: () => this.CONSUME1(JsonT) },
+        ]); } },
     ]);
     this.OPTION(() => this.CONSUME(Question));
   });
