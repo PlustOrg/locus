@@ -24,9 +24,22 @@ export function generateReactPage(page: any, knownComponentNames: string[] = [],
     if (knownComponentNames.includes(name) && name !== page.name) used.add(name);
   }
   const importLines = Array.from(used).map(n => `import ${n} from '../components/${n}'`).join('\n');
-  const ui = `\n  return (\n    ${uiContent}\n  );\n`;
+  const ui = `  return (\n    ${uiContent}\n  );`;
   const end = `}\n`;
-  return [directive, imports, importLines, importLines ? '' : '', compStart, stateLines, onLoad, actions, ui, end].join('\n');
+  // Ensure a consistent blank line after imports section for stable snapshots
+  const parts: string[] = [];
+  if (directive) parts.push(directive.trimEnd());
+  parts.push(imports.trimEnd());
+  if (importLines) parts.push(importLines.trimEnd());
+  // single blank line separator
+  parts.push('');
+  parts.push(compStart.trimEnd());
+  if (stateLines) parts.push(stateLines);
+  if (onLoad.trim()) parts.push(onLoad.trimEnd());
+  if (actions.trim()) parts.push(actions);
+  parts.push(ui.trimEnd());
+  parts.push(end.trimEnd());
+  return parts.join('\n') + '\n';
 }
 
 export function generateReactComponent(component: any, warnings?: string[]): string {

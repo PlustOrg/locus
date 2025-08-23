@@ -75,18 +75,14 @@ router.delete('/user/:id', async (req, res) => {
 `;
 
 exports[`Generator snapshots React page snapshot 1`] = `
-"import React, { useEffect, useState } from 'react';
+"'use client';
+import React, { useState } from 'react';
 
 export default function Home() {
-
-  const [greeting, setGreeting] = useState("Hello");
-
-
-
+  const [greeting, setGreeting] = useState(\"Hello\");
   return (
      <div>{greeting}</div> 
   );
-
 }
 "
 `;
