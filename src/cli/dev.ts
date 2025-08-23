@@ -38,7 +38,7 @@ function formatBanner(info: {
   return chalk.cyanBright(top + '\n' + body + '\n' + bottom);
 }
 
-export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string }) {
+export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string; emitJs?: boolean }) {
   const fileMap = new Map<string, string>();
   let logStream: import('fs').WriteStream | null = null;
   if (opts.logFile) {
@@ -55,7 +55,7 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   // initial build
   let buildMeta: any = { meta: { hasPages: false } };
   try {
-    buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug });
+  buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug, emitJs: opts.emitJs });
   } catch (e) {
     if (e instanceof LocusError) {
   reportError(e, fileMap, opts.errorFormat);
@@ -73,10 +73,40 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
 
   // Auto install dependencies if needed (skip in tests or if node_modules exists)
   await ensureDependencies(workDir, { quiet: opts.quiet, log: logMirror });
+  // Auto-run prisma generate if schema exists and client missing
+  if (process.env.LOCUS_TEST_DISABLE_SPAWN !== '1') {
+    try {
+      const schemaPath = join(workDir, 'prisma', 'schema.prisma');
+      if (existsSync(schemaPath)) {
+        let prismaClientMissing = false;
+        try { require.resolve('@prisma/client'); } catch { prismaClientMissing = true; }
+        if (prismaClientMissing) {
+          const line = '[locus][dev] running prisma generate (auto)';
+          if (!opts.quiet) process.stdout.write(chalk.gray(line + '\n'));
+          logMirror(line + '\n');
+          const proc = spawnSafe('npx', ['prisma', 'generate', '--schema', schemaPath], workDir);
+          proc.stdout.on('data', (d: Buffer) => logMirror(d.toString()));
+          proc.stderr.on('data', (d: Buffer) => logMirror(d.toString()));
+          await new Promise(r => proc.on('exit', () => r(null)));
+        }
+      }
+    } catch {/* ignore */}
+  }
+
+  // If emitJs, start a tsc --watch to compile to dist and run compiled server when ready
+  let tscProc: any = null;
+  if (opts.emitJs && process.env.LOCUS_TEST_DISABLE_SPAWN !== '1') {
+    const line = '[locus][dev] starting TypeScript compiler (watch)';
+    if (!opts.quiet) process.stdout.write(chalk.gray(line + '\n'));
+    logMirror(line + '\n');
+    tscProc = spawnSafe('npx', ['tsc', '--watch', '--preserveWatchOutput', 'false', '--project', 'tsconfig.json', '--outDir', 'dist', '--declaration', 'false', '--emitDeclarationOnly', 'false'], workDir);
+    tscProc.stdout.on('data', (d: Buffer) => logMirror(d.toString()));
+    tscProc.stderr.on('data', (d: Buffer) => logMirror(d.toString()));
+  }
 
   if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting API on :${apiPort} (cwd=${relative(opts.srcDir, workDir) || '.'})\n`));
   logMirror(`[locus][dev] starting API on :${apiPort} (cwd=${workDir})\n`);
-  const apiProc = spawnApi(opts.srcDir, workDir, { quiet: opts.quiet, log: logMirror });
+  const apiProc = spawnApi(opts.srcDir, workDir, { quiet: opts.quiet, log: logMirror, emitJs: opts.emitJs });
   let nextProc: any = { stdout: { on() {} }, kill() {} };
   if (buildMeta?.meta?.hasPages) {
     if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting Next dev server on :3000 (cwd=${relative(opts.srcDir, workDir) || '.'})\n`));
@@ -160,7 +190,8 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   logMirror('[locus][dev] shutting down...\n');
     try { watcher.close(); } catch {}
     try { nextProc.kill(); } catch {}
-    try { apiProc.kill(); } catch {}
+  try { apiProc.kill(); } catch {}
+  try { if (tscProc) tscProc.kill(); } catch {}
   if (!opts.quiet) console.log(chalk.gray('[locus][dev] bye'));
   logMirror('[locus][dev] bye\n');
   if (logStream) { try { logStream.end(); } catch {} }
@@ -204,8 +235,13 @@ async function ensureDependencies(dir: string, io: { quiet?: boolean; log: (s: s
   const line = '[locus][dev] installing dependencies (first run)...';
   if (!io.quiet) process.stdout.write(chalk.gray(line + '\n'));
   io.log(line + '\n');
+  // Detect package manager via lockfile
+  const useYarn = existsSync(join(dir, 'yarn.lock'));
+  const usePnpm = existsSync(join(dir, 'pnpm-lock.yaml'));
+  const args = useYarn ? ['install', '--silent'] : (usePnpm ? ['install'] : ['install', '--no-audit', '--no-fund']);
+  const bin = useYarn ? 'yarn' : (usePnpm ? 'pnpm' : 'npm');
   await new Promise<void>((resolve) => {
-    const proc = spawnSafe('npm', ['install', '--no-audit', '--no-fund'], dir);
+    const proc = spawnSafe(bin, args, dir);
     proc.stdout.on('data', (d: Buffer) => io.log(d.toString()));
     proc.stderr.on('data', (d: Buffer) => io.log(d.toString()));
     proc.on('exit', () => resolve());
@@ -261,12 +297,15 @@ function spawnNext(generatedDir: string) {
   return spawnSafe('npm', ['run', 'dev:next'], generatedDir);
 }
 
-function spawnApi(_srcDir: string, workDir: string, opts: { quiet?: boolean; log?: (s: string)=>void }) {
+function spawnApi(_srcDir: string, workDir: string, opts: { quiet?: boolean; log?: (s: string)=>void; emitJs?: boolean }) {
   const serverTs = join(workDir, 'server.ts');
   if (!existsSync(serverTs)) {
     const msg = '[locus][dev] missing server.ts in ' + workDir;
     if (!opts.quiet) process.stdout.write(msg + '\n');
     opts.log?.(msg + '\n');
+  }
+  if (opts.emitJs && existsSync(join(workDir, 'dist', 'server.js'))) {
+    return spawnSafe('node', ['dist/server.js'], workDir);
   }
   return spawnSafe('npm', ['run', 'dev:api'], workDir);
 }

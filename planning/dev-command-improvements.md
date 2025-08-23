@@ -7,11 +7,17 @@ Implemented:
 - Added route-missing hint in dev stderr parsing.
 - Ensured incremental builder does not early-return before writing ancillary files (README, tsconfig).
 
-Next candidates:
-- Option to output compiled JS (skip ts-node in runtime) via `--emit-js` flag.
-- Detect existing lockfile (yarn/pnpm) and use matching package manager for auto-install.
-- Add health endpoint generation and live readiness probe logs.
-- Auto-run `prisma generate` if schema/prisma folder present & client missing.
+Implemented (Aug 23 2025):
+- `--emit-js` flag for both `build` and `dev` commands. Build compiles TS -> JS into `generated/dist`. Dev starts a background `tsc --watch` and runs `dist/server.js` when available.
+- Package manager auto-detection (yarn / pnpm / npm) during first dependency install in dev.
+- Health (`/healthz`) and readiness (`/readyz`) endpoints added to generated Express server plus a `[locus][api] ready` log line.
+- Automatic `prisma generate` during `locus dev` if `prisma/schema.prisma` exists and `@prisma/client` can't be resolved.
+
+Follow-ups / Nice-to-haves:
+- Skip spawning `tsc --watch` if already running (PID file) – currently always restarts per dev session.
+- Emit type declarations optionally (`--emit-dts`).
+- Expose structured readiness JSON including route count & commit hash.
+- Add retry/backoff logging for failed prisma generate.
 # `locus dev` UX Improvement Checklist
 
 Goal: Provide immediate, clear, and attractive feedback when running `locus dev`, showing:

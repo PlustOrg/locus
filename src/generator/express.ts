@@ -101,10 +101,14 @@ app.use(express.json())
 if (process.env.ENABLE_CORS === '1') { app.use(cors()) }
 const publicDir = path.join(__dirname, 'next-app', 'public')
 try { app.use(express.static(publicDir)) } catch {}
+// Basic health/readiness endpoints
+app.get('/healthz', (req, res) => { res.json({ ok: true, uptime: process.uptime(), ts: Date.now() }) })
+let startedAt = Date.now();
+app.get('/readyz', (req, res) => { res.json({ ready: true, uptime: process.uptime(), startedAt }) })
 ${uses}
 
 export function startServer(port: number = Number(process.env.API_PORT || process.env.PORT) || 3001) {
-  return app.listen(port, () => { console.log('[locus][api] listening on :' + port) })
+  return app.listen(port, () => { console.log('[locus][api] listening on :' + port); console.log('[locus][api] ready'); })
 }
 export default app
 `;

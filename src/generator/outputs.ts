@@ -53,7 +53,8 @@ export function buildPackageJson(hasPages: boolean, appName: string): string {
       dev: hasPages ? 'npm run dev:api & npm run dev:next' : 'npm run dev:api',
       'prisma:generate': 'prisma generate',
       build: hasPages ? 'next build next-app' : 'echo "No Next app"',
-      start: hasPages ? 'next start next-app' : 'node server.ts'
+  start: hasPages ? 'next start next-app' : 'node server.ts',
+  'start:api': 'node dist/server.js'
     },
     dependencies: {
       express: '^4.19.2',

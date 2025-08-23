@@ -9,7 +9,7 @@ import { validateUnifiedAst } from '../validator/validate';
 import { BuildError, LocusError } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
 import { reportError, ErrorOutputFormat } from './reporter';
-export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean }) {
+export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean; emitJs?: boolean }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
   const debug = !!opts.debug;
@@ -84,6 +84,13 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       const tsconfigPath = join(outDir, 'tsconfig.json');
       if (!existsSync(tsconfigPath) && !opts.dryRun) {
         writeFileSync(tsconfigPath, buildTsConfig());
+      }
+      // Optionally compile TS -> JS (tsc) into dist
+      if (opts.emitJs && !opts.dryRun) {
+        try {
+          const res = spawnSync('npx', ['tsc', '--project', tsconfigPath, '--outDir', 'dist', '--declaration', 'false', '--emitDeclarationOnly', 'false'], { cwd: outDir, stdio: 'ignore' });
+          if (res.status !== 0) process.stderr.write('[locus][build] tsc exited with code ' + res.status + '\n');
+        } catch {/* ignore compile errors */}
       }
     } catch (e) {
       if (e instanceof LocusError || (e && (e as any).code)) {
