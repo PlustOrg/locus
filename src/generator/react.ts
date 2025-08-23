@@ -1,23 +1,37 @@
 export function generateReactPage(page: any): string {
-  const imports = `import React, { useEffect, useState } from 'react';\n`;
+  const usesState = Array.isArray(page.state) && page.state.length > 0;
+  const usesEffect = !!page.onLoad;
+  const usesActions = Array.isArray(page.actions) && page.actions.length > 0;
+  const needsClient = usesState || usesEffect || usesActions;
+  const importHooks: string[] = [];
+  if (usesState) importHooks.push('useState');
+  if (usesEffect) importHooks.push('useEffect');
+  const hooksSegment = importHooks.length ? `, { ${importHooks.join(', ')} }` : '';
+  const directive = needsClient ? `'use client';\n` : '';
+  const imports = `import React${hooksSegment} from 'react';\n`;
   const compStart = `export default function ${page.name}() {\n`;
-  const stateLines = (page.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n');
-  const onLoad = page.onLoad ? `\n  useEffect(() => {\n    ${page.onLoad}\n  }, []);\n` : '';
+  const stateLines = usesState ? (page.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n') : '';
+  const onLoad = usesEffect ? `\n  useEffect(() => {\n    ${page.onLoad}\n  }, []);\n` : '';
   const actions = (page.actions || []).map((a: any) => `  function ${a.name}(${(a.params||[]).join(', ')}) {\n    ${a.body || ''}\n  }`).join('\n\n');
   const uiContent = page.uiAst ? renderUiAst(page.uiAst) : transformUi(stripUiWrapper(page.ui) || '<div />', page.state || []);
   const ui = `\n  return (\n    ${uiContent}\n  );\n`;
   const end = `}\n`;
-  return [imports, compStart, stateLines, onLoad, actions, ui, end].join('\n');
+  return [directive, imports, compStart, stateLines, onLoad, actions, ui, end].join('\n');
 }
 
 export function generateReactComponent(component: any): string {
-  const imports = `import React from 'react';\n`;
+  const hasState = Array.isArray(component.state) && component.state.length > 0; // future-proof
+  const needsClient = hasState; // extend if components gain effects/actions later
+  const importHooks = hasState ? ', { useState }' : '';
+  const directive = needsClient ? `'use client';\n` : '';
+  const imports = `import React${importHooks} from 'react';\n`;
   const props = (component.params || []).map((p: any) => `${p.name}: ${mapPropType(p.type)}`).join('; ');
   const propsInterface = props ? `interface ${component.name}Props { ${props} }\n` : '';
   const signature = props ? `(${lowerFirst(component.name)}Props: ${component.name}Props)` : `()`;
   const uiContent = component.uiAst ? renderUiAst(component.uiAst) : transformUi(stripUiWrapper(component.ui) || '<div />', component.state || []);
-  const comp = `export default function ${component.name}${signature} {\n  return (\n    ${uiContent}\n  );\n}\n`;
-  return [imports, propsInterface, comp].join('\n');
+  const stateLines = hasState ? (component.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n') + '\n' : '';
+  const comp = `export default function ${component.name}${signature} {\n${stateLines}  return (\n    ${uiContent}\n  );\n}\n`;
+  return [directive, imports, propsInterface, comp].join('\n');
 }
 
 function capitalize(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
