@@ -34,7 +34,8 @@ export function generateReactComponent(component: any, warnings?: string[]): str
   const needsClient = hasState; // extend if components gain effects/actions later
   const importHooks = hasState ? ', { useState }' : '';
   const directive = needsClient ? `'use client';\n` : '';
-  const imports = `import React${importHooks} from 'react';\n`;
+  const styleImport = component.styleOverride ? `import './${component.name}.css';\n` : '';
+  const imports = `import React${importHooks} from 'react';\n${styleImport}`;
   const originalUi = stripUiWrapper(component.ui) || '<div />';
   const hasChildrenRef = /\{\s*children\s*\}/.test(originalUi);
   // Detect potential named slots: {identifierSlot} pattern

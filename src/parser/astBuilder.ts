@@ -330,6 +330,8 @@ function enrichPageFromCst(node: any, cst: CstNode, source: string) {
 
 function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
   const ch = cst.children as CstChildrenDictionary;
+  // Full component block source (including braces)
+  const fullBlockSrc = sliceFrom(cst, source);
   // params
   const params: any[] = [];
   const decls = (ch['paramDecl'] as CstNode[]) || [];
@@ -368,6 +370,26 @@ function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
     const inner = raw[0] ? sliceFrom(raw[0], source) : '';
     node.ui = `ui {${inner}}`;
     node.uiAst = parseUi(inner);
+  }
+  // style:override block (simple brace matching, non-nested assumption)
+  const styleIdx = fullBlockSrc.indexOf('style:override');
+  if (styleIdx !== -1) {
+    const braceStart = fullBlockSrc.indexOf('{', styleIdx);
+    if (braceStart !== -1) {
+      let depth = 1;
+      let i = braceStart + 1;
+      while (i < fullBlockSrc.length && depth > 0) {
+        const ch2 = fullBlockSrc[i];
+        if (ch2 === '{') depth++;
+        else if (ch2 === '}') depth--;
+        i++;
+      }
+      if (depth === 0) {
+  const inner = fullBlockSrc.slice(braceStart + 1, i - 1);
+  const trimmed = inner.trim();
+  if (trimmed) node.styleOverride = trimmed;
+      }
+    }
   }
 }
 

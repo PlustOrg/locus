@@ -7,7 +7,8 @@ export function generateCssVariables(ds?: DesignSystemBlock): string {
     const sel = `[data-theme="${theme}"]`;
     lines.push(`${sel} {`);
     for (const [k, v] of Object.entries(tokens)) {
-      lines.push(`  --color-${k}: ${v};`);
+      const val = (v as any)?.value !== undefined ? (v as any).value : v;
+      lines.push(`  --color-${k}: ${val};`);
     }
     lines.push('}');
   }
