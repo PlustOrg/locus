@@ -3,29 +3,63 @@ import { PError } from '../errors';
 import { LocusLexer } from './tokens';
 import { DatabaseCstParser } from './databaseParser';
 import { buildDatabaseAst } from './astBuilder';
+import { attachComponentStyles } from './extractStyles';
+// CSS style:override blocks treated as opaque post-parse; no preprocessing.
+
+function detectUnterminatedStyleBlock(source: string): { offset: number } | null {
+  const len = source.length;
+  let i = 0;
+  while (i < len) {
+    const ch = source[i];
+    // strings
+    if (ch === '"' || ch === '\'') {
+      const quote = ch; i++;
+      while (i < len) { if (source[i] === '\\') { i += 2; continue; } if (source[i] === quote) { i++; break; } i++; }
+      continue;
+    }
+    // block comment
+    if (ch === '/' && source[i+1] === '*') {
+      i += 2; while (i < len && !(source[i] === '*' && source[i+1] === '/')) i++; i += 2; continue;
+    }
+    // line comment
+    if (ch === '/' && source[i+1] === '/') { i += 2; while (i < len && source[i] !== '\n') i++; continue; }
+    // style:override detection
+    if (ch === 's' && source.startsWith('style:override', i)) {
+      const start = i;
+      let j = i + 'style:override'.length;
+      while (j < len && /\s/.test(source[j])) j++;
+      if (source[j] !== '{') { i++; continue; }
+      j++; // skip '{'
+      let depth = 1;
+      while (j < len && depth > 0) {
+        const c = source[j];
+        if (c === '"' || c === '\'') {
+          const q = c; j++; while (j < len) { if (source[j] === '\\') { j += 2; continue; } if (source[j] === q) { j++; break; } j++; }
+          continue;
+        }
+        if (c === '/' && source[j+1] === '*') { j += 2; while (j < len && !(source[j] === '*' && source[j+1] === '/')) j++; j += 2; continue; }
+        if (c === '/' && source[j+1] === '/') { j += 2; while (j < len && source[j] !== '\n') j++; continue; }
+        if (c === '{') depth++;
+        else if (c === '}') depth--;
+        j++;
+      }
+      if (depth !== 0) return { offset: start };
+      i = j; continue;
+    }
+    i++;
+  }
+  return null;
+}
 
 export function parseLocus(source: string, filePath?: string): LocusFileAST {
-  // Strip style:override blocks (balanced braces) from lexed source so grammar ignores CSS internals.
-  let lexSource = source;
-  const marker = 'style:override';
-  let search = lexSource.indexOf(marker);
-  while (search !== -1) {
-    const braceStart = lexSource.indexOf('{', search + marker.length);
-    if (braceStart === -1) break;
-    let depth = 1;
-    let i = braceStart + 1;
-    while (i < lexSource.length && depth > 0) {
-      const ch = lexSource[i];
-      if (ch === '{') depth++;
-      else if (ch === '}') depth--;
-      i++;
-    }
-    if (depth !== 0) break; // unbalanced; abort stripping further
-    // Replace full block with minimal placeholder to keep structural braces predictable
-    lexSource = lexSource.slice(0, search) + 'style:override {}' + lexSource.slice(i);
-    search = lexSource.indexOf(marker, search + 'style:override {}'.length);
+  const unter = detectUnterminatedStyleBlock(source);
+  if (unter) {
+    const prefix = source.slice(0, unter.offset);
+    const line = (prefix.match(/\n/g)?.length || 0) + 1;
+    const col = unter.offset - prefix.lastIndexOf('\n');
+    throw new PError('Unterminated style:override block', filePath, line, col, 'style:override'.length);
   }
-  const lexResult = LocusLexer.tokenize(lexSource);
+  const lexResult = LocusLexer.tokenize(source);
   if (lexResult.errors.length) {
     const err = lexResult.errors[0];
   throw new PError(err.message, filePath, err.line, err.column, (err as any).length ?? 1);
@@ -44,5 +78,7 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     throw new PError(err.message, filePath, tok.startLine, tok.startColumn, length);
   }
 
-  return buildDatabaseAst(cst, source, filePath);
+  const ast = buildDatabaseAst(cst, source, filePath);
+  attachComponentStyles(ast, source);
+  return ast;
 }

@@ -42,6 +42,10 @@ export const DotTok = createToken({ name: 'DotTok', pattern: /\./ });
 export const PlusTok = createToken({ name: 'PlusTok', pattern: /\+/ });
 export const HyphenTok = createToken({ name: 'HyphenTok', pattern: /-/ });
 export const SemicolonTok = createToken({ name: 'SemicolonTok', pattern: /;/ });
+export const StarTok = createToken({ name: 'StarTok', pattern: /\*/ });
+// Style keywords (reintroduced for component style override detection)
+export const StyleKw = createToken({ name: 'StyleKw', pattern: /style\b/ });
+export const OverrideKw = createToken({ name: 'OverrideKw', pattern: /override\b/ });
 export const LBracketTok = createToken({ name: 'LBracketTok', pattern: /\[/ });
 export const RBracketTok = createToken({ name: 'RBracketTok', pattern: /\]/ });
 export const SingleQuoteTok = createToken({ name: 'SingleQuoteTok', pattern: /'/ });
@@ -71,8 +75,6 @@ export const List = createToken({ name: 'List', pattern: /list\b/ });
 export const Of = createToken({ name: 'Of', pattern: /of\b/ });
 export const Equals = createToken({ name: 'Equals', pattern: /=/ });
 // Style override keywords
-export const StyleKw = createToken({ name: 'StyleKw', pattern: /style\b/ });
-export const OverrideKw = createToken({ name: 'OverrideKw', pattern: /override\b/ });
 
 export const Unknown = createToken({ name: 'Unknown', pattern: /[\s\S]/ });
 
@@ -92,6 +94,9 @@ export const AllTokens = [
   HasMany,
   BelongsTo,
   HasOne,
+  // style keywords
+  StyleKw,
+  OverrideKw,
   // feature keywords
   Page,
   Component,
@@ -106,8 +111,6 @@ export const AllTokens = [
   List,
   Of,
   Equals,
-  StyleKw,
-  OverrideKw,
   // types
   StringT,
   TextT,
@@ -131,6 +134,7 @@ export const AllTokens = [
   PlusTok,
   HyphenTok,
   SemicolonTok,
+  StarTok,
   LBracketTok,
   RBracketTok,
   SingleQuoteTok,

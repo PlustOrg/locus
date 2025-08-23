@@ -331,7 +331,7 @@ function enrichPageFromCst(node: any, cst: CstNode, source: string) {
 function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
   const ch = cst.children as CstChildrenDictionary;
   // Full component block source (including braces)
-  const fullBlockSrc = sliceFrom(cst, source);
+  // full component block source no longer needed for style extraction (scanner used)
   // params
   const params: any[] = [];
   const decls = (ch['paramDecl'] as CstNode[]) || [];
@@ -372,29 +372,25 @@ function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
     node.uiAst = parseUi(inner);
   }
   // style:override blocks (capture all, last wins). Simple regex approach.
-  // Prefer CST-captured styleOverrideBlock nodes if present
-  const styleOverrideNodes = (ch['styleOverrideBlock'] as CstNode[]) || [];
-  let extracted = false;
-  if (styleOverrideNodes.length) {
-    const lastNode = styleOverrideNodes[styleOverrideNodes.length - 1];
-    const sch = lastNode.children as CstChildrenDictionary;
-    const raw = (sch['rawContent'] as CstNode[] | undefined)?.[0];
-    const inner = raw ? sliceFrom(raw, source) : '';
-    if (inner.trim()) {
-      node.styleOverride = inner.trim();
-      extracted = true;
-    }
+  // Extract style blocks directly from source by regexp within component block span (simpler post-parse)
+  const compSource = sliceFrom(cst, source);
+  const styleRe = /style:override\s*{([\s\S]*?)}/g;
+  let sm: RegExpExecArray | null;
+  const styles: Array<{content:string; start:number; end:number; line:number; column:number}> = [];
+  // compute base start offset of component
+  const compTokens = collectTokens(cst);
+  const baseStart = compTokens.length ? Math.min(...compTokens.map(t => t.startOffset ?? 0)) : 0;
+  while ((sm = styleRe.exec(compSource)) !== null) {
+    const blockStartInComp = sm.index;
+    const globalStart = baseStart + blockStartInComp;
+    const prefix = source.slice(0, globalStart);
+    const line = (prefix.match(/\n/g)?.length || 0) + 1;
+    const column = globalStart - prefix.lastIndexOf('\n');
+    styles.push({ content: sm[1], start: globalStart, end: globalStart + sm[0].length, line, column });
   }
-  if (!extracted) {
-    // Fallback regex (legacy or preprocessed path)
-    const styleRe = /style:override\s*{([\s\S]*?)}/g;
-    let m: RegExpExecArray | null;
-    let last: string | undefined;
-    while ((m = styleRe.exec(fullBlockSrc)) !== null) {
-      const content = m[1].trim();
-      if (content) last = content;
-    }
-    if (last) node.styleOverride = last;
+  if (styles.length) {
+    (node as any).styleOverrides = styles.map(s => ({ content: s.content.trim(), loc: { line: s.line, column: s.column } }));
+    node.styleOverride = styles[styles.length - 1].content.trim();
   }
 }
 

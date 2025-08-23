@@ -56,6 +56,7 @@ import {
   SingleQuoteTok,
   HyphenTok,
   SemicolonTok,
+  StarTok,
   StyleKw,
   OverrideKw,
 } from './tokens';
@@ -107,27 +108,46 @@ export class DatabaseCstParser extends CstParser {
     this.MANY(() => this.OR([
       { ALT: () => this.SUBRULE(this.paramDecl) },
       { ALT: () => this.SUBRULE(this.uiBlock) },
-      { ALT: () => this.SUBRULE(this.styleOverrideBlock) },
+      { ALT: () => this.SUBRULE(this.styleBlock) },
       {
         GATE: () => {
           const t = this.LA(1).tokenType;
-          return t !== Param && t !== UI && t !== StyleKw && t !== RCurly;
+    return t !== Param && t !== UI && t !== RCurly;
         },
         ALT: () => this.SUBRULE(this.rawContent)
       },
     ]));
     this.CONSUME(RCurly);
   });
-
-  private styleOverrideBlock = this.RULE('styleOverrideBlock', () => {
-    // style:override { arbitrary css with nested braces }
+  private styleBlock = this.RULE('styleBlock', () => {
     this.CONSUME(StyleKw);
-    this.CONSUME(Colon);
+    this.CONSUME(Colon); // first colon
     this.CONSUME(OverrideKw);
-    this.CONSUME(LCurly);
-    this.CONSUME(RCurly);
+    this.CONSUME(LCurly); // opening brace
+    // Arbitrary content until matching RCurly (reuse rawContent pieces but allow empty)
+    this.MANY(() => this.OR([
+      { ALT: () => { this.CONSUME1(LCurly); this.SUBRULE(this.rawContent); this.CONSUME1(RCurly); } },
+      { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(NumberLiteral) },
+      { ALT: () => this.CONSUME(Comma) },
+      { ALT: () => this.CONSUME1(Colon) },
+      { ALT: () => this.CONSUME(SemicolonTok) },
+      { ALT: () => this.CONSUME(DotTok) },
+      { ALT: () => this.CONSUME(PlusTok) },
+      { ALT: () => this.CONSUME(HyphenTok) },
+      { ALT: () => this.CONSUME(SlashTok) },
+  { ALT: () => this.CONSUME(StarTok) },
+      { ALT: () => this.CONSUME(LBracketTok) },
+      { ALT: () => this.CONSUME(RBracketTok) },
+      { ALT: () => this.CONSUME(SingleQuoteTok) },
+      { ALT: () => this.CONSUME(Question) },
+      { ALT: () => this.CONSUME(Less) },
+      { ALT: () => this.CONSUME(Greater) },
+      { ALT: () => this.CONSUME(Unknown) },
+    ]));
+  this.CONSUME(RCurly); // closing style block brace
   });
-
   private storeBlock = this.RULE('storeBlock', () => {
     this.CONSUME(Store);
     this.CONSUME(Identifier);
@@ -224,7 +244,9 @@ export class DatabaseCstParser extends CstParser {
   private rawContent = this.RULE('rawContent', () => {
     // Consume any tokens except the top-level closing '}', supporting nested {...} blocks
   this.AT_LEAST_ONE(() => this.OR([
-      { ALT: () => { this.CONSUME(LCurly); this.SUBRULE(this.rawContent); this.CONSUME(RCurly); } },
+  // Empty block
+  { ALT: () => { this.CONSUME(LCurly); this.CONSUME(RCurly); } },
+  { ALT: () => { this.CONSUME1(LCurly); this.SUBRULE(this.rawContent); this.CONSUME1(RCurly); } },
       { ALT: () => this.CONSUME(Identifier) },
       { ALT: () => this.CONSUME(StringLiteral) },
       { ALT: () => this.CONSUME(NumberLiteral) },

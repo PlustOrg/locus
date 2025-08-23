@@ -1,11 +1,11 @@
 import { parseLocus } from '../../src/parser';
 
 describe('Component style malformed', () => {
-  test('unexpected tokens after style still parse', () => {
-    const src = 'component Weird { ui { <div/> } style:override { .a { color: red; } EXTRA TOKENS HERE }';
-  const ast = parseLocus(src, 'test.locus');
-  const comp = ast.components[0];
-    // styleOverride may be undefined but parser shouldn't throw
-    expect(comp.name).toBe('Weird');
+  test('style blocks captured even with extra tokens following', () => {
+    const src = 'component Weird { ui { <div/> } style:override { /* c */ .a { color: red; } /* trailing */ } more tokens here }';
+    const ast = parseLocus(src, 'test.locus');
+    const comp: any = ast.components[0];
+    expect(comp.styleOverrides.length).toBe(1);
+    expect(comp.styleOverride).toContain('color: red');
   });
 });
