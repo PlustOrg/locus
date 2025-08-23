@@ -38,7 +38,7 @@ function formatBanner(info: {
   return chalk.cyanBright(top + '\n' + body + '\n' + bottom);
 }
 
-export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string; emitJs?: boolean }) {
+export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string; emitJs?: boolean; suppressWarnings?: boolean }) {
   const fileMap = new Map<string, string>();
   let logStream: import('fs').WriteStream | null = null;
   if (opts.logFile) {
@@ -56,6 +56,11 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   let buildMeta: any = { meta: { hasPages: false } };
   try {
   buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug, emitJs: opts.emitJs });
+  if (!opts.suppressWarnings && (buildMeta as any)?.meta?.warnings?.length && !opts.quiet) {
+    for (const w of (buildMeta as any).meta.warnings) {
+      process.stdout.write(chalk.yellow('[locus][warn] ' + w + '\n'));
+    }
+  }
   } catch (e) {
     if (e instanceof LocusError) {
   reportError(e, fileMap, opts.errorFormat);

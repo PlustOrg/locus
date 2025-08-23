@@ -101,13 +101,17 @@ export function buildOutputArtifacts(merged: UnifiedLike, opts: BuildArtifactsOp
   }
   // React pages & components (generate components first for imports)
   const components = [...merged.components].sort((a, b) => a.name.localeCompare(b.name));
+  const warnings: string[] = [];
   for (const c of components) {
-    files[`react/components/${c.name}.tsx`] = withHeader(generateReactComponent(c), 'react component');
+    files[`react/components/${c.name}.tsx`] = withHeader(generateReactComponent(c, warnings), 'react component');
   }
   const componentNames = components.map(c => c.name);
   const pages = [...merged.pages].sort((a, b) => a.name.localeCompare(b.name));
   for (const p of pages) {
-    files[`react/pages/${p.name}.tsx`] = withHeader(generateReactPage(p, componentNames), 'react page');
+    files[`react/pages/${p.name}.tsx`] = withHeader(generateReactPage(p, componentNames, warnings), 'react page');
+  }
+  if (warnings.length) {
+    files['GENERATED_WARNINGS.txt'] = warnings.map(w => `- ${w}`).join('\n') + '\n';
   }
   // Theme
   if (opts.includeTheme !== false) {
@@ -132,5 +136,5 @@ export function buildOutputArtifacts(merged: UnifiedLike, opts: BuildArtifactsOp
       files['next-app/public/theme.css'] = files['theme.css'];
     }
   }
-  return { files, meta: { hasPages: pages.length > 0 } };
+  return { files, meta: { hasPages: pages.length > 0, warnings } };
 }

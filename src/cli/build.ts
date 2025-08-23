@@ -8,8 +8,9 @@ import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
 import { BuildError, LocusError } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
+import chalk from 'chalk';
 import { reportError, ErrorOutputFormat } from './reporter';
-export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean; emitJs?: boolean }) {
+export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean; emitJs?: boolean; suppressWarnings?: boolean }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
   const debug = !!opts.debug;
@@ -60,8 +61,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   const tMerge1 = Date.now();
 
   // Generate artifacts using shared module
+  let genMeta: any = {};
   try {
   const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+    genMeta = meta;
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
       process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
@@ -75,7 +78,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       await safeMkdir(dir);
       await safeWrite(full, content);
     })));
-    const appName = getAppName(srcDir);
+  const appName = getAppName(srcDir);
     const pkgPath = join(outDir, 'package.json');
     if (!existsSync(pkgPath)) writeFileSync(pkgPath, buildPackageJson(meta.hasPages, appName));
     const readmePath = join(outDir, 'README.md');
@@ -91,6 +94,11 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
           const res = spawnSync('npx', ['tsc', '--project', tsconfigPath, '--outDir', 'dist', '--declaration', 'false', '--emitDeclarationOnly', 'false'], { cwd: outDir, stdio: 'ignore' });
           if (res.status !== 0) process.stderr.write('[locus][build] tsc exited with code ' + res.status + '\n');
         } catch {/* ignore compile errors */}
+      }
+  if (!opts.suppressWarnings && genMeta.warnings && genMeta.warnings.length && !opts.dryRun) {
+        for (const w of genMeta.warnings) {
+          process.stdout.write(chalk.yellow('[locus][warn] ' + w + '\n'));
+        }
       }
     } catch (e) {
       if (e instanceof LocusError || (e && (e as any).code)) {

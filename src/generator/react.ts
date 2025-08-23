@@ -1,4 +1,4 @@
-export function generateReactPage(page: any, knownComponentNames: string[] = []): string {
+export function generateReactPage(page: any, knownComponentNames: string[] = [], _warnings?: string[]): string {
   const usesState = Array.isArray(page.state) && page.state.length > 0;
   const usesEffect = !!page.onLoad;
   const usesActions = Array.isArray(page.actions) && page.actions.length > 0;
@@ -29,7 +29,7 @@ export function generateReactPage(page: any, knownComponentNames: string[] = [])
   return [directive, imports, importLines, importLines ? '' : '', compStart, stateLines, onLoad, actions, ui, end].join('\n');
 }
 
-export function generateReactComponent(component: any): string {
+export function generateReactComponent(component: any, warnings?: string[]): string {
   const hasState = Array.isArray(component.state) && component.state.length > 0; // future-proof
   const needsClient = hasState; // extend if components gain effects/actions later
   const importHooks = hasState ? ', { useState }' : '';
@@ -37,11 +37,26 @@ export function generateReactComponent(component: any): string {
   const imports = `import React${importHooks} from 'react';\n`;
   const originalUi = stripUiWrapper(component.ui) || '<div />';
   const hasChildrenRef = /\{\s*children\s*\}/.test(originalUi);
+  // Detect potential named slots: {identifierSlot} pattern
+  const slotRefRegex = /\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}/g;
+  const namedSlotRefs = new Set<string>();
+  let mSlot: RegExpExecArray | null;
+  while ((mSlot = slotRefRegex.exec(originalUi)) !== null) {
+    const name = mSlot[1];
+    if (name !== 'children' && /Slot$/.test(name)) namedSlotRefs.add(name);
+  }
   const explicitChildren = (component.params || []).some((p: any) => p.name === 'children');
   // Build augmented params list (do not mutate original object) if children referenced but not declared
   const effectiveParams = [...(component.params || [])];
   if (hasChildrenRef && !explicitChildren) {
     effectiveParams.push({ name: 'children', type: { kind: 'primitive', name: 'slot' } });
+    warnings?.push(`Component ${component.name}: auto-added slot param 'children' (referenced in UI but not declared).`);
+  }
+  for (const slotName of namedSlotRefs) {
+    if (!effectiveParams.some(p => p.name === slotName)) {
+      effectiveParams.push({ name: slotName, type: { kind: 'primitive', name: 'slot' } });
+      warnings?.push(`Component ${component.name}: auto-added named slot param '${slotName}' (referenced in UI).`);
+    }
   }
   const props = effectiveParams.map((p: any) => `${p.name}: ${mapPropType(p.type)}`).join('; ');
   const propsInterface = props ? `interface ${component.name}Props { ${props} }\n` : '';
@@ -49,8 +64,11 @@ export function generateReactComponent(component: any): string {
   const signature = props ? `(${hasChildrenProp ? '{ children, ...rest }' : lowerFirst(component.name) + 'Props'}: ${component.name}Props)` : `()`;
   const uiContent = component.uiAst ? renderUiAst(component.uiAst) : transformUi(originalUi, component.state || []);
   const stateLines = hasState ? (component.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n') + '\n' : '';
+  const autoAddedNote = (warnings || []).some(w => w.includes(`Component ${component.name}: auto-added`))
+    ? `/* NOTE: One or more slot params were auto-added based on UI usage. Consider declaring them explicitly in the component definition for clarity. */\n`
+    : '';
   const comp = `export default function ${component.name}${signature} {\n${stateLines}  return (\n    ${uiContent}\n  );\n}\n`;
-  return [directive, imports, propsInterface, comp].join('\n');
+  return [directive, imports, propsInterface, autoAddedNote, comp].join('\n');
 }
 
 function capitalize(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
