@@ -1,4 +1,4 @@
-export function generateReactPage(page: any): string {
+export function generateReactPage(page: any, knownComponentNames: string[] = []): string {
   const usesState = Array.isArray(page.state) && page.state.length > 0;
   const usesEffect = !!page.onLoad;
   const usesActions = Array.isArray(page.actions) && page.actions.length > 0;
@@ -13,10 +13,20 @@ export function generateReactPage(page: any): string {
   const stateLines = usesState ? (page.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n') : '';
   const onLoad = usesEffect ? `\n  useEffect(() => {\n    ${page.onLoad}\n  }, []);\n` : '';
   const actions = (page.actions || []).map((a: any) => `  function ${a.name}(${(a.params||[]).join(', ')}) {\n    ${a.body || ''}\n  }`).join('\n\n');
-  const uiContent = page.uiAst ? renderUiAst(page.uiAst) : transformUi(stripUiWrapper(page.ui) || '<div />', page.state || []);
+  const originalUi = stripUiWrapper(page.ui) || '<div />';
+  const uiContent = page.uiAst ? renderUiAst(page.uiAst) : transformUi(originalUi, page.state || []);
+  // Auto-detect component usage: JSX tags starting with capital letter that are in knownComponentNames
+  const used = new Set<string>();
+  const tagRegex = /<([A-Z][A-Za-z0-9_]*)\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = tagRegex.exec(originalUi)) !== null) {
+    const name = m[1];
+    if (knownComponentNames.includes(name) && name !== page.name) used.add(name);
+  }
+  const importLines = Array.from(used).map(n => `import ${n} from '../components/${n}'`).join('\n');
   const ui = `\n  return (\n    ${uiContent}\n  );\n`;
   const end = `}\n`;
-  return [directive, imports, compStart, stateLines, onLoad, actions, ui, end].join('\n');
+  return [directive, imports, importLines, importLines ? '' : '', compStart, stateLines, onLoad, actions, ui, end].join('\n');
 }
 
 export function generateReactComponent(component: any): string {
@@ -25,10 +35,19 @@ export function generateReactComponent(component: any): string {
   const importHooks = hasState ? ', { useState }' : '';
   const directive = needsClient ? `'use client';\n` : '';
   const imports = `import React${importHooks} from 'react';\n`;
-  const props = (component.params || []).map((p: any) => `${p.name}: ${mapPropType(p.type)}`).join('; ');
+  const originalUi = stripUiWrapper(component.ui) || '<div />';
+  const hasChildrenRef = /\{\s*children\s*\}/.test(originalUi);
+  const explicitChildren = (component.params || []).some((p: any) => p.name === 'children');
+  // Build augmented params list (do not mutate original object) if children referenced but not declared
+  const effectiveParams = [...(component.params || [])];
+  if (hasChildrenRef && !explicitChildren) {
+    effectiveParams.push({ name: 'children', type: { kind: 'primitive', name: 'slot' } });
+  }
+  const props = effectiveParams.map((p: any) => `${p.name}: ${mapPropType(p.type)}`).join('; ');
   const propsInterface = props ? `interface ${component.name}Props { ${props} }\n` : '';
-  const signature = props ? `(${lowerFirst(component.name)}Props: ${component.name}Props)` : `()`;
-  const uiContent = component.uiAst ? renderUiAst(component.uiAst) : transformUi(stripUiWrapper(component.ui) || '<div />', component.state || []);
+  const hasChildrenProp = effectiveParams.some((p: any) => p.name === 'children');
+  const signature = props ? `(${hasChildrenProp ? '{ children, ...rest }' : lowerFirst(component.name) + 'Props'}: ${component.name}Props)` : `()`;
+  const uiContent = component.uiAst ? renderUiAst(component.uiAst) : transformUi(originalUi, component.state || []);
   const stateLines = hasState ? (component.state || []).map((s: any) => `  const [${s.name}, set${capitalize(s.name)}] = useState(${s.default});`).join('\n') + '\n' : '';
   const comp = `export default function ${component.name}${signature} {\n${stateLines}  return (\n    ${uiContent}\n  );\n}\n`;
   return [directive, imports, propsInterface, comp].join('\n');

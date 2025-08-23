@@ -99,14 +99,15 @@ export function buildOutputArtifacts(merged: UnifiedLike, opts: BuildArtifactsOp
   for (const [rel, content] of Object.entries(routes)) {
     files[rel] = withHeader(content as string, rel.includes('server.ts') ? 'express server' : 'express route');
   }
-  // React pages & components
-  const pages = [...merged.pages].sort((a, b) => a.name.localeCompare(b.name));
-  for (const p of pages) {
-    files[`react/pages/${p.name}.tsx`] = withHeader(generateReactPage(p), 'react page');
-  }
+  // React pages & components (generate components first for imports)
   const components = [...merged.components].sort((a, b) => a.name.localeCompare(b.name));
   for (const c of components) {
     files[`react/components/${c.name}.tsx`] = withHeader(generateReactComponent(c), 'react component');
+  }
+  const componentNames = components.map(c => c.name);
+  const pages = [...merged.pages].sort((a, b) => a.name.localeCompare(b.name));
+  for (const p of pages) {
+    files[`react/pages/${p.name}.tsx`] = withHeader(generateReactPage(p, componentNames), 'react page');
   }
   // Theme
   if (opts.includeTheme !== false) {

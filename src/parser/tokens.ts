@@ -40,6 +40,8 @@ export const Greater = createToken({ name: 'Greater', pattern: />/ });
 export const SlashTok = createToken({ name: 'SlashTok', pattern: /\// });
 export const DotTok = createToken({ name: 'DotTok', pattern: /\./ });
 export const PlusTok = createToken({ name: 'PlusTok', pattern: /\+/ });
+export const HyphenTok = createToken({ name: 'HyphenTok', pattern: /-/ });
+export const SemicolonTok = createToken({ name: 'SemicolonTok', pattern: /;/ });
 export const LBracketTok = createToken({ name: 'LBracketTok', pattern: /\[/ });
 export const RBracketTok = createToken({ name: 'RBracketTok', pattern: /\]/ });
 export const SingleQuoteTok = createToken({ name: 'SingleQuoteTok', pattern: /'/ });
@@ -122,6 +124,8 @@ export const AllTokens = [
   SlashTok,
   DotTok,
   PlusTok,
+  HyphenTok,
+  SemicolonTok,
   LBracketTok,
   RBracketTok,
   SingleQuoteTok,

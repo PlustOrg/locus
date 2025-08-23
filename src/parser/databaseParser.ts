@@ -54,6 +54,8 @@ import {
   LBracketTok,
   RBracketTok,
   SingleQuoteTok,
+  HyphenTok,
+  SemicolonTok,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -256,6 +258,8 @@ export class DatabaseCstParser extends CstParser {
   { ALT: () => this.CONSUME(SlashTok) },
   { ALT: () => this.CONSUME(DotTok) },
   { ALT: () => this.CONSUME(PlusTok) },
+  { ALT: () => this.CONSUME(HyphenTok) },
+  { ALT: () => this.CONSUME(SemicolonTok) },
   { ALT: () => this.CONSUME(LBracketTok) },
   { ALT: () => this.CONSUME(RBracketTok) },
   { ALT: () => this.CONSUME(SingleQuoteTok) },
