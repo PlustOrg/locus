@@ -87,30 +87,25 @@ router.delete('/${routeBase}/:id', async (req, res) => {
   mounts.push(base);
   }
   // Optional: basic app bootstrap
-  const imports = mounts.map(n => `import { router as ${n}Router } from './routes/${n}.ts'`).join('\n');
+  // Use CommonJS style dynamic requires to avoid extension resolution issues under differing module loaders
+  const imports = mounts.map(n => `const { router: ${n}Router } = require('./routes/${n}.ts')`).join('\n');
   const uses = mounts.map(n => `app.use('/${opts?.pluralizeRoutes ? pluralize(n) : n}', ${n}Router)`).join('\n');
-  files['server.ts'] = `import express from 'express'
+  files['server.ts'] = `/* eslint-disable */
+import express from 'express'
 import cors from 'cors'
 import path from 'path'
 ${imports}
 
 const app = express()
-// JSON body parsing
 app.use(express.json())
-// Conditional CORS (enable by setting ENABLE_CORS=1)
 if (process.env.ENABLE_CORS === '1') { app.use(cors()) }
-// Static assets (theme, public files)
 const publicDir = path.join(__dirname, 'next-app', 'public')
-app.use(express.static(publicDir))
+try { app.use(express.static(publicDir)) } catch {}
 ${uses}
 
 export function startServer(port: number = Number(process.env.API_PORT || process.env.PORT) || 3001) {
-  return app.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log('[locus][api] listening on :' + port)
-  })
+  return app.listen(port, () => { console.log('[locus][api] listening on :' + port) })
 }
-
 export default app
 `;
   return files;

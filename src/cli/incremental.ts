@@ -29,13 +29,14 @@ export function createIncrementalBuilder(opts: {
 
   function writePackageJson(hasPages: boolean) {
     const pkgPath = join(opts.outDir, 'package.json');
-    if (existsSync(pkgPath)) return; // one-time
-    const appName = getAppName(opts.srcDir);
-    writeFileSafe(pkgPath, buildPackageJson(hasPages, appName));
+    if (!existsSync(pkgPath)) {
+      const appName = getAppName(opts.srcDir);
+      writeFileSafe(pkgPath, buildPackageJson(hasPages, appName));
+    }
     const readmePath = join(opts.outDir, 'README.md');
     if (!existsSync(readmePath)) writeFileSafe(readmePath, buildGeneratedReadme());
-  const tsconfigPath = join(opts.outDir, 'tsconfig.json');
-  if (!existsSync(tsconfigPath)) writeFileSafe(tsconfigPath, buildTsConfig());
+    const tsconfigPath = join(opts.outDir, 'tsconfig.json');
+    if (!existsSync(tsconfigPath)) writeFileSafe(tsconfigPath, buildTsConfig());
   }
 
   const lastWritten = new Map<string, string>();

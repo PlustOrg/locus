@@ -1,3 +1,17 @@
+## Recent Fixes (Aug 22 2025)
+
+Implemented:
+- Always emit `tsconfig.json` (build + incremental) even on subsequent dev runs.
+- Generated `package.json` now uses `node -r ts-node/register/transpile-only server.ts` for API dev to avoid ESM/extension quirks.
+- Express server generator now uses CommonJS `require` for route imports to prevent Node 23 ESM resolution failures for extensionless TS sources.
+- Added route-missing hint in dev stderr parsing.
+- Ensured incremental builder does not early-return before writing ancillary files (README, tsconfig).
+
+Next candidates:
+- Option to output compiled JS (skip ts-node in runtime) via `--emit-js` flag.
+- Detect existing lockfile (yarn/pnpm) and use matching package manager for auto-install.
+- Add health endpoint generation and live readiness probe logs.
+- Auto-run `prisma generate` if schema/prisma folder present & client missing.
 # `locus dev` UX Improvement Checklist
 
 Goal: Provide immediate, clear, and attractive feedback when running `locus dev`, showing:

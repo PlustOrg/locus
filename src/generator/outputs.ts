@@ -48,7 +48,7 @@ export function buildPackageJson(hasPages: boolean, appName: string): string {
     private: true,
     version: '0.0.0',
     scripts: {
-      'dev:api': 'ts-node --transpile-only server.ts',
+      'dev:api': 'node -r ts-node/register/transpile-only server.ts',
       ...(hasPages ? { 'dev:next': 'next dev next-app' } : {}),
       dev: hasPages ? 'npm run dev:api & npm run dev:next' : 'npm run dev:api',
       'prisma:generate': 'prisma generate',
