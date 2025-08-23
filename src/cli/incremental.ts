@@ -97,6 +97,7 @@ export function createIncrementalBuilder(opts: {
       rebuildAll();
     },
     async update(filePath: string) {
+      if (!filePath.endsWith('.locus')) return; // ignore non-locus changes
       try {
         const content = readFileSync(filePath, 'utf8');
         opts.fileMap.set(filePath, content);
@@ -107,6 +108,7 @@ export function createIncrementalBuilder(opts: {
       rebuildAll();
     },
     async remove(filePath: string) {
+      if (!filePath.endsWith('.locus')) return;
       cache.delete(filePath);
       rebuildAll();
     }
