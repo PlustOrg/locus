@@ -74,7 +74,8 @@ export function buildTsConfig(): string {
       module: 'commonjs',
       esModuleInterop: true,
       skipLibCheck: true,
-      strict: false
+      strict: false,
+      types: []
     },
     include: ['**/*.ts', '**/*.tsx']
   }, null, 2);

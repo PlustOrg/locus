@@ -47,7 +47,7 @@ export default function PageEntry(){ return <Page/> }
   }
 
   // tsconfig for editor TS in next-app
-  files['next-app/tsconfig.json'] = JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { jsx: 'preserve' } }, null, 2) + '\n';
+  files['next-app/tsconfig.json'] = JSON.stringify({ extends: '../tsconfig.json', compilerOptions: { jsx: 'preserve' }, include: ['.'] }, null, 2) + '\n';
   // next.config.js minimal
   files['next-app/next.config.js'] = `/** Auto-generated minimal Next.js config */\nmodule.exports = { reactStrictMode: true }\n`;
 

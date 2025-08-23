@@ -63,8 +63,14 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   reportError((e as any).cause as LocusError, fileMap, opts.errorFormat);
     }
   }
-  // start next.js and express servers (stubbed)
-  const apiPort = Number(process.env.API_PORT || process.env.PORT) || 3001;
+  // Determine API port (find free if base occupied)
+  const basePort = Number(process.env.API_PORT || process.env.PORT) || 3001;
+  const apiPort = await pickFreePort(basePort);
+  if (apiPort !== basePort && !opts.quiet) {
+    process.stdout.write(chalk.yellow(`[locus][dev] port ${basePort} in use, using ${apiPort}`) + '\n');
+  }
+  // Propagate chosen port to child processes
+  process.env.API_PORT = String(apiPort);
   const generatedDir = join(opts.srcDir, 'generated');
   const pkgInGenerated = existsSync(join(generatedDir, 'package.json'));
   const rootPkg = existsSync(join(opts.srcDir, 'package.json'));
@@ -208,7 +214,12 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     try { routeCount = readdirSync(routesDir).filter(f => f.endsWith('.ts')).length; } catch {}
     const theme = existsSync(join(opts.srcDir, 'generated', 'theme.css'));
     let prismaClient = true; let prismaHint = false;
-    try { require.resolve('@prisma/client'); } catch { prismaClient = false; prismaHint = true; }
+    try {
+      // Attempt resolution relative to generated dir first
+      require.resolve('@prisma/client', { paths: [generatedDir, process.cwd()] });
+    } catch {
+      prismaClient = false; prismaHint = true;
+    }
     const banner = formatBanner({
       appName,
       apiPort,
@@ -308,4 +319,24 @@ function spawnApi(_srcDir: string, workDir: string, opts: { quiet?: boolean; log
     return spawnSafe('node', ['dist/server.js'], workDir);
   }
   return spawnSafe('npm', ['run', 'dev:api'], workDir);
+}
+
+async function pickFreePort(start: number): Promise<number> {
+  const maxAttempts = 20;
+  let port = start;
+  for (let i = 0; i < maxAttempts; i++) {
+    const free = await isPortFree(port);
+    if (free) return port;
+    port++;
+  }
+  return start; // fallback
+}
+
+function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = require('net').createServer();
+    server.once('error', () => { try { server.close(); } catch {}; resolve(false); });
+    server.once('listening', () => { server.close(() => resolve(true)); });
+    server.listen(port, '0.0.0.0');
+  });
 }
