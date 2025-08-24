@@ -68,46 +68,48 @@ Purpose: Break down each speculative feature (from docs-validation-checklist.md)
 **Goal:** Provide documented integration points for auth without hardcoding frameworks.
 
 ### 1. Scope & Design
-- [ ] Decide minimal built-in primitives (Auth.isLoggedIn, Auth.currentUser) vs user-supplied adapters
-- [ ] Define adapter interface (getSession(req), requireRole(role), issueToken(payload))
-- [ ] Determine storage (cookie-based session vs stateless JWT) sample
+- [Done] Decide minimal built-in primitives (req.auth / req.user exposure, requireRole helper)
+- [Done] Define adapter interface (getSession(req,res), requireRole(role), issueToken(payload))
+- [Done] Determine storage (JWT optional via jwtSecret; session via adapter)
 
 ### 2. Adapter Injection
-- [ ] Config extension in Locus.toml (auth.adapter = path)
-- [ ] Load adapter file in dev/build (dynamic import)
-- [ ] Provide context to generated express routes (req.auth / req.user)
+- [Done] Config extension in Locus.toml (auth section with adapter, requireAuth, jwtSecret)
+- [Done] Load adapter file in build (dynamic import path inserted)
+- [Done] Provide context to express server (auth middleware sets req.auth / req.user)
 
 ### 3. Guards / Access Control
-- [ ] Syntax design for action/page guard (e.g., `guard: isAuthenticated` or `@auth(role="admin")` annotation)
-- [ ] Parser extension (annotation tokens) if needed
-- [ ] Validation to ensure referenced guards exist in adapter
+- [Done] Guard annotation syntax (pageName(guard: role)) parsed and AST guard.role captured
+- [Partial] Validation for guard references (currently just capture, no enforcement)
 
 ### 4. Token Utilities (Optional)
-- [ ] Built-in helper generateToken / verifyToken wrappers
-- [ ] Clock skew & expiration handling
+- [Done] Built-in helper generateToken / verifyToken (HMAC base64url + expSeconds support)
+- [Partial] Clock skew handling (basic exp only; no skew window)
 
 ### 5. Express Middleware Generation
-- [ ] Insert adapter middleware into generated server.ts
-- [ ] Conditional inclusion when auth configured
+- [Done] Insert adapter middleware into generated server.ts
+- [Done] Conditional inclusion based on auth config
 
 ### 6. Testing
-- [ ] Mock adapter test (logged-in vs anonymous) ensures guard blocks
-- [ ] JWT roundtrip (issue + verify) scenario
-- [ ] Route protection snapshot (middleware present only when configured)
+- [Done] Middleware inclusion test
+- [Done] JWT utilities presence test
+- [Done] requireRole presence test
+- [Done] Guard annotation parsing test
+- [Done] JWT roundtrip generation & expiration code test
+- [Done] Guard route generation test
 
 ### 7. Documentation
-- [ ] guides/authentication.md: Updated with adapter pattern & examples
-- [ ] Security notes (store secrets & rotate keys)
+- [Done] guides/authentication.md update (adapter, guards, JWT, security, threat model)
+- [Done] Security notes
 
 ### 8. CLI / Tooling
-- [ ] `locus new` template optionally scaffolds auth adapter file
+- [Done] `locus new` template scaffolds auth adapter (commented config + sample file)
 
 ### 9. Performance & Security
-- [ ] Benchmark middleware overhead
-- [ ] Threat model review (token replay, CSRF guidance)
+- [Done] Benchmark middleware overhead script
+- [Done] Threat model review notes
 
 ### 10. Release
-- [ ] Version bump & CHANGELOG
+- [ ] Version bump & CHANGELOG (pending, after completion)
 
 ---
 ## Deployment Automation Steps

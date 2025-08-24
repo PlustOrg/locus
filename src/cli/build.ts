@@ -8,6 +8,10 @@ import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
 import { BuildError, LocusError } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
+import * as fs from 'fs';
+import * as path from 'path';
+import { parseToml } from '../config/toml';
+import { generateExpressApi, AuthConfig } from '../generator/express';
 import { initPluginManager } from '../plugins/manager';
 import chalk from 'chalk';
 import { reportError, ErrorOutputFormat } from './reporter';
@@ -78,7 +82,32 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   let genMeta: any = {};
   try {
     await pluginMgr.onBeforeGenerate(merged);
-  const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+    // detect auth configuration (Locus.toml optional)
+    let auth: AuthConfig | undefined;
+    try {
+      const tomlPath = path.join(srcDir, 'Locus.toml');
+      if (fs.existsSync(tomlPath)) {
+        const tomlRaw = fs.readFileSync(tomlPath, 'utf8');
+        const toml = parseToml(tomlRaw);
+        const a = (toml._sections && toml._sections['auth']) || toml['auth'];
+        if (a) {
+          auth = {
+            adapterPath: a.adapter,
+            requireAuth: !!a.requireAuth,
+            jwtSecret: a.jwtSecret
+          };
+          if (auth.jwtSecret && !process.env.LOCUS_JWT_SECRET) process.env.LOCUS_JWT_SECRET = auth.jwtSecret;
+        }
+      }
+    } catch {/* ignore */}
+
+    const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+    // augment express server if auth configured
+    if (auth) {
+      const guarded = (merged.pages||[]).filter((p:any)=>p.guard).map((p:any)=>({ name: p.name, role: p.guard.role }));
+      const expressFiles = generateExpressApi((merged.database?.entities)||[], { auth, pagesWithGuards: guarded });
+      for (const [k,v] of Object.entries(expressFiles)) { artifacts[k] = v; }
+    }
     // afterGenerate hook may want to add artifacts
     await pluginMgr.onAfterGenerate({ artifacts, meta });
   // run any custom generators registered during previous hooks

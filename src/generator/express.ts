@@ -5,7 +5,13 @@ function pluralize(name: string): string {
   if (name.endsWith('s')) return name + 'es';
   return name + 's';
 }
-export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean }): Record<string, string> {
+export interface AuthConfig {
+  adapterPath?: string;
+  requireAuth?: boolean;
+  jwtSecret?: string;
+}
+
+export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[] }): Record<string, string> {
   const files: Record<string, string> = {};
   const mounts: string[] = [];
   const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
@@ -90,6 +96,28 @@ router.delete('/${routeBase}/:id', async (req, res) => {
   // Use CommonJS style dynamic requires to avoid extension resolution issues under differing module loaders
   const imports = mounts.map(n => `const { router: ${n}Router } = require('./routes/${n}.ts')`).join('\n');
   const uses = mounts.map(n => `app.use('/${opts?.pluralizeRoutes ? pluralize(n) : n}', ${n}Router)`).join('\n');
+  const guardLines: string[] = [];
+  if (opts?.pagesWithGuards?.length) {
+    guardLines.push('// page guard declarations');
+    for (const pg of opts.pagesWithGuards) {
+      guardLines.push(`// Guard page ${pg.name} requires role ${pg.role}`);
+  // create stub endpoint illustrating guard enforcement
+  guardLines.push(`app.get('/guard/${pg.name.toLowerCase()}', requireRole('${pg.role}'), (req,res)=> res.json({ ok: true, page: '${pg.name}' }))`);
+    }
+  }
+  // Auth utilities generation (if requested)
+  if (opts?.auth?.jwtSecret) {
+  files['auth/authUtils.ts'] = `import crypto from 'crypto';\n\nconst secret = process.env.LOCUS_JWT_SECRET || ${JSON.stringify(opts.auth.jwtSecret)};\n\ninterface TokenOptions { expSeconds?: number }\ninterface TokenPayload { [k:string]: any; exp?: number }\nexport function generateToken(payload: TokenPayload, opts: TokenOptions = {}): string {\n  const bodyObj: TokenPayload = { ...payload };\n  if (opts.expSeconds) { bodyObj.exp = Math.floor(Date.now()/1000) + opts.expSeconds; }\n  const body = Buffer.from(JSON.stringify(bodyObj)).toString('base64url');\n  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');\n  return body + '.' + sig;\n}\nexport function verifyToken(token: string): TokenPayload | null {\n  const [body, sig] = token.split('.');\n  if (!body || !sig) return null;\n  const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');\n  if (expected !== sig) return null;\n  try { const obj: TokenPayload = JSON.parse(Buffer.from(body,'base64url').toString('utf8')); if (obj.exp && obj.exp < Math.floor(Date.now()/1000)) return null; return obj; } catch { return null; }\n}\n`;
+  }
+
+  const authLines: string[] = [];
+  if (opts?.auth?.adapterPath) {
+    authLines.push(`// auth middleware injected\nimport * as authAdapter from '${opts.auth.adapterPath.replace(/\\/g,'/')}';`);
+    authLines.push(`(app as any).authAdapter = authAdapter;`);
+    authLines.push(`app.use(async function locusAuthMiddleware(req,res,next){\n  try {\n    const session = authAdapter.getSession ? await authAdapter.getSession(req,res) : null;\n    (req as any).auth = session;\n    (req as any).user = session;\n    if (${opts.auth.requireAuth ? 'true' : 'false'} && !session) { return res.status(401).json({ error: 'Unauthorized' }); }\n    next();\n  } catch (e) { res.status(500).json({ error: 'Auth failure' }); }\n});`);
+    authLines.push(`// expose requireRole if provided\nconst requireRole = authAdapter.requireRole || ((role: string)=> (req:any,res:any,next:any)=> next());`);
+  }
+
   files['server.ts'] = `/* eslint-disable */
 import express from 'express'
 import cors from 'cors'
@@ -105,6 +133,8 @@ try { app.use(express.static(publicDir)) } catch {}
 app.get('/healthz', (req, res) => { res.json({ ok: true, uptime: process.uptime(), ts: Date.now() }) })
 let startedAt = Date.now();
 app.get('/readyz', (req, res) => { res.json({ ready: true, uptime: process.uptime(), startedAt }) })
+${authLines.join('\n')}
+${guardLines.join('\n')}
 ${uses}
 
 export function startServer(port: number = Number(process.env.API_PORT || process.env.PORT) || 3001) {

@@ -260,10 +260,19 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
     const pageNodes = (blkCh['pageBlock'] as CstNode[]) || [];
     for (const pn of pageNodes) {
       const ch = pn.children as CstChildrenDictionary;
-  const nameTok = (ch['Identifier'] as IToken[])[0];
-  const name = nameTok.image;
-  const page: any = { type: 'page', name };
-  defineHidden(page, 'nameLoc', posOf(nameTok));
+      const nameTok = (ch['Identifier'] as IToken[])[0];
+      const name = nameTok.image;
+      const page: any = { type: 'page', name };
+      // guardClause extraction: second Identifier inside guardClause (guard: role)
+      if (ch['guardClause']) {
+        const gc = (ch['guardClause'] as CstNode[])[0];
+        const gch = gc.children as CstChildrenDictionary;
+        const ids = (gch['Identifier'] as IToken[]);
+        if (ids.length >= 2 && ids[0].image === 'guard') {
+          page.guard = { role: ids[1].image };
+        }
+      }
+      defineHidden(page, 'nameLoc', posOf(nameTok));
       enrichPageFromCst(page, pn, originalSource || '');
       pages.push(page);
     }

@@ -85,6 +85,7 @@ export class DatabaseCstParser extends CstParser {
   private pageBlock = this.RULE('pageBlock', () => {
     this.CONSUME(Page);
     this.CONSUME(Identifier);
+  this.OPTION(() => this.SUBRULE(this.guardClause));
     this.CONSUME(LCurly);
     this.MANY(() => this.OR([
       { ALT: () => this.SUBRULE(this.stateBlock) },
@@ -100,6 +101,14 @@ export class DatabaseCstParser extends CstParser {
       },
     ]));
     this.CONSUME(RCurly);
+  });
+
+  private guardClause = this.RULE('guardClause', () => {
+    this.CONSUME(LParen);
+    this.CONSUME1(Identifier); // expect 'guard'
+    this.CONSUME(Colon);
+    this.CONSUME2(Identifier); // role identifier
+    this.CONSUME(RParen);
   });
 
   private componentBlock = this.RULE('componentBlock', () => {

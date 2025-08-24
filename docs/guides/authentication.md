@@ -1,3 +1,53 @@
+## Locus Authentication Guide (Adapter Pattern)
+
+Locus integrates authentication via a user-supplied adapter referenced in `Locus.toml`:
+
+```toml
+[auth]
+adapter = "./authAdapter.js"
+jwtSecret = "dev-secret"
+requireAuth = false
+```
+
+### Adapter Surface
+Export any of:
+- `getSession(req, res)` -> user/session object or null
+- `requireRole(role)` -> Express middleware (role-based guard)
+- `issueToken(payload, jwt)` -> optional helper (jwt has generateToken/verifyToken)
+
+### Runtime Injection
+During build the Express server is generated with an auth middleware that:
+1. Calls `getSession` (if provided) per request
+2. Sets `req.auth` and `req.user`
+3. Optionally enforces `requireAuth` (401 when no session)
+4. Exposes `requireRole` for guard routes
+
+### Page Guards
+Use page guard syntax: `page Dashboard(guard: admin) { ... }`
+This inserts comments plus a stub protected route `/guard/dashboard` requiring `admin` role.
+
+### JWT Helpers
+If `jwtSecret` is set, an `auth/authUtils.ts` file is generated with:
+- `generateToken(payload, { expSeconds })`
+- `verifyToken(token)` (returns null if signature mismatch or expired)
+
+### Security Notes
+| Concern | Mitigation / Guidance |
+|---------|-----------------------|
+| Secret leakage | Load `jwtSecret` from env in production, not committed to repo |
+| Expired tokens | `verifyToken` enforces `exp` claim if present |
+| Role escalation | Keep role assignment on server side; never trust client-provided roles |
+| CSRF | Use same-site cookies for session token; consider CSRF tokens for unsafe methods |
+| Replay attacks | Include short exp & rotate secrets periodically |
+
+### Threat Model Highlights
+- Untrusted user input: validate payloads before issuing tokens.
+- Token replay: keep expirations short; optionally bind to device fingerprint.
+- Privilege escalation: never derive roles purely from client claims; cross-check server store.
+
+### Performance
+Auth middleware is lightweight (session fetch + object assignment). Use `scripts/bench_auth.ts` to gauge overhead.
+
 # Authentication Guide
 
 Locus is designed to make common web application patterns, like user authentication, as simple as possible. While Locus doesn't have a single "auth" command, it provides all the necessary building blocks to create a robust and secure authentication system.
