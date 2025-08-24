@@ -1,15 +1,7 @@
-import { buildDatabaseAst } from '../../src/parser/astBuilder';
-import { LocusLexer } from '../../src/parser/tokens';
-import { DatabaseCstParser } from '../../src/parser/databaseParser';
+import { parseLocus } from '../../src/parser';
 import { buildOutputArtifacts } from '../../src/generator/outputs';
 
-function parse(src: string) {
-  const lex = LocusLexer.tokenize(src);
-  const parser = new DatabaseCstParser();
-  parser.input = lex.tokens;
-  const cst = parser.file();
-  return buildDatabaseAst(cst as any, src, 'test.locus');
-}
+const parse = (src: string) => parseLocus(src, 'test.locus');
 
 describe('style:override support', () => {
   test('captures style block without extra or missing braces', () => {

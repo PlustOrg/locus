@@ -1,15 +1,6 @@
-import { buildDatabaseAst } from '../../src/parser/astBuilder';
-import { LocusLexer } from '../../src/parser/tokens';
-import { DatabaseCstParser } from '../../src/parser/databaseParser';
+import { parseLocus } from '../../src/parser';
 
-function parseComp(src: string) {
-  const lex = LocusLexer.tokenize(src);
-  const parser = new DatabaseCstParser();
-  parser.input = lex.tokens;
-  const cst = parser.file();
-  const ast = buildDatabaseAst(cst as any, src, 'test.locus');
-  return ast.components[0];
-}
+const parseComp = (src: string) => parseLocus(src, 'test.locus').components[0];
 
 describe('Nested style:override braces', () => {
   test('captures @media block intact', () => {

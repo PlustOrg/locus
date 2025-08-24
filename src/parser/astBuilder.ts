@@ -380,22 +380,45 @@ function enrichComponentFromCst(node: any, cst: CstNode, source: string) {
     node.ui = `ui {${inner}}`;
     node.uiAst = parseUi(inner);
   }
-  // style:override blocks (capture all, last wins). Simple regex approach.
-  // Extract style blocks directly from source by regexp within component block span (simpler post-parse)
+  // style:override blocks (capture all, last wins) with brace balancing to support nested blocks (@media, etc.)
   const compSource = sliceFrom(cst, source);
-  const styleRe = /style:override\s*{([\s\S]*?)}/g;
-  let sm: RegExpExecArray | null;
-  const styles: Array<{content:string; start:number; end:number; line:number; column:number}> = [];
-  // compute base start offset of component
   const compTokens = collectTokens(cst);
   const baseStart = compTokens.length ? Math.min(...compTokens.map(t => t.startOffset ?? 0)) : 0;
-  while ((sm = styleRe.exec(compSource)) !== null) {
-    const blockStartInComp = sm.index;
-    const globalStart = baseStart + blockStartInComp;
-    const prefix = source.slice(0, globalStart);
-    const line = (prefix.match(/\n/g)?.length || 0) + 1;
-    const column = globalStart - prefix.lastIndexOf('\n');
-    styles.push({ content: sm[1], start: globalStart, end: globalStart + sm[0].length, line, column });
+  const styles: Array<{content:string; start:number; end:number; line:number; column:number}> = [];
+  let idx = 0;
+  while (idx < compSource.length) {
+    const found = compSource.indexOf('style:override', idx);
+    if (found === -1) break;
+    let j = found + 'style:override'.length;
+    // skip whitespace
+    while (j < compSource.length && /\s/.test(compSource[j])) j++;
+    if (compSource[j] !== '{') { idx = found + 1; continue; }
+    const blockStart = j;
+    j++; // after '{'
+    let depth = 1;
+    while (j < compSource.length && depth > 0) {
+      const chh = compSource[j];
+      if (chh === '"' || chh === '\'') { // skip strings
+        const quote = chh; j++; while (j < compSource.length) { if (compSource[j] === '\\') { j += 2; continue; } if (compSource[j] === quote) { j++; break; } j++; }
+        continue;
+      }
+      if (chh === '/' && compSource[j+1] === '*') { j += 2; while (j < compSource.length && !(compSource[j] === '*' && compSource[j+1] === '/')) j++; j += 2; continue; }
+      if (chh === '/' && compSource[j+1] === '/') { j += 2; while (j < compSource.length && compSource[j] !== '\n') j++; continue; }
+      if (chh === '{') depth++; else if (chh === '}') depth--;
+      j++;
+    }
+    if (depth === 0) {
+      const inner = compSource.slice(blockStart + 1, j - 1);
+      const globalStart = baseStart + found;
+      const prefix = source.slice(0, globalStart);
+      const line = (prefix.match(/\n/g)?.length || 0) + 1;
+      const column = globalStart - prefix.lastIndexOf('\n');
+      styles.push({ content: inner, start: globalStart, end: baseStart + j, line, column });
+      idx = j;
+    } else {
+      // Unterminated; break to avoid infinite loop
+      break;
+    }
   }
   if (styles.length) {
     (node as any).styleOverrides = styles.map(s => ({ content: s.content.trim(), loc: { line: s.line, column: s.column } }));

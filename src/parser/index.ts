@@ -51,6 +51,39 @@ function detectUnterminatedStyleBlock(source: string): { offset: number } | null
   return null;
 }
 
+function sanitizeStyleOverrideContent(source: string): string {
+  let out = '';
+  let i = 0;
+  const len = source.length;
+  while (i < len) {
+    const idx = source.indexOf('style:override', i);
+    if (idx === -1) { out += source.slice(i); break; }
+    // copy prefix
+    out += source.slice(i, idx);
+    let j = idx + 'style:override'.length;
+    while (j < len && /\s/.test(source[j])) j++;
+    if (source[j] !== '{') { out += 'style:override'; i = idx + 'style:override'.length; continue; }
+    // append literal up to '{'
+    out += source.slice(idx, j + 1);
+    j++; let depth = 1; const startContent = j;
+    while (j < len && depth > 0) {
+      const ch = source[j];
+      if (ch === '"' || ch === '\'') { const q = ch; j++; while (j < len) { if (source[j] === '\\') { j += 2; continue; } if (source[j] === q) { j++; break; } j++; } continue; }
+      if (ch === '/' && source[j+1] === '*') { j += 2; while (j < len && !(source[j] === '*' && source[j+1] === '/')) j++; j += 2; continue; }
+      if (ch === '/' && source[j+1] === '/') { j += 2; while (j < len && source[j] !== '\n') j++; continue; }
+      if (ch === '{') depth++; else if (ch === '}') depth--;
+      j++;
+    }
+    const endContent = depth === 0 ? j - 1 : j;
+    // replace inner content with single space preserving newlines count
+    const inner = source.slice(startContent, endContent);
+    const preserved = inner.replace(/[^\n]/g, ' ');
+    out += preserved;
+    if (depth === 0) { out += '}'; i = j; } else { i = j; }
+  }
+  return out;
+}
+
 export function parseLocus(source: string, filePath?: string): LocusFileAST {
   const unter = detectUnterminatedStyleBlock(source);
   if (unter) {
@@ -59,7 +92,8 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     const col = unter.offset - prefix.lastIndexOf('\n');
     throw new PError('Unterminated style:override block', filePath, line, col, 'style:override'.length);
   }
-  const lexResult = LocusLexer.tokenize(source);
+  const sanitized = sanitizeStyleOverrideContent(source);
+  const lexResult = LocusLexer.tokenize(sanitized);
   if (lexResult.errors.length) {
     const err = lexResult.errors[0];
   throw new PError(err.message, filePath, err.line, err.column, (err as any).length ?? 1);
