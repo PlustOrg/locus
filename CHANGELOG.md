@@ -25,3 +25,21 @@ All notable changes to this project will be documented in this file.
 - Features parsing (page/component/store) with UI AST
 - CLI commands: db/build/dev/new/deploy
 - Deterministic outputs and incremental dev build support
+
+## 0.4.0 - 2025-08-24
+### Added
+- Advanced authentication adapter support via [auth] in Locus.toml (adapter, jwtSecret, requireAuth)
+- Express auth middleware injection (req.auth / req.user), requireRole helper
+- Page guard syntax `page Name(guard: role)` with generated guard route stubs
+- JWT utilities (generateToken / verifyToken) with expSeconds and expiration validation
+- Auth adapter scaffold & commented config in `locus new` template
+- Benchmark script `scripts/bench_auth.ts`
+- Authentication guide with adapter pattern, guards, security & threat model notes
+
+### Changed
+- Express server generation augmented when auth configured (auth middleware + guard comments)
+
+### Security
+- Added expiration handling in JWT verification
+- Documented threat mitigations (replay, CSRF guidance, secret management)
+
