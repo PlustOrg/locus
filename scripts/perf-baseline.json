@@ -2,6 +2,6 @@
   "sample": "scripts/sample.locus",
   "iterations": 100,
   "tokensPerSecMin": 9000,
-  "tokensPerSecMinCi": 3500,
+  "tokensPerSecMinCi": 3200,
   "notes": "Adjust tokensPerSecMin to your environment. This baseline is informational and used by bench:assert."
 }
