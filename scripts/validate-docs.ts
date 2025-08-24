@@ -12,6 +12,9 @@ import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from '
 import { join, dirname, resolve } from 'path';
 import { createHash } from 'crypto';
 import { parseLocus } from '../src/parser';
+import { mergeAsts } from '../src/parser/merger';
+import { validateUnifiedAst } from '../src/validator/validate';
+import { generatePrismaSchema } from '../src/generator/prisma';
 import { existsSync as _exists } from 'fs';
 
 interface SnippetResult { file: string; index: number; ok: boolean; error?: string; code: string; }
@@ -38,6 +41,7 @@ const fenceRe = /(^|\n)```([^\n`]*)\n([\s\S]*?)\n```/g; // simple fence matcher
 
 const snippets: SnippetResult[] = [];
 const linkIssues: LinkIssue[] = [];
+const semanticIssues: Array<{file:string; index:number; issue:string}> = [];
 
 for (const file of mdFiles) {
   const rel = file.slice(ROOT.length + 1);
@@ -84,12 +88,31 @@ for (const file of mdFiles) {
       candidate = `component _DocExample { ui {\n${candidate}\n} }`;
     }
     let ok = true; let error: string | undefined;
+    let ast: any;
     try {
-      parseLocus(candidate, `${rel}#${idx}`);
+      ast = parseLocus(candidate, `${rel}#${idx}`);
     } catch (e: any) {
       ok = false; error = e.message;
     }
     snippets.push({ file: rel, index: idx, ok, error, code });
+    if (ok && ast) {
+      try {
+        const merged = mergeAsts([ast]);
+        validateUnifiedAst(merged as any);
+        // If database present, check generated prisma schema contains each entity name
+        if (/database\s*{/.test(candidate)) {
+          const schema = generatePrismaSchema(merged.database as any);
+          const names = (merged.database.entities || []).map((e:any)=>e.name);
+          for (const n of names) {
+            if (!new RegExp(`model\\s+${n}\\b`).test(schema)) {
+              semanticIssues.push({ file: rel, index: idx, issue: `Missing model ${n} in prisma output` });
+            }
+          }
+        }
+      } catch (e:any) {
+        semanticIssues.push({ file: rel, index: idx, issue: e.message });
+      }
+    }
   }
 }
 
@@ -111,16 +134,29 @@ let baseline: string | undefined;
 if (existsSync(HASH_FILE)) baseline = readFileSync(HASH_FILE, 'utf8').trim();
 
 const failing = snippets.filter(s => !s.ok);
+// Negative (expected-fail) tests sourced from docs commentary
+const negativeTests = [
+  { label: 'unsupported optional belongs_to', code: 'database { entity X { p: belongs_to Y (optional) } entity Y { } }' }
+];
+const negativeResults = negativeTests.map(nt => {
+  try { parseLocus(nt.code, `neg:${nt.label}`); return { label: nt.label, ok: false, error: 'DID_NOT_FAIL' }; }
+  catch(e:any){ return { label: nt.label, ok: true }; }
+});
+const negativeFailures = negativeResults.filter(r => !r.ok);
 
 const report: any = {
   summary: {
     totalSnippets: snippets.length,
     failed: failing.length,
     linkIssues: linkIssues.length,
-    hashMatch: baseline ? baseline === digest : true
+    hashMatch: baseline ? baseline === digest : true,
+    semanticIssues: semanticIssues.length,
+    negativeFailures: negativeFailures.length
   },
   failing,
   linkIssues,
+  semanticIssues,
+  negativeResults,
   newHash: digest,
   baselineHash: baseline
 };
@@ -135,7 +171,42 @@ if (_exists(CHECKLIST)) {
   }
 }
 
-if (failing.length || linkIssues.length || (baseline && baseline !== digest)) {
+// CLI flag cross-check
+function collectDocFlags(): Set<string> {
+  const set = new Set<string>();
+  const re = /(?<!var\()--[a-zA-Z][a-zA-Z0-9-]+/g; // exclude CSS vars used in var(--token)
+  for (const f of mdFiles) {
+    const raw = readFileSync(f, 'utf8');
+    let m:RegExpExecArray|null; while((m=re.exec(raw))) {
+      const flag = m[0];
+      // filter out obvious non-flags (long separators) or short '--x'
+      if (/^--[-]+$/.test(flag)) continue;
+      if (flag.length < 5) continue;
+      set.add(flag);
+    }
+  }
+  return set;
+}
+function collectCliFlags(): Set<string> {
+  const idxPath = join(ROOT, 'src', 'index.ts');
+  if (!existsSync(idxPath)) return new Set();
+  const raw = readFileSync(idxPath, 'utf8');
+  const reg = /\.option\([^)]*--([a-zA-Z0-9-]+)/g; let m:RegExpExecArray|null; const s=new Set<string>();
+  while((m=reg.exec(raw))) s.add('--'+m[1]);
+  return s;
+}
+const docFlags = collectDocFlags();
+const cliFlags = collectCliFlags();
+const allowDocOnly = new Set<string>(['--save-dev','--openapi','--emit-client-only','--no-audit','--no-fund','--version']);
+const allowCliOnly = new Set<string>(['--version','--cwd','--emit-js','--no-warn','--watch']);
+const extraDocFlags = [...docFlags].filter(f => !cliFlags.has(f) && !allowDocOnly.has(f));
+const undocumentedCliFlags = [...cliFlags].filter(f => !docFlags.has(f) && !allowCliOnly.has(f));
+report.summary['extraDocFlags'] = extraDocFlags.length;
+report.summary['undocumentedCliFlags'] = undocumentedCliFlags.length;
+report['extraDocFlags'] = extraDocFlags;
+report['undocumentedCliFlags'] = undocumentedCliFlags;
+
+if (failing.length || linkIssues.length || semanticIssues.length || negativeFailures.length || (baseline && baseline !== digest) || extraDocFlags.length || undocumentedCliFlags.length) {
   console.error('DOCS VALIDATION FAILED');
   console.error(JSON.stringify(report, null, 2));
   process.exit(1);
