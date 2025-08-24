@@ -59,6 +59,7 @@ import {
   StarTok,
   StyleKw,
   OverrideKw,
+  HexColor,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -377,6 +378,7 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Colon);
     this.OR([
       { ALT: () => this.CONSUME(StringLiteral) },
+  { ALT: () => this.CONSUME(HexColor) },
       { ALT: () => this.CONSUME(NumberLiteral) },
     ]);
   });

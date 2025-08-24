@@ -59,6 +59,7 @@ export const MapTok = createToken({ name: 'MapTok', pattern: /map\b/ });
 export const Identifier = createToken({ name: 'Identifier', pattern: /[A-Za-z_][A-Za-z0-9_]*/ });
 export const NumberLiteral = createToken({ name: 'NumberLiteral', pattern: /-?\d+(?:\.\d+)?/ });
 export const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"(?:[^"\\]|\\.)*"/ });
+export const HexColor = createToken({ name: 'HexColor', pattern: /#[0-9A-Fa-f]{3,8}\b/ });
 
 // Features keywords (minimal for Phase 1.3)
 export const Page = createToken({ name: 'Page', pattern: /page\b/ });
@@ -144,6 +145,7 @@ export const AllTokens = [
   MapTok,
   // literals and identifiers
   StringLiteral,
+  HexColor,
   NumberLiteral,
   Identifier,
   // catch-all raw char token (must be last in list to avoid conflicts)

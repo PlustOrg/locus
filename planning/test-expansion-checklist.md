@@ -42,16 +42,16 @@ Status legend: [ ] not started, [P] planned (in repo), [Done] implemented.
 - [Done] Incremental: deleting .locus file removes generated outputs
 
 ## Medium Priority
-- [ ] Parser: token order regression (e.g., keyword vs Identifier) test
-- [ ] Parser: recovery disabled ensures first syntax error halts
-- [ ] Parser: design system multiple sections merge behavior
-- [ ] Parser: store parsing with inline state fallback
-- [ ] Generator: Next app present only when pages exist
-- [ ] Generator: stable ordering (snapshot hash) unaffected by entity insertion order
-- [ ] Generator: sorting of entities for Prisma deterministic
-- [ ] Theme: absence of design system yields placeholder comment only
-- [ ] Warnings: named slot auto-add listed separately
-- [ ] Warnings: de-dup over multiple components referencing children
+- [Done] Parser: token order regression (e.g., keyword vs Identifier) test
+- [Done] Parser: recovery disabled ensures first syntax error halts
+- [Done] Parser: design system multiple sections merge behavior
+- [Done] Parser: store parsing with inline state fallback
+- [Done] Generator: Next app present only when pages exist
+- [Done] Generator: stable ordering (snapshot hash) unaffected by entity insertion order *(basic deterministic entity + file ordering tests)*
+- [Done] Generator: sorting of entities for Prisma deterministic
+- [Done] Theme: absence of design system yields placeholder comment only
+- [Done] Warnings: named slot auto-add listed separately *(message pattern distinction)*
+- [Done] Warnings: de-dup over multiple components referencing children *(single warning per component)*
 
 ## Low Priority / Stretch
 - [ ] Performance: benchmark parser speed regression guard (perf_baseline.json)
@@ -71,3 +71,5 @@ Status legend: [ ] not started, [P] planned (in repo), [Done] implemented.
 
 ## Notes
 Prioritize High Priority Next items for immediate robustness. Add new items as features evolve.
+Hex color enhancement: unquoted #rgb/#rrggbb tokens now supported in design system token assignments.
+Structured warnings & manifest: Added GENERATED_WARNINGS.json with categorized kinds and BUILD_MANIFEST.json with deterministic sha256 hash.

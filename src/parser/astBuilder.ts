@@ -189,9 +189,11 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
           for (const ta of toks) {
             const ach = ta.children as CstChildrenDictionary;
             const key = (ach['Identifier'] as IToken[])[0].image;
-            const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
+            const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['HexColor'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
             const valTok = lit![0];
-            const val = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
+            let val: string;
+            if (valTok.tokenType.name === 'StringLiteral') val = valTok.image.slice(1, -1);
+            else val = valTok.image; // HexColor or NumberLiteral raw image
             dsc.colors[themeName][key] = { value: val, loc: posOf(valTok) } as any;
           }
         }
@@ -242,9 +244,10 @@ export function buildDatabaseAst(cst: CstNode, originalSource?: string, filePath
           for (const ta of toks) {
             const ach = ta.children as CstChildrenDictionary;
             const key = (ach['Identifier'] as IToken[])[0].image;
-            const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
+            const lit = (ach['StringLiteral'] as IToken[] | undefined) || (ach['HexColor'] as IToken[] | undefined) || (ach['NumberLiteral'] as IToken[] | undefined);
             const valTok = lit![0];
-            const val = valTok.tokenType.name === 'StringLiteral' ? valTok.image.slice(1, -1) : valTok.image;
+            let val: string;
+            if (valTok.tokenType.name === 'StringLiteral') val = valTok.image.slice(1, -1); else val = valTok.image;
             (dsc as any)[prop][key] = { value: val, loc: posOf(valTok) };
           }
         }
