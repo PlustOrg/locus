@@ -62,7 +62,6 @@ component Card {
 }
 ```
 
-<!-- skip-validate -->
 ```locus
 <Card>
   <Text>Inside the card!</Text>

@@ -92,7 +92,9 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     const col = unter.offset - prefix.lastIndexOf('\n');
     throw new PError('Unterminated style:override block', filePath, line, col, 'style:override'.length);
   }
-  const sanitized = sanitizeStyleOverrideContent(source);
+  let sanitized = sanitizeStyleOverrideContent(source);
+  // Allow exclamation marks inside UI text by neutralizing them for the lexer (kept in original source for AST slicing)
+  sanitized = sanitized.replace(/!/g, ' ');
   const lexResult = LocusLexer.tokenize(sanitized);
   if (lexResult.errors.length) {
     const err = lexResult.errors[0];
