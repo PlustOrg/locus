@@ -1,6 +1,6 @@
 {
   "name": "@plust/locus",
-  "version": "0.1.22",
+  "version": "0.1.23",
   "main": "dist/index.js",
   "directories": {
     "doc": "docs"
@@ -16,9 +16,9 @@
     "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50",
     "bench:assert": "ts-node scripts/bench_assert.ts",
     "release:bump": "ts-node scripts/release_bump.ts",
-  "prepare": "npm run build",
-  "docs:check": "ts-node scripts/validate-docs.ts",
-  "docs:update-hash": "TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/validate-docs.ts --update-hash"
+    "prepare": "npm run build",
+    "docs:check": "ts-node scripts/validate-docs.ts",
+    "docs:update-hash": "TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/validate-docs.ts --update-hash"
   },
   "bin": {
     "locus": "dist/index.js"
