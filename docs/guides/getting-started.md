@@ -109,6 +109,6 @@ With the migration applied, you can now interact with your new `Product` table u
 Congratulations! You've successfully created a Locus project, modified the data model, and seen the development tools in action.
 
 From here, you can explore more advanced topics:
-*   **[Building UIs](./ui-syntax.md):** Learn how to create pages and components.
+*   **[Building UIs](../language/ui-syntax.md):** Learn how to create pages and components.
 *   **[Data Relationships](./data-relationships.md):** Define how your data models connect to each other.
-*   **[Theming](./theming.md):** Customize the look and feel of your application.
+*   **[Theming](../design-system/theming.md):** Customize the look and feel of your application.

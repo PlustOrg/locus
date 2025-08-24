@@ -53,6 +53,7 @@ The `[vars]` section is key. For each variable, you define:
 
 Now, write the Locus code for the feature. You can use your defined variables within the `.locus` files using the `{{variable_name}}` syntax.
 
+<!-- skip-validate -->
 ```locus
 // file: contact-form/src/contact.locus
 

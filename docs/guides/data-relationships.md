@@ -108,9 +108,9 @@ database {
   entity Comment {
     text: String
     
-    // A comment can optionally belong to a parent comment.
-    // The '?' makes the relationship optional, allowing for top-level comments.
-    parent: belongs_to Comment?
+  // A comment can belong to a parent comment to form a thread.
+  // (Optional belongs_to not yet supported; top-level comments modeled by separate root collection.)
+  parent: belongs_to Comment
     
     // A comment can have many replies (which are also comments).
     replies: has_many Comment

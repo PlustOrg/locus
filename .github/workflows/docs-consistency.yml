@@ -1,0 +1,35 @@
+name: Docs Consistency
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'src/**'
+      - 'planning/docs-validation-checklist.md'
+      - 'scripts/validate-docs.ts'
+      - '.github/workflows/docs-consistency.yml'
+  push:
+    branches: [ main ]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Unit Tests
+        run: npm test -- --runInBand
+      - name: Docs Validation
+        run: npm run docs:check
+      - name: Report Summary
+        if: always()
+        run: |
+          echo '### Docs Validation Summary' >> $GITHUB_STEP_SUMMARY
+          if [ -f docs/.snippets.hash ]; then echo 'Current snippet hash: '$(cat docs/.snippets.hash) >> $GITHUB_STEP_SUMMARY; fi

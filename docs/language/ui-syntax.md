@@ -60,7 +60,10 @@ component Card {
     <div class="card">{children}</div>
   }
 }
+```
 
+<!-- skip-validate -->
+```locus
 <Card>
   <Text>Inside the card!</Text>
 </Card>
