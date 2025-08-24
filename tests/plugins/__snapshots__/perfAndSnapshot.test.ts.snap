@@ -1,0 +1,5 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Plugin performance guard & snapshot custom generator output snapshot plugin-extra-hello 1`] = `"hello-world"`;
+
+exports[`Plugin performance guard & snapshot custom generator output snapshot: plugin-extra-hello 1`] = `"hello-world"`;

@@ -8,6 +8,7 @@ import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
 import { BuildError, LocusError } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
+import { initPluginManager } from '../plugins/manager';
 import chalk from 'chalk';
 import { reportError, ErrorOutputFormat } from './reporter';
 export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean; emitJs?: boolean; suppressWarnings?: boolean }) {
@@ -24,11 +25,15 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   }
   const fileMap = new Map<string, string>();
   const tParse0 = Date.now();
-  const asts = files.map(fp => {
+  const pluginMgr = await initPluginManager(srcDir);
+  const asts: any[] = [];
+  for (const fp of files) {
     try {
-      const content = typeof readFileSync === 'function' ? readFileSync(fp, 'utf8') : String(fp);
+      const content = readFileSync(fp, 'utf8');
       fileMap.set(fp, content);
-      return parseLocus(content as any, fp);
+      try { await pluginMgr.onParseStart(fp, content); } catch {/* ignore */}
+      const ast = parseLocus(content as any, fp);
+      asts.push(ast);
     } catch (e) {
       if (e instanceof LocusError || (e && (e as any).code)) {
         reportError((e as any) as LocusError, fileMap, opts.errorFormat);
@@ -36,11 +41,19 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       }
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
     }
-  });
+  }
   const tParse1 = Date.now();
+  // per-file parsed hooks
+  for (let i=0;i<asts.length;i++) {
+    const fp = files[i];
+    try { await pluginMgr.onFileParsed(fp, asts[i]); } catch {/* collect inside manager */}
+  }
+  // parse complete (allow virtual AST injection)
+  try { await pluginMgr.onParseComplete(asts); } catch {/* ignore */}
+  const allAsts = asts.concat(pluginMgr.virtualAsts);
   let merged;
   try {
-    merged = mergeAsts(asts);
+  merged = mergeAsts(allAsts);
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
       reportError((e as any) as LocusError, fileMap, opts.errorFormat);
@@ -50,6 +63,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   }
   // Validate unified AST
   try {
+    await pluginMgr.onValidate(merged);
     validateUnifiedAst(merged);
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
@@ -63,11 +77,21 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   // Generate artifacts using shared module
   let genMeta: any = {};
   try {
+    await pluginMgr.onBeforeGenerate(merged);
   const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+    // afterGenerate hook may want to add artifacts
+    await pluginMgr.onAfterGenerate({ artifacts, meta });
+  // run any custom generators registered during previous hooks
+  pluginMgr.runCustomGenerators(merged);
+    // merge plugin artifacts
+    Object.assign(artifacts, pluginMgr.extraArtifacts);
     if (opts.suppressWarnings && meta.warnings?.length) {
       // Remove warnings artifact if suppression requested
       delete (artifacts as any)['GENERATED_WARNINGS.txt'];
     }
+    // add plugin warnings
+  meta.warnings = [...(meta.warnings || []), ...pluginMgr.warnings];
+  (meta as any).pluginTimings = pluginMgr.timings;
     genMeta = meta;
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();

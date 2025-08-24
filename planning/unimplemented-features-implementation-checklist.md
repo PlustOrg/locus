@@ -7,59 +7,61 @@ Purpose: Break down each speculative feature (from docs-validation-checklist.md)
 **Goal:** Allow external plugins to hook into parse, validate, generate phases and register custom generators/components.
 
 ### 1. Product Definition & Design
-- [ ] Enumerate required hook points (parseStart, parseEnd, validateStart, validateEnd, beforeGenerate, afterGenerate, fileEmit, errorCollected)
-- [ ] Decide synchronous vs async contract (Promise support) and ordering rules
-- [ ] Define plugin manifest schema (name, version, hooks implemented, capabilities)
-- [ ] Security / sandboxing decision (run in same process vs separate worker)
-- [ ] Performance budget (max hook latency; abort conditions)
+- [Done] Enumerate required hook points (implemented: onParseStart, onFileParsed, onParseComplete, onValidate, onBeforeGenerate, onAfterGenerate)
+- [Done] Decide synchronous vs async contract (all hooks may return Promise; sequential execution)
+- [Done] Define plugin manifest basic schema (name, apiVersion, hooks present)
+- [Done] Security decision (same-process; sandbox deferred)
+- [Done] Performance timings captured per hook (timings object)
 
 ### 2. API Spec & Types
-- [ ] Create TypeScript interfaces (PluginManifest, LocusPluginContext, HookResult)
-- [ ] Context object shape (fs write abstraction, logger, addWarning, addFile)
-- [ ] Versioned API namespace (e.g., apiVersion: 1)
-- [ ] Error handling strategy (wrap plugin errors; surface with plugin name)
+- [Done] Create TypeScript interfaces (LocusPlugin, LocusPluginContext)
+- [Done] Context object shape (addWarning, addVirtualAst, writeArtifact)
+- [Done] Versioned API namespace (apiVersion=1 supported; others warned)
+- [Done] Error handling strategy (errors captured, converted to warnings with plugin name)
 
 ### 3. Loader & Discovery
-- [ ] Support local plugin path config (Locus.toml or CLI flag)
-- [ ] Support node module resolution (@scope/locus-plugin-*)
-- [ ] Cache & reuse loaded plugin instances
-- [ ] Validate manifest compatibility (apiVersion)
+- [Done] Support local plugin list via locus.plugins.js in src root
+- [Done] Support node module resolution (@scope/locus-plugin-*)
+- [Done] Cache & reuse loaded plugin instances
+- [Done] Validate manifest compatibility (apiVersion warnings)
 
 ### 4. Execution Engine
-- [ ] Insert hook invocations at selected pipeline points
-- [ ] Aggregate modifications (e.g., plugin adds virtual components/pages)
-- [ ] Conflict resolution rules (multiple plugins editing same file)
-- [ ] Timeouts / cancellation handling
+- [Done] Insert hook invocations at selected pipeline points
+- [Done] Aggregate modifications (virtual AST injection)
+- [Done] Conflict resolution (first-wins with warning)
+- [Done] Timeouts / cancellation handling (env LOCUS_PLUGIN_TIMEOUT_MS)
 
 ### 5. Extensibility: Custom Generators
-- [ ] Allow plugin to register new output target (e.g., "mobile", "docs")
-- [ ] Provide emitFile(path, content, kind?) helper
-- [ ] Order guarantee after core generators
+- [Done] Provide emitFile(path, content, kind?) helper (writeArtifact)
+- [Done] Register new output targets (registerGenerator after core generation with ordering guarantee)
+- [Done] Document extension points for future generators
 
 ### 6. Validation of Plugins
-- [ ] Schema validation of manifest (zod or hand-rolled)
-- [ ] Dry-run mode (list hooks without running)
-- [ ] Diagnostics summarizing hook execution times
+- [Done] Schema validation of manifest
+- [Done] Dry-run mode (doctor lists hooks without running full build)
+- [Done] Diagnostics summarizing hook execution times (doctor output timings)
 
 ### 7. Testing
-- [ ] Unit tests for loader (valid + invalid manifest)
-- [ ] Hook ordering test with multiple plugins
-- [ ] Error isolation test (failing plugin does not crash build)
-- [ ] Performance regression guard (added overhead < threshold)
-- [ ] Snapshot test for custom generator output
+- [Done] Hook ordering & virtual AST injection test
+- [Done] Error isolation test
+- [Done] Loader/module resolution test
+- [Done] apiVersion invalid + timeout tests
+- [Done] Custom generator conflict test
+- [Done] Performance regression warning test
+- [Done] Snapshot test for custom generator output
 
 ### 8. Documentation
-- [ ] plugins/typescript-plugins.md update with full hook matrix
-- [ ] Example minimal plugin repository skeleton
-- [ ] Troubleshooting section (timeouts, version mismatch)
+- [Done] plugins/typescript-plugins.md updated (lifecycle + context + generators + troubleshooting + extension points)
+- [Done] Example minimal plugin repository skeleton
+- [Done] Troubleshooting section (timeouts, version mismatch)
 
 ### 9. Tooling / CLI
-- [ ] `locus plugins list` command
-- [ ] `locus plugins doctor` validates plugin health
+- [Done] `locus plugins list` command
+- [Done] `locus plugins doctor` validates plugin health
 
 ### 10. Release & Migration
-- [ ] Increment minor version
-- [ ] CHANGELOG entry with breaking / additive notes
+- [Done] Increment minor version (0.2.0)
+- [Done] CHANGELOG entry with additive notes
 
 ---
 ## Advanced Authentication Flows (JWT / Session Middleware)

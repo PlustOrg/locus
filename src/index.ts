@@ -7,6 +7,7 @@ import type { ErrorOutputFormat } from './cli/reporter';
 import path from 'path';
 import { newProject } from './cli/new';
 import { deploy as deployCmd } from './cli/deploy';
+import { listPlugins, doctorPlugins } from './cli/plugins';
 
 const program = new Command();
 program.name('locus').description('Locus compiler CLI');
@@ -64,6 +65,25 @@ program
   });
 
 program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });
+
+program
+  .command('plugins')
+  .description('Plugin utilities')
+  .argument('<sub>', 'subcommand: list|doctor')
+  .option('--src <dir>', 'source dir', '.')
+  .action(async (sub: string, opts: any) => {
+    const srcDir = path.resolve(opts.src);
+    if (sub === 'list') {
+      const names = await listPlugins(srcDir);
+      process.stdout.write(names.join('\n') + '\n');
+    } else if (sub === 'doctor') {
+      const rep = await doctorPlugins(srcDir);
+      process.stdout.write(JSON.stringify(rep, null, 2) + '\n');
+    } else {
+      process.stderr.write('Unknown plugins subcommand: ' + sub + '\n');
+      process.exit(1);
+    }
+  });
 
 program
   .command('deploy')
