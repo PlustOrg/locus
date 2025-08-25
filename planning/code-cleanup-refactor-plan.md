@@ -52,7 +52,7 @@ Layers:
 - [Done] Added `featureEnrichers.ts` for feature/page/component/store enrichment
 - [Done] Added experimental orchestrator `modularAstBuilder.ts` behind env flag `LOCUS_EXP_MOD_BUILDERS=1`
 - [Partial] Barrel exports in `ast/index.ts` (deferred; existing exports unchanged)
-- [Partial] Extraction of relation/field attribute parsing helpers (database builder encapsulates; may further split later)
+- [Done] Extraction of relation/field attribute parsing helpers (`helpers.ts`)
 - [Deferred] Break `databaseParser.ts` into sub-parsers (kept monolithic for now)
 - [Done] Style scanning already isolated (`styleScanner.ts`); documented by separation
 

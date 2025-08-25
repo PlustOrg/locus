@@ -94,3 +94,7 @@ export interface StoreBlock { type: 'store'; name: string; nameLoc?: { line: num
 export interface ProjectAST {
   files: LocusFileAST[];
 }
+
+// Barrel re-exports for builder-layer (experimental modular builders)
+// These are intentionally optional; consumers should prefer high-level parse API.
+export type { FieldAttributeDefault as ASTFieldAttributeDefault };
