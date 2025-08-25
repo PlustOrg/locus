@@ -563,7 +563,7 @@ function parseStateDecls(src: string) {
   return out;
 }
 
-function parseUi(src: string): UINode {
+export function parseUi(src: string): UINode {
   // Minimal parser: supports single root element with nested elements and text.
   // Attributes: size="str", attr={expr}, on:evt={expr}, for:each={item in items}
   const stack: ElementNode[] = [];
