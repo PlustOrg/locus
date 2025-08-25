@@ -133,7 +133,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       const full = join(outDir, rel);
       const dir = dirname(full);
       await safeMkdir(dir);
-      await safeWrite(full, content);
+      await safeWrite(full, content as string);
     })));
   const appName = getAppName(srcDir);
     const pkgPath = join(outDir, 'package.json');

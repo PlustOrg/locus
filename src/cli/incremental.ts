@@ -59,8 +59,8 @@ export function createIncrementalBuilder(opts: {
   for (const [rel, content] of Object.entries(artifacts)) {
       const full = join(outDir, rel);
       if (lastWritten.get(full) !== content) {
-        writeFileSafe(full, content);
-        lastWritten.set(full, content);
+        writeFileSafe(full, content as string);
+        lastWritten.set(full, content as string);
         changed.push(full);
     totalWrites++;
       }

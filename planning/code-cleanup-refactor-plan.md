@@ -1,3 +1,12 @@
+### 5.2 Generation Pipeline Refactor
+ - [Done] Introduced registry-based pipeline (`generator/pipeline.ts`) with deterministic ordered steps
+ - [Done] Added GenerationContext (addFile, addWarning, meta)
+ - [Done] Centralized duplicate file handling with warning emission
+ - [Done] Refactored `buildOutputArtifacts` to delegate to pipeline (legacy API preserved)
+ - [Done] Added new test: `pipeline_duplicate_file.test.ts` for duplicate handling
+ - [Done] Ensured manifest & warnings logic moved into dedicated steps
+ - [Done] All existing tests updated/passing (152 tests)
+ - [Done] Auth augmentation left in build layer (future: separate generator if expanded)
 # Code Cleanup & Refactor Plan
 Status Date: 2025-08-25
 Owner: (assign)
