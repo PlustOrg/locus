@@ -2,7 +2,6 @@ import { LocusFileAST } from '../ast';
 import { PError } from '../errors';
 import { LocusLexer } from './tokens';
 import { DatabaseCstParser } from './databaseParser';
-import { buildDatabaseAst } from './astBuilder';
 import { buildAstModular } from './modularAstBuilder';
 import { attachComponentStyles } from './extractStyles';
 // CSS style:override blocks treated as opaque post-parse; no preprocessing.
@@ -115,8 +114,7 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     throw new PError(err.message, filePath, tok.startLine, tok.startColumn, length);
   }
 
-  const useMod = process.env.LOCUS_EXP_MOD_BUILDERS === '1';
-  const ast = useMod ? buildAstModular(cst, source, filePath) : buildDatabaseAst(cst, source, filePath);
+  const ast = buildAstModular(cst, source, filePath);
   attachComponentStyles(ast, source);
   return ast;
 }

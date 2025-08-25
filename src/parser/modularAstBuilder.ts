@@ -2,7 +2,7 @@ import { CstChildrenDictionary, CstNode } from 'chevrotain';
 import { LocusFileAST } from '../ast';
 import { buildDatabaseBlocks } from './builders/databaseBuilder';
 import { buildDesignSystemBlocks } from './builders/designSystemBuilder';
-import { buildFeatureBlocks } from './builders/featuresBuilder';
+import { buildFeatureBlocksLegacy } from './builders/featuresLegacy';
 import { defineHidden } from './builderUtils';
 
 /**
@@ -28,7 +28,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
     const compNodes = (ch['componentBlock'] as CstNode[]) || [];
     const storeNodes = (ch['storeBlock'] as CstNode[]) || [];
     if (pageNodes.length || compNodes.length || storeNodes.length) {
-      const f = buildFeatureBlocks(pageNodes, compNodes, storeNodes, originalSource || '');
+      const f = buildFeatureBlocksLegacy(pageNodes, compNodes, storeNodes, originalSource || '');
       pages.push(...f.pages); components.push(...f.components); stores.push(...f.stores);
     }
   }

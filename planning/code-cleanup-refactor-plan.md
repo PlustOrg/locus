@@ -1,12 +1,3 @@
-### 5.2 Generation Pipeline Refactor
- - [Done] Introduced registry-based pipeline (`generator/pipeline.ts`) with deterministic ordered steps
- - [Done] Added GenerationContext (addFile, addWarning, meta)
- - [Done] Centralized duplicate file handling with warning emission
- - [Done] Refactored `buildOutputArtifacts` to delegate to pipeline (legacy API preserved)
- - [Done] Added new test: `pipeline_duplicate_file.test.ts` for duplicate handling
- - [Done] Ensured manifest & warnings logic moved into dedicated steps
- - [Done] All existing tests updated/passing (152 tests)
- - [Done] Auth augmentation left in build layer (future: separate generator if expanded)
 # Code Cleanup & Refactor Plan
 Status Date: 2025-08-25
 Owner: (assign)
@@ -65,12 +56,15 @@ Layers:
  - [Decision: Deferred Out of Scope] Sub-parser split for `databaseParser.ts` (complexity not justified now; revisit in performance phase)
  - [Done] Style scanning already isolated (`styleScanner.ts`) and boundary documented
 
-### 5.2 Build / Generation Pipeline
-- [ ] Create `generator/pipeline.ts` that registers generators (prisma, express, react, theme, next, custom)
-- [ ] Refactor `buildOutputArtifacts` to iterate registry (deterministic order) instead of hard-coded sequence
-- [ ] Provide `GenerationContext` with addFile(), addWarning(), metrics capture
-- [ ] Move auth augmentation into a dedicated generator `authGenerator` (wraps express modifications)
-- [ ] Add guard to ensure no duplicate file writes (centralized) rather than per-generator logic
+### 5.2 Generation Pipeline Refactor
+ - [Done] Introduced registry-based pipeline (`generator/pipeline.ts`) with deterministic ordered steps
+ - [Done] Added GenerationContext (addFile, addWarning, meta)
+ - [Done] Centralized duplicate file handling with warning emission
+ - [Done] Refactored `buildOutputArtifacts` to delegate to pipeline (legacy API preserved)
+ - [Done] Added new test: `pipeline_duplicate_file.test.ts` for duplicate handling
+ - [Done] Ensured manifest & warnings logic moved into dedicated steps
+ - [Done] All existing tests updated/passing (152 tests)
+ - [Done] Auth augmentation left in build layer (future: separate generator if expanded)
 
 ### 5.3 Configuration & Env
 - [ ] Implement unified `loadConfig(srcDir): LocusConfig` (merges Locus.toml + env overrides)

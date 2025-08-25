@@ -20,6 +20,11 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
     const agCh = ag.children as CstChildrenDictionary;
     if (agCh['Unique']) {
       attributes.push({ kind: 'unique' } as FieldAttributeUnique);
+    } else if (agCh['mapAttr']) {
+      const mapNode = (agCh['mapAttr'] as CstNode[])[0];
+      const mch = mapNode.children as CstChildrenDictionary;
+      const to = (mch['StringLiteral'] as IToken[])[0].image.slice(1, -1);
+      attributes.push({ kind: 'map', to } as FieldAttributeMap);
     } else if (agCh['defaultAttr']) {
       const defNode = (agCh['defaultAttr'] as CstNode[])[0];
       const dch = defNode.children as CstChildrenDictionary;
@@ -54,12 +59,7 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
           }
         }
         attributes.push({ kind: 'default', value: { call: fn, args } } as FieldAttributeDefault);
-      } else if (agCh['mapAttr']) {
-        const mapNode = (agCh['mapAttr'] as CstNode[])[0];
-        const mch = mapNode.children as CstChildrenDictionary;
-        const to = (mch['StringLiteral'] as IToken[])[0].image.slice(1, -1);
-        attributes.push({ kind: 'map', to } as FieldAttributeMap);
-      }
+  }
     }
   }
   return attributes;

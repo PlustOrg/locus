@@ -1,24 +1,19 @@
-import { DatabaseCstParser } from '../../src/parser/databaseParser';
-import { LocusLexer } from '../../src/parser/tokens';
-import { buildDatabaseAst } from '../../src/parser/astBuilder';
-import { buildAstModular } from '../../src/parser/modularAstBuilder';
+import { parseLocus } from '../../src/parser';
 
-function parseToCst(src: string) {
-  const lex = LocusLexer.tokenize(src);
-  const p = new DatabaseCstParser();
-  p.input = lex.tokens;
-  const cst = p.file();
-  if (p.errors.length) throw new Error(p.errors[0].message);
-  return cst;
-}
-
-describe('Modular builder parity', () => {
-  const sample = `database { entity User { id: Integer name: String createdAt: DateTime } }\npage Home { ui { <Div>Hello</Div> } }`;
-  test('databases & pages parity', () => {
-    const cst = parseToCst(sample);
-    const legacy = buildDatabaseAst(cst, sample, 'file.locus');
-    const mod = buildAstModular(cst, sample, 'file.locus');
-    expect(JSON.stringify(mod.databases)).toEqual(JSON.stringify(legacy.databases));
-    expect(JSON.stringify(mod.pages.map(p=>p.name))).toEqual(JSON.stringify(legacy.pages.map(p=>p.name)));
+// Structural smoke test verifying modular builder output shape for mixed content.
+describe('Modular builders parity (structure smoke test)', () => {
+  test('parses mixed source with database, page (guard), component, store', () => {
+    const src = `database { entity User { id: Integer (unique) name: String } }\npage Dashboard (guard: admin) {\n  state { count: Integer = 0 }\n  ui { <div>{count}</div> }\n}\ncomponent Card { param title: String? = \"Untitled\" ui { <div>{title}</div> } }\nstore Counter { value: Integer = 1 }`;
+    const ast = parseLocus(src) as any;
+    expect(ast.databases.length).toBe(1);
+    expect(ast.databases[0].entities[0].name).toBe('User');
+    expect(ast.databases[0].entities[0].fields.find((f:any)=>f.name==='id').attributes.some((a:any)=>a.kind==='unique')).toBe(true);
+    const page = ast.pages.find((p:any)=>p.name==='Dashboard');
+    expect(page.guard.role).toBe('admin');
+    expect(page.state[0]).toEqual({ name: 'count', type: { kind: 'primitive', name: 'Integer' }, default: '0' });
+    const comp = ast.components.find((c:any)=>c.name==='Card');
+    expect((comp.params[0].default || '').startsWith('"Untitled"')).toBe(true);
+    const store = ast.stores.find((s:any)=>s.name==='Counter');
+    expect(store.state[0].name).toBe('value');
   });
 });
