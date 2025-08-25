@@ -1,5 +1,5 @@
 import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
-import { ComponentBlock, LocusFileAST, PageBlock, StoreBlock } from '../../ast';
+import { ComponentBlock, PageBlock, StoreBlock } from '../../ast';
 import { posOf, defineHidden } from '../builderUtils';
 import { enrichComponentFromCst, enrichPageFromCst, enrichStoreFromCst } from '../featureEnrichers';
 
