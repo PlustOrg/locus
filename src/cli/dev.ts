@@ -9,6 +9,7 @@ import { join, relative } from 'path';
 import chalk from 'chalk';
 // merged into upper import
 import { getAppName } from '../generator/outputs';
+import { loadConfig } from '../config/config';
 import { createIncrementalBuilder } from './incremental';
 
 function formatBanner(info: {
@@ -39,6 +40,7 @@ function formatBanner(info: {
 }
 
 export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string; emitJs?: boolean; suppressWarnings?: boolean }) {
+  const _config = loadConfig(opts.srcDir);
   const fileMap = new Map<string, string>();
   let logStream: import('fs').WriteStream | null = null;
   if (opts.logFile) {
@@ -69,7 +71,7 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     }
   }
   // Determine API port (find free if base occupied)
-  const basePort = Number(process.env.API_PORT || process.env.PORT) || 3001;
+  const basePort = Number(process.env.API_PORT || process.env.PORT) || 3001; // TODO: config.server.port
   const apiPort = await pickFreePort(basePort);
   if (apiPort !== basePort && !opts.quiet) {
     process.stdout.write(chalk.yellow(`[locus][dev] port ${basePort} in use, using ${apiPort}`) + '\n');

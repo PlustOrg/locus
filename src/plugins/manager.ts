@@ -1,6 +1,7 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { LocusPlugin } from './types';
+import { LocusConfig } from '../config/config';
 
 export class PluginManager {
   plugins: LocusPlugin[] = [];
@@ -9,7 +10,7 @@ export class PluginManager {
   extraArtifacts: Record<string,string> = {};
   registeredGenerators: Array<{ plugin: string; name: string; fn: (u:any)=>Record<string,string> }> = [];
   timings: Record<string, Record<string, number>> = {};
-  constructor(public srcDir: string) {}
+  constructor(public srcDir: string, private config?: LocusConfig) {}
 
   private static moduleCache: Record<string, any> = {};
 
@@ -65,7 +66,7 @@ export class PluginManager {
   }
 
   private async run<K extends keyof LocusPlugin>(hook: K, ...args: any[]) {
-    const timeoutMs = Number(process.env.LOCUS_PLUGIN_TIMEOUT_MS || '0');
+    const timeoutMs = this.config?.performance?.pluginTimeoutMs || Number(process.env.LOCUS_PLUGIN_TIMEOUT_MS || '0');
     for (const p of this.plugins) {
       const fn = p[hook];
       if (typeof fn === 'function') {
@@ -117,7 +118,7 @@ export class PluginManager {
       }
     }
     // performance threshold warnings
-    const perfWarnMs = Number(process.env.LOCUS_PLUGIN_HOOK_WARN_MS || '0');
+  const perfWarnMs = this.config?.performance?.pluginHookWarnMs || Number(process.env.LOCUS_PLUGIN_HOOK_WARN_MS || '0');
     if (perfWarnMs > 0) {
       for (const [pName, hooks] of Object.entries(this.timings)) {
         for (const [hName, ms] of Object.entries(hooks)) {
@@ -128,8 +129,8 @@ export class PluginManager {
   }
 }
 
-export async function initPluginManager(srcDir: string): Promise<PluginManager> {
-  const pm = new PluginManager(srcDir);
+export async function initPluginManager(srcDir: string, config?: LocusConfig): Promise<PluginManager> {
+  const pm = new PluginManager(srcDir, config);
   await pm.load();
   return pm;
 }

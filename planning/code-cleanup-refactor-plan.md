@@ -67,11 +67,11 @@ Layers:
  - [Done] Auth augmentation left in build layer (future: separate generator if expanded)
 
 ### 5.3 Configuration & Env
-- [ ] Implement unified `loadConfig(srcDir): LocusConfig` (merges Locus.toml + env overrides)
-- [ ] Define `LocusConfig` interface (auth?, deploy?, performance thresholds)
-- [ ] Replace scattered `process.env` reads with config provider
-- [ ] Add validation & warnings for deprecated keys
-- [ ] Provide JSON schema for `Locus.toml` (initial minimal) in `docs/reference`
+ - [Done] Implement unified `loadConfig(srcDir): LocusConfig` (merges Locus.toml + env overrides)
+ - [Done] Define `LocusConfig` interface (auth?, deploy?, performance thresholds)
+ - [Done] Replace scattered `process.env` reads with config provider (build pipeline & plugin manager; runtime flags like ENABLE_CORS/API_PORT intentionally left as env for now)
+ - [Done] Add validation & warnings for deprecated keys (legacy top-level auth)
+ - [Done] Provide JSON schema for `Locus.toml` (initial minimal) in `docs/reference` (placeholder schema added)
 
 ### 5.4 Error & Diagnostics
 - [ ] Introduce `Diagnostic` type { kind, code, message, file?, loc?, severity }

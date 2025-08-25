@@ -8,9 +8,8 @@ import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
 import { BuildError, LocusError } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
-import * as fs from 'fs';
-import * as path from 'path';
-import { parseToml } from '../config/toml';
+// Removed legacy direct fs/path config parsing in favor of loadConfig
+import { loadConfig } from '../config/config';
 import { generateExpressApi, AuthConfig } from '../generator/express';
 import { initPluginManager } from '../plugins/manager';
 import chalk from 'chalk';
@@ -29,7 +28,8 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   }
   const fileMap = new Map<string, string>();
   const tParse0 = Date.now();
-  const pluginMgr = await initPluginManager(srcDir);
+  const config = loadConfig(srcDir);
+  const pluginMgr = await initPluginManager(srcDir, config);
   const asts: any[] = [];
   for (const fp of files) {
     try {
@@ -82,26 +82,18 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   let genMeta: any = {};
   try {
     await pluginMgr.onBeforeGenerate(merged);
-    // detect auth configuration (Locus.toml optional)
+    // detect auth configuration via unified config
     let auth: AuthConfig | undefined;
-    try {
-      const tomlPath = path.join(srcDir, 'Locus.toml');
-      if (fs.existsSync(tomlPath)) {
-        const tomlRaw = fs.readFileSync(tomlPath, 'utf8');
-        const toml = parseToml(tomlRaw);
-        const a = (toml._sections && toml._sections['auth']) || toml['auth'];
-        if (a) {
-          auth = {
-            adapterPath: a.adapter,
-            requireAuth: !!a.requireAuth,
-            jwtSecret: a.jwtSecret
-          };
-          if (auth.jwtSecret && !process.env.LOCUS_JWT_SECRET) process.env.LOCUS_JWT_SECRET = auth.jwtSecret;
-        }
-      }
-    } catch {/* ignore */}
+    if (config.auth?.jwtSecret || config.raw._sections?.auth) {
+      const aSection = config.raw._sections?.auth || {};
+      auth = { jwtSecret: config.auth?.jwtSecret, adapterPath: aSection.adapter, requireAuth: !!aSection.requireAuth } as any;
+      if (auth?.jwtSecret && !process.env.LOCUS_JWT_SECRET) process.env.LOCUS_JWT_SECRET = auth.jwtSecret;
+    }
 
     const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
+    if ((config as any).warnings?.length) {
+      meta.warnings = [...(meta.warnings||[]), ...(config as any).warnings];
+    }
     // augment express server if auth configured
     if (auth) {
       const guarded = (merged.pages||[]).filter((p:any)=>p.guard).map((p:any)=>({ name: p.name, role: p.guard.role }));
