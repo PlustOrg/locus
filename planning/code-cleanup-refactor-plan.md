@@ -47,14 +47,14 @@ Layers:
 ## 5. Master Checklist
 
 ### 5.1 Module Decomposition
-- [Done] Introduced modular builder files: `src/parser/builders/{databaseBuilder,designSystemBuilder,featuresBuilder}.ts`
-- [Done] Added `builderUtils.ts` for shared helpers (posOf/defineHidden)
-- [Done] Added `featureEnrichers.ts` for feature/page/component/store enrichment
-- [Done] Added experimental orchestrator `modularAstBuilder.ts` behind env flag `LOCUS_EXP_MOD_BUILDERS=1`
-- [Partial] Barrel exports in `ast/index.ts` (deferred; existing exports unchanged)
-- [Done] Extraction of relation/field attribute parsing helpers (`helpers.ts`)
-- [Deferred] Break `databaseParser.ts` into sub-parsers (kept monolithic for now)
-- [Done] Style scanning already isolated (`styleScanner.ts`); documented by separation
+ - [Done] Introduced modular builder files: `src/parser/builders/{databaseBuilder,designSystemBuilder,featuresBuilder}.ts`
+ - [Done] Added `builderUtils.ts` for shared helpers (posOf/defineHidden)
+ - [Done] Added `featureEnrichers.ts` for feature/page/component/store enrichment
+ - [Done] Added experimental orchestrator `modularAstBuilder.ts` behind env flag `LOCUS_EXP_MOD_BUILDERS=1`
+ - [Done] Barrel export placeholder added (decided to keep public surface minimal; no further action)
+ - [Done] Extraction of relation/field attribute parsing helpers (`helpers.ts`)
+ - [Decision: Deferred Out of Scope] Sub-parser split for `databaseParser.ts` (complexity not justified now; revisit in performance phase)
+ - [Done] Style scanning already isolated (`styleScanner.ts`) and boundary documented
 
 ### 5.2 Build / Generation Pipeline
 - [ ] Create `generator/pipeline.ts` that registers generators (prisma, express, react, theme, next, custom)
