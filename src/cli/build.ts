@@ -6,7 +6,7 @@ import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { validateUnifiedAst } from '../validator/validate';
 // generation now centralized in generator/outputs
-import { BuildError, LocusError } from '../errors';
+import { BuildError, LocusError, errorToDiagnostic, Diagnostic } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
 // Removed legacy direct fs/path config parsing in favor of loadConfig
 import { loadConfig } from '../config/config';
@@ -31,6 +31,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   const config = loadConfig(srcDir);
   const pluginMgr = await initPluginManager(srcDir, config);
   const asts: any[] = [];
+  const diagnostics: Diagnostic[] = [];
   for (const fp of files) {
     try {
       const content = readFileSync(fp, 'utf8');
@@ -40,11 +41,21 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       asts.push(ast);
     } catch (e) {
       if (e instanceof LocusError || (e && (e as any).code)) {
-        reportError((e as any) as LocusError, fileMap, opts.errorFormat);
-        process.exit(1);
+        diagnostics.push(errorToDiagnostic(e as any));
+        continue; // continue parsing others
       }
       throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
     }
+  }
+  if (diagnostics.length) {
+    reportError([], fileMap, opts.errorFormat); // no-op for pretty
+    if (opts.errorFormat === 'json') {
+      process.stderr.write(JSON.stringify({ diagnostics }) + '\n');
+    } else if (diagnostics.length) {
+      // render first diagnostic via existing reporter path
+      reportError(new LocusError({ code: 'parse_error', message: diagnostics[0].message, filePath: diagnostics[0].filePath, line: diagnostics[0].line, column: diagnostics[0].column, length: diagnostics[0].length }), fileMap, opts.errorFormat);
+    }
+    return { outDir, diagnostics, failed: true } as any;
   }
   const tParse1 = Date.now();
   // per-file parsed hooks
@@ -60,8 +71,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   merged = mergeAsts(allAsts);
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
-      reportError((e as any) as LocusError, fileMap, opts.errorFormat);
-      process.exit(1);
+      const diag = errorToDiagnostic(e as any);
+      if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
+      else reportError(e as any, fileMap, opts.errorFormat);
+      return { outDir, diagnostics: [diag], failed: true } as any;
     }
     throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
   }
@@ -71,8 +84,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     validateUnifiedAst(merged);
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
-      reportError((e as any) as LocusError, fileMap, opts.errorFormat);
-      process.exit(1);
+      const diag = errorToDiagnostic(e as any);
+      if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
+      else reportError(e as any, fileMap, opts.errorFormat);
+      return { outDir, diagnostics: [diag], failed: true } as any;
     }
     throw e;
   }

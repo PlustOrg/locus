@@ -74,11 +74,11 @@ Layers:
  - [Done] Provide JSON schema for `Locus.toml` (initial minimal) in `docs/reference` (placeholder schema added)
 
 ### 5.4 Error & Diagnostics
-- [ ] Introduce `Diagnostic` type { kind, code, message, file?, loc?, severity }
-- [ ] Wrap parser & validator errors into Diagnostics list
-- [ ] CLI reporter renders diagnostics uniformly (pretty|json)
-- [ ] Replace direct `process.exit` in build pipeline with thrown structured error consumed by CLI
-- [ ] Assign consistent codes (e.g., PARSE_*, VALIDATE_*, GEN_*, AUTH_*)
+ - [Done] Introduce `Diagnostic` type { kind, code, message, file?, loc?, severity }
+ - [Done] Wrap parser & validator errors into Diagnostics list (accumulated in build; merge/validate paths produce diagnostics)
+ - [Done] CLI reporter supports array JSON output (diagnostics array)
+ - [Done] Replace direct `process.exit` in build pipeline with diagnostics return (non-zero exit to be handled by caller if desired)
+ - [Done] Assign consistent codes (PARSE_ERROR, VALIDATION_ERROR, MERGE_ERROR, LEX_ERROR) (future granular codes can extend)
 
 ### 5.5 Testing Enhancements
 - [ ] Add integration test spinning generated express server & hitting guard route (supertest)

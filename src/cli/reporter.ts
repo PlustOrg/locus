@@ -1,10 +1,20 @@
-import { LocusError } from '../errors';
+import { LocusError, errorToDiagnostic } from '../errors';
 import chalk from 'chalk';
 import boxen from 'boxen';
 
 export type ErrorOutputFormat = 'pretty' | 'json';
 
-export function reportError(e: LocusError, fileMap: Map<string, string>, format: ErrorOutputFormat = 'pretty') {
+export function reportError(e: LocusError | LocusError[], fileMap: Map<string, string>, format: ErrorOutputFormat = 'pretty') {
+  if (Array.isArray(e)) {
+    if (format === 'json') {
+      const diags = e.map(err => errorToDiagnostic(err));
+      process.stderr.write(JSON.stringify({ diagnostics: diags }) + '\n');
+      return;
+    }
+    // pretty print first for now; future: multi-box
+    if (e.length) return reportError(e[0], fileMap, format);
+    return;
+  }
   let output = '';
   const heading = e.code === 'parse_error'
     ? 'Parse Error'
@@ -28,6 +38,7 @@ export function reportError(e: LocusError, fileMap: Map<string, string>, format:
       column: e.column,
       length: e.length,
       heading,
+      diagnosticCode: errorToDiagnostic(e).code,
     };
     process.stderr.write(JSON.stringify(payload) + '\n');
     return;
