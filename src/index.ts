@@ -25,6 +25,7 @@ program
     else program.help();
   });
 
+
 program
   .command('build')
   .description('Build the project outputs')
@@ -33,13 +34,24 @@ program
   .option('--errors <format>', 'error output format: pretty|json', 'pretty')
   .option('--prisma-generate', 'run prisma generate after build', false)
   .option('--emit-js', 'after generating TS sources, compile to JS in dist/ and adjust package scripts', false)
-  .option('--no-warn', 'suppress non-error warnings', false)
+  .option('--suppress-warnings', 'suppress non-error warnings', false)
+  .option('--debug', 'print detailed timing and performance logs', false)
   .option('--dry-run', 'show files that would be generated without writing them', false)
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
     const outDir = path.resolve(opts.out);
-  await buildProject({ srcDir, outDir, errorFormat: opts.errors as ErrorOutputFormat, prismaGenerate: !!opts.prismaGenerate, dryRun: !!opts.dryRun, emitJs: !!opts.emitJs, suppressWarnings: !!opts.noWarn });
+    await buildProject({
+      srcDir,
+      outDir,
+      errorFormat: opts.errors as ErrorOutputFormat,
+      prismaGenerate: !!opts.prismaGenerate,
+      dryRun: !!opts.dryRun,
+      emitJs: !!opts.emitJs,
+      suppressWarnings: !!opts.suppressWarnings,
+      debug: !!opts.debug
+    });
   });
+
 
 program
   .command('dev')
@@ -49,10 +61,19 @@ program
   .option('--quiet', 'suppress banner and startup logs', false)
   .option('--log-file <file>', 'write all dev output (including child stderr) to a log file')
   .option('--emit-js', 'compile generated TS to JS continuously (tsc --watch) and run compiled server', false)
-  .option('--no-warn', 'suppress non-error warnings', false)
+  .option('--suppress-warnings', 'suppress non-error warnings', false)
+  .option('--debug', 'print detailed timing and performance logs', false)
   .action(async (opts: any) => {
     const srcDir = path.resolve(opts.src);
-  await devCmd({ srcDir, errorFormat: opts.errors as ErrorOutputFormat, quiet: !!opts.quiet, logFile: opts.logFile, emitJs: !!opts.emitJs, suppressWarnings: !!opts.noWarn });
+    await devCmd({
+      srcDir,
+      errorFormat: opts.errors as ErrorOutputFormat,
+      quiet: !!opts.quiet,
+      logFile: opts.logFile,
+      emitJs: !!opts.emitJs,
+      suppressWarnings: !!opts.suppressWarnings,
+      debug: !!opts.debug
+    });
   });
 
 program

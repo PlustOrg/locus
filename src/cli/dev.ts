@@ -55,14 +55,17 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   }
   const logMirror = (chunk: string) => { if (logStream) logStream.write(chunk); };
   // initial build
-  let buildMeta: any = { meta: { hasPages: false } };
+    let buildMeta: any = { meta: { hasPages: false } };
   try {
-  buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug, emitJs: opts.emitJs });
+    buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug, emitJs: opts.emitJs });
   if (!opts.suppressWarnings && (buildMeta as any)?.meta?.warnings?.length && !opts.quiet) {
     for (const w of (buildMeta as any).meta.warnings) {
       process.stdout.write(chalk.yellow('[locus][warn] ' + w + '\n'));
     }
   }
+    if (opts.debug) {
+      process.stdout.write(`[locus][debug] Initial build complete\n`);
+    }
   } catch (e) {
     if (e instanceof LocusError) {
   reportError(e, fileMap, opts.errorFormat);

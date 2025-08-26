@@ -58,6 +58,9 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     return { outDir, diagnostics, failed: true } as any;
   }
   const tParse1 = Date.now();
+  if (opts.debug) {
+    process.stdout.write(`[locus][debug] Parsed ${files.length} files in ${tParse1-tParse0}ms\n`);
+  }
   // per-file parsed hooks
   for (let i=0;i<asts.length;i++) {
     const fp = files[i];
@@ -92,6 +95,9 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     throw e;
   }
   const tMerge1 = Date.now();
+  if (opts.debug) {
+    process.stdout.write(`[locus][debug] Merged ASTs in ${tMerge1-tParse1}ms\n`);
+  }
 
   // Generate artifacts using shared module
   let genMeta: any = {};
@@ -129,6 +135,9 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
   meta.warnings = [...(meta.warnings || []), ...pluginMgr.warnings];
   (meta as any).pluginTimings = pluginMgr.timings;
     genMeta = meta;
+    if (opts.debug) {
+      process.stdout.write(`[locus][debug] Generated artifacts in ${Date.now()-tMerge1}ms\n`);
+    }
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
       process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
