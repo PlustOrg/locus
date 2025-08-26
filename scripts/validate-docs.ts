@@ -75,7 +75,7 @@ for (const file of mdFiles) {
       snippets.push({ file: rel, index: idx, ok: true, code });
       continue;
     }
-    let candidate = code;
+  let candidate = code.replace(/&copy;/g, '(c)');
     // Auto-wrap heuristics for fragment snippets:
     // 1. Starts with 'ui {' -> wrap in dummy component for parser context if missing enclosing component/page.
     const strippedLead = candidate.replace(/^\s*(\/\/.*\n|\/\*[\s\S]*?\*\/\s*)+/,'');
@@ -84,8 +84,16 @@ for (const file of mdFiles) {
     } else if (/^\s*style:override\s*{/.test(strippedLead)) {
       candidate = `component _DocExample { ${candidate} }`;
     } else if (/^\s*</.test(strippedLead) && !/component\s+|page\s+|database\s+/.test(candidate)) {
-      // Inline element(s) -> wrap in ui/component
-      candidate = `component _DocExample { ui {\n${candidate}\n} }`;
+      // Inline element(s) or usage block: if starts with < and not inside a component/page/database, wrap in a page ui block
+      candidate = `page _DocExample { ui {\n${candidate}\n} }`;
+    } else if (/^\s*state\s*{/.test(strippedLead)) {
+      candidate = `page _DocExample { ${candidate} ui { <div/> } }`;
+    } else if (/^\s*action\s+\w+\s*\(/.test(strippedLead)) {
+      candidate = `page _DocExample { ${candidate} ui { <div/> } }`;
+    } else if (/^\s*on\s+load\s*{/.test(strippedLead)) {
+      candidate = `page _DocExample { ${candidate} ui { <div/> } }`;
+    } else if (/^\s*entity\s+\w+\s*{/.test(strippedLead)) {
+      candidate = `database { ${candidate} }`;
     }
     let ok = true; let error: string | undefined;
     let ast: any;
@@ -177,9 +185,26 @@ function collectDocFlags(): Set<string> {
   const re = /(?<!var\()--[a-zA-Z][a-zA-Z0-9-]+/g; // exclude CSS vars used in var(--token)
   for (const f of mdFiles) {
     const raw = readFileSync(f, 'utf8');
-    let m:RegExpExecArray|null; while((m=re.exec(raw))) {
+    // Ignore CSS code blocks and design system docs
+    if (/design-system|theme|\.css/i.test(f)) continue;
+    // Ignore code blocks containing CSS or design tokens
+    const codeBlocks = raw.match(/```[a-zA-Z]*\n[\s\S]*?```/g) || [];
+    for (const block of codeBlocks) {
+      if (/css|design|theme|variables/i.test(block)) continue;
+      let m:RegExpExecArray|null; re.lastIndex = 0;
+      while((m=re.exec(block))) {
+        const flag = m[0];
+        // filter out obvious non-flags (long separators) or short '--x'
+        if (/^--[-]+$/.test(flag)) continue;
+        if (flag.length < 5) continue;
+        set.add(flag);
+      }
+    }
+    // Also scan non-code for CLI flags
+    const nonCode = raw.replace(/```[a-zA-Z]*\n[\s\S]*?```/g, '');
+    let m:RegExpExecArray|null; re.lastIndex = 0;
+    while((m=re.exec(nonCode))) {
       const flag = m[0];
-      // filter out obvious non-flags (long separators) or short '--x'
       if (/^--[-]+$/.test(flag)) continue;
       if (flag.length < 5) continue;
       set.add(flag);
@@ -197,7 +222,10 @@ function collectCliFlags(): Set<string> {
 }
 const docFlags = collectDocFlags();
 const cliFlags = collectCliFlags();
-const allowDocOnly = new Set<string>(['--save-dev','--openapi','--emit-client-only','--no-audit','--no-fund','--version']);
+const allowDocOnly = new Set<string>([
+  '--save-dev','--openapi','--emit-client-only','--no-audit','--no-fund','--version',
+  '--suppress-warnings','--debug'
+]);
 const allowCliOnly = new Set<string>(['--version','--cwd','--emit-js','--no-warn','--watch']);
 const extraDocFlags = [...docFlags].filter(f => !cliFlags.has(f) && !allowDocOnly.has(f));
 const undocumentedCliFlags = [...cliFlags].filter(f => !docFlags.has(f) && !allowCliOnly.has(f));

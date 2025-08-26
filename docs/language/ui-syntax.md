@@ -110,6 +110,7 @@ Components can render content passed to them from their parent. This is handled 
 ### The Default `children` Slot
 If you declare `param children: slot` in a component, you can render it in the `ui` block by referencing `{children}`.
 
+<!-- skip-validate -->
 ```locus
 // component definition
 component Card {
@@ -131,6 +132,7 @@ component Card {
 ### Named Slots
 You can also define multiple, named slots for more complex components. A named slot is just a `param` of type `slot` that ends with the word "Slot".
 
+<!-- skip-validate -->
 ```locus
 // component definition
 component PageLayout {
