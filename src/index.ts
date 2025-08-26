@@ -5,6 +5,7 @@ import { buildProject } from './cli/build';
 import { dev as devCmd } from './cli/dev';
 import type { ErrorOutputFormat } from './cli/reporter';
 import path from 'path';
+import { readFileSync } from 'fs';
 import { newProject } from './cli/new';
 import { deploy as deployCmd } from './cli/deploy';
 import { listPlugins, doctorPlugins } from './cli/plugins';
@@ -62,6 +63,21 @@ program
   .action(async (name: string, opts: any) => {
     const cwd = path.resolve(opts.cwd);
     newProject({ cwd, name });
+  });
+
+
+program
+  .option('--version', 'Print the Locus CLI version')
+  .action(() => {
+    // Print version from package.json
+    try {
+      const pkgPath = path.join(__dirname, '../package.json');
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+      process.stdout.write(pkg.version + '\n');
+    } catch {
+      process.stdout.write('unknown\n');
+    }
+    process.exit(0);
   });
 
 program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });

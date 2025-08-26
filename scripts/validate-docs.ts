@@ -223,7 +223,7 @@ function collectCliFlags(): Set<string> {
 const docFlags = collectDocFlags();
 const cliFlags = collectCliFlags();
 const allowDocOnly = new Set<string>([
-  '--save-dev','--openapi','--emit-client-only','--no-audit','--no-fund','--version',
+  '--save-dev','--openapi','--emit-client-only','--no-audit','--no-fund',
   '--suppress-warnings','--debug'
 ]);
 const allowCliOnly = new Set<string>(['--version','--cwd','--emit-js','--no-warn','--watch']);
