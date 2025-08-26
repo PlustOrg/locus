@@ -12,14 +12,11 @@ Welcome to the official documentation for the Locus language and toolchain. This
 - [UI Syntax](./language/ui-syntax.md)
 - [Authentication](./guides/authentication.md)
 - [Data Relationships](./guides/data-relationships.md)
-- [Design System](./design-system/theming.md)
-- [Styling & Layout](./design-system/styling.md)
+- [Design System](./guides/design-system.md)
 - [Toolchain & CLI](./toolchain/cli.md)
 - [Development Workflow](./toolchain/development-workflow.md)
 - [Deployment](./toolchain/deployment.md)
-- [Plugins & Extensibility](./plugins/index.md)
-- [Blueprints](./plugins/blueprints.md)
-- [TypeScript Plugins](./plugins/typescript-plugins.md)
+- [Plugins & Extensibility](./guides/plugins.md)
 - [Architecture](./reference/architecture.md)
 - [Development Plan](./development/development-plan.md)
 
@@ -27,7 +24,7 @@ Welcome to the official documentation for the Locus language and toolchain. This
 
 - **New to Locus?** Start with [Getting Started](./guides/getting-started.md) and [Introduction](./introduction/language.md).
 - **Building Features?** See [Application Logic](./language/application-logic.md) and [UI Syntax](./language/ui-syntax.md).
-- **Styling and Theming?** Visit [Design System](./design-system/theming.md) and [Styling & Layout](./design-system/styling.md).
-- **Deploying or Extending?** Check [Deployment](./toolchain/deployment.md) and [Plugins & Extensibility](./plugins/index.md).
+- **Styling and Theming?** Visit [Design System](./guides/design-system.md).
+- **Deploying or Extending?** Check [Deployment](./toolchain/deployment.md) and [Plugins & Extensibility](./guides/plugins.md).
 
 Locus is designed for clarity, velocity, and maintainability. If you spot any gaps or have suggestions, please contribute!
