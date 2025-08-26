@@ -1,4 +1,5 @@
-import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
+import { ensureDir, writeFileSafe } from './utils';
 import { join, dirname } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
@@ -12,20 +13,7 @@ export function createIncrementalBuilder(opts: {
 }) {
   const cache = new Map<string, ReturnType<typeof parseLocus>>();
 
-  function ensureDir(p: string) {
-    const dir = dirname(p);
-    try {
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    } catch {
-      // Best-effort for missing parent paths in mocked envs
-      try { mkdirSync(dir, { recursive: true }); } catch { /* ignore */ }
-    }
-  }
-
-  function writeFileSafe(p: string, content: string) {
-    ensureDir(p);
-    writeFileSync(p, content);
-  }
+  // File writing utilities are now imported from utils
 
   function writePackageJson(hasPages: boolean) {
     const pkgPath = join(opts.outDir, 'package.json');

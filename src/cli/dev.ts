@@ -1,17 +1,19 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { spawn } from 'child_process';
 import { buildProject } from './build';
-import { readdirSync, statSync, existsSync } from 'fs';
+import { existsSync, readdirSync } from 'fs';
 import { LocusError } from '../errors';
 import { reportError, ErrorOutputFormat } from './reporter';
 import { join, relative } from 'path';
 import chalk from 'chalk';
-// merged into upper import
 import { getAppName } from '../generator/outputs';
 import { loadConfig } from '../config/config';
 import { createIncrementalBuilder } from './incremental';
+import { collectLocusFiles, spawnSafe, createDebounce } from './utils';
 
+/**
+ * Format the startup banner for dev mode.
+ */
 function formatBanner(info: {
   appName: string;
   apiPort: number;
@@ -39,6 +41,10 @@ function formatBanner(info: {
   return chalk.cyanBright(top + '\n' + body + '\n' + bottom);
 }
 
+/**
+ * Main dev server entrypoint for Locus CLI.
+ * Runs initial build, starts API/Next servers, watches files, and handles incremental rebuilds.
+ */
 export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string; emitJs?: boolean; suppressWarnings?: boolean }) {
   const _config = loadConfig(opts.srcDir);
   const fileMap = new Map<string, string>();
@@ -167,16 +173,9 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     outDir: join(opts.srcDir, 'generated'),
     fileMap,
   });
-  const initialFiles = collectLocusFiles(opts.srcDir);
-  try {
-    await inc.init(initialFiles);
-  } catch (e) {
-    if (e instanceof LocusError) {
-  reportError(e, fileMap, opts.errorFormat);
-    } else if (e && (e as any).cause instanceof LocusError) {
-  reportError((e as any).cause as LocusError, fileMap, opts.errorFormat);
-    }
-  }
+  // Collect initial .locus files for incremental builder
+  // collectLocusFiles is used for incremental builder initialization below
+  // Debounce file watcher events
   const debounce = createDebounce(100);
   const timed = async (label: string, fn: () => Promise<void>) => {
     const s = Date.now();
@@ -268,47 +267,6 @@ async function ensureDependencies(dir: string, io: { quiet?: boolean; log: (s: s
     proc.on('exit', () => resolve());
     proc.on('error', () => resolve());
   });
-}
-
-function collectLocusFiles(dir: string): string[] {
-  const results: string[] = [];
-  const visit = (d: string) => {
-    let entries: string[] = [];
-    try { entries = readdirSync(d); } catch { return; }
-    for (const name of entries) {
-      const full = join(d, name);
-      let isDir = false;
-      try { isDir = statSync(full).isDirectory(); } catch { continue; }
-      if (isDir) visit(full);
-      else if (name.endsWith('.locus')) results.push(full);
-    }
-  };
-  visit(dir);
-  return results;
-}
-
-function spawnSafe(cmd: string, args: string[], cwd?: string) {
-  // Cross-platform process spawn helper with optional cwd
-  if (process.env.LOCUS_TEST_DISABLE_SPAWN === '1') {
-    // Return a mock-like minimal event emitter object for tests
-    const { EventEmitter } = require('events');
-    const fake: any = new EventEmitter();
-    fake.stdout = new EventEmitter();
-    fake.stderr = new EventEmitter();
-    fake.kill = () => { fake.emit('exit', 0); };
-    setTimeout(() => fake.stdout.emit('data', Buffer.from('test')), 5);
-    return fake;
-  }
-  const proc = spawn(cmd, args, { stdio: 'pipe', cwd, shell: process.platform === 'win32' });
-  return proc;
-}
-
-function createDebounce(ms: number) {
-  let t: any;
-  return (fn: () => void) => {
-    clearTimeout(t);
-    t = setTimeout(fn, ms);
-  };
 }
 
 function spawnNext(generatedDir: string) {

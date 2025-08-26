@@ -1,6 +1,7 @@
 import { LocusError, errorToDiagnostic } from '../errors';
 import chalk from 'chalk';
 import boxen from 'boxen';
+import { colorizeFriendlyMessage, humanizeToken, simplifyChevrotainMessage } from './reportUtils';
 
 export type ErrorOutputFormat = 'pretty' | 'json';
 
@@ -93,42 +94,6 @@ export function reportError(e: LocusError | LocusError[], fileMap: Map<string, s
   process.stderr.write(boxen(output, { padding: 1, margin: 1, borderColor: 'red' }) + '\n');
 }
 
-function simplifyChevrotainMessage(msg: string): string {
-  // Example: "Expecting token of type --> LCurly <-- but found --> '"light"' <--"
-  const m = /Expecting token of type -->\s*(\w+)\s*<--\s*but found -->\s*([^<]+)\s*<--/.exec(msg);
-  if (m) {
-    const expected = humanizeToken(m[1]);
-    const found = m[2].trim();
-    return `Expected ${expected} but found ${found}`;
-  }
-  return msg;
-}
-
-function humanizeToken(tok: string): string {
-  const map: Record<string, string> = {
-    LCurly: "'{'",
-    RCurly: "'}'",
-    LParen: "'('",
-    RParen: "')'",
-    Comma: "','",
-    Colon: "':'",
-    Equals: "'='",
-    LBracketTok: "'['",
-    RBracketTok: "']'",
-    Identifier: 'an identifier',
-    StringLiteral: 'a string',
-    NumberLiteral: 'a number',
-    Question: "'?'",
-    Less: "'<'",
-    Greater: "'>'",
-    SlashTok: "'/'",
-    DotTok: "'.'",
-    PlusTok: "'+'",
-    SingleQuoteTok: "'\''",
-  };
-  return map[tok] || tok;
-}
-
 function suggestTip(e: LocusError, friendlyMsg: string): string | undefined {
   if (e.code === 'parse_error') {
     if (friendlyMsg.includes("Expected ':'")) {
@@ -142,14 +107,4 @@ function suggestTip(e: LocusError, friendlyMsg: string): string | undefined {
     }
   }
   return undefined;
-}
-
-function colorizeFriendlyMessage(msg: string): string {
-  const m = /^Expected (.+) but found (.+)$/i.exec(msg);
-  if (m) {
-    const exp = chalk.yellow(m[1]);
-    const found = chalk.cyan(m[2]);
-    return `Expected ${exp} but found ${found}`;
-    }
-  return msg;
 }
