@@ -1,26 +1,39 @@
-import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
+import { loadBaselineConfig } from './utils/config';
 
-interface Baseline {
-  sample: string;
-  iterations: number;
-  tokensPerSecMin: number;
-  tokensPerSecMinCi?: number;
-}
+/**
+ * This script runs the parser benchmark and asserts that the performance
+ * is above a certain threshold defined in a baseline configuration file.
+ *
+ * It allows overriding the number of iterations and the minimum tokens per second
+ * through environment variables.
+ */
+const baselineConfig = loadBaselineConfig('scripts/perf-baseline.json');
 
-const cfg = JSON.parse(readFileSync('scripts/perf-baseline.json', 'utf8')) as Baseline;
-// Allow environment overrides
-const iter = Number(process.env.BENCH_ITER || cfg.iterations);
-const minTps = Number(process.env.BENCH_MIN_TPS || (process.env.CI && cfg.tokensPerSecMinCi ? cfg.tokensPerSecMinCi : cfg.tokensPerSecMin));
+// Allow environment overrides for iterations and minimum tokens per second.
+const iterations = Number(process.env.BENCH_ITER || baselineConfig.iterations);
+const minTokensPerSec = Number(
+  process.env.BENCH_MIN_TPS ||
+    (process.env.CI && baselineConfig.tokensPerSecMinCi
+      ? baselineConfig.tokensPerSecMinCi
+      : baselineConfig.tokensPerSecMin)
+);
 
-// Use ts-node transpile-only for speed and run the TS script so argv positions are correct.
-const cmd = `node -r ts-node/register/transpile-only ./scripts/bench_parser.ts "${cfg.sample}" ${iter}`;
-const out = execSync(cmd, { encoding: 'utf8' });
-const result = JSON.parse(out.trim().split('\n').pop()!);
+// Use ts-node with transpile-only for speed and run the benchmark script.
+const command = `node -r ts-node/register/transpile-only ./scripts/bench_parser.ts "${baselineConfig.sample}" ${iterations}`;
+const output = execSync(command, { encoding: 'utf8' });
 
-if (result.tokensPerSec < minTps) {
-  console.error(`Parser perf regression: ${result.tokensPerSec} < ${minTps} tokens/sec`);
+// The benchmark script outputs JSON, so we parse the last line of the output.
+const result = JSON.parse(output.trim().split('\n').pop()!);
+
+// Assert that the performance is above the minimum threshold.
+if (result.tokensPerSec < minTokensPerSec) {
+  console.error(
+    `Parser performance regression: ${result.tokensPerSec} < ${minTokensPerSec} tokens/sec`
+  );
   process.exit(1);
 } else {
-  console.log(`Parser perf OK: ${result.tokensPerSec} tokens/sec >= ${minTps}`);
+  console.log(
+    `Parser performance OK: ${result.tokensPerSec} tokens/sec >= ${minTokensPerSec}`
+  );
 }

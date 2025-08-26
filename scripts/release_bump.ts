@@ -1,69 +1,67 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
+import { BumpType, bumpVersion } from './utils/version';
 
-type BumpType = 'patch' | 'minor' | 'major';
-
-function bumpVersion(ver: string, type: BumpType): string {
-  const m = ver.trim().match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
-  if (!m) throw new Error(`Invalid semver version in package.json: '${ver}'`);
-  let [major, minor, patch] = [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
-  if (type === 'major') { major += 1; minor = 0; patch = 0; }
-  else if (type === 'minor') { minor += 1; patch = 0; }
-  else { patch += 1; }
-  return `${major}.${minor}.${patch}`;
-}
-
+/**
+ * This script bumps the version number in package.json and generates git commands for creating a release.
+ *
+ * Usage:
+ * ts-node scripts/release_bump.ts [patch|minor|major]
+ *
+ * It defaults to 'patch' if no argument is provided.
+ */
 function main() {
-  const arg = (process.argv[2] || 'patch').toLowerCase();
-  const type: BumpType = (['patch','minor','major'] as const).includes(arg as BumpType) ? (arg as BumpType) : 'patch';
-  const pkgPath = 'package.json';
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as any;
-  const prev = pkg.version as string;
-  const next = bumpVersion(prev, type);
-  pkg.version = next;
-  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+  const bumpTypeArg = (process.argv[2] || 'patch').toLowerCase();
+  const bumpType: BumpType = (['patch','minor','major'] as const).includes(bumpTypeArg as BumpType) ? (bumpTypeArg as BumpType) : 'patch';
 
-  const addFiles = ['package.json'];
-  if (existsSync('package-lock.json')) addFiles.push('package-lock.json');
-  const addCmd = `git add ${addFiles.join(' ')}`;
-  const commitCmd = `git commit -m "chore(release): v${next}"`;
-  const tagCmd = `git tag v${next}`;
-  const pushCmd = `git push origin $(git rev-parse --abbrev-ref HEAD) --tags`;
-  const publishCmd = `npm publish --access public`;
+  const packageJsonPath = 'package.json';
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as any;
 
-  // Run git add/commit/tag locally (skip push)
-  try {
-    execSync(addCmd, { stdio: 'inherit' });
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.log('# WARN: git add failed (continuing).');
+  const previousVersion = packageJson.version as string;
+  const nextVersion = bumpVersion(previousVersion, bumpType);
+
+  packageJson.version = nextVersion;
+  writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
+
+  // Prepare git commands
+  const filesToCommit = ['package.json'];
+  if (existsSync('package-lock.json')) {
+    filesToCommit.push('package-lock.json');
   }
+
+  const addCommand = `git add ${filesToCommit.join(' ')}`;
+  const commitCommand = `git commit -m "chore(release): v${nextVersion}"`;
+  const tagCommand = `git tag v${nextVersion}`;
+  const pushCommand = `git push origin $(git rev-parse --abbrev-ref HEAD) --tags`;
+  const publishCommand = `npm publish --access public`;
+
+  // Execute git commands locally
   try {
-    execSync(commitCmd, { stdio: 'inherit' });
-  } catch (e) {
-    // Likely no changes to commit; continue
-    // eslint-disable-next-line no-console
+    execSync(addCommand, { stdio: 'inherit' });
+  } catch (error) {
+    console.warn('# WARN: git add failed (continuing).', error);
+  }
+
+  try {
+    execSync(commitCommand, { stdio: 'inherit' });
+  } catch (error) {
+    // This might fail if there are no changes to commit
     console.log('# NOTE: git commit skipped or failed (maybe no changes).');
   }
+
   try {
-    execSync(tagCmd, { stdio: 'inherit' });
-  } catch (e) {
-    // Tag may already exist; continue
-    // eslint-disable-next-line no-console
-    console.log(`# NOTE: git tag '${`v${next}`}' already exists or failed.`);
+    execSync(tagCommand, { stdio: 'inherit' });
+  } catch (error) {
+    // This might fail if the tag already exists
+    console.log(`# NOTE: git tag 'v${nextVersion}' already exists or failed.`);
   }
 
-  // Output copy-paste friendly commands
-  // eslint-disable-next-line no-console
-  console.log(`\nVersion bumped: ${prev} -> ${next}\n`);
-  // eslint-disable-next-line no-console
+  // Output commands for the user to run manually
+  console.log(`\nVersion bumped: ${previousVersion} -> ${nextVersion}\n`);
   console.log(`# Next step: push tag and changes to origin, and optionally publish:`);
-  // eslint-disable-next-line no-console
-  console.log(pushCmd);
-  // eslint-disable-next-line no-console
+  console.log(pushCommand);
   console.log(`# Manual publish (if not using CI):`);
-  // eslint-disable-next-line no-console
-  console.log(publishCmd);
+  console.log(publishCommand);
 }
 
 main();
