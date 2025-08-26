@@ -15,14 +15,14 @@ describe('CLI db commands', () => {
   });
 
   test('locus db migrate calls prisma migrate dev', async () => {
-    await runDbMigrate({ cwd: '/proj' } as any);
+    await runDbMigrate();
     expect(cp.exec).toHaveBeenCalled();
     const cmd = (cp.exec as any).mock.calls[0][0];
     expect(cmd).toMatch(/prisma\s+migrate\s+dev/);
   });
 
   test('locus db studio calls prisma studio', async () => {
-    await runDbStudio({ cwd: '/proj' } as any);
+    await runDbStudio();
     expect(cp.exec).toHaveBeenCalled();
     const cmd = (cp.exec as any).mock.calls[0][0];
     expect(cmd).toMatch(/prisma\s+studio/);

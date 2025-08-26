@@ -1,178 +1,109 @@
-import { readdirSync, writeFileSync, mkdirSync, existsSync, readFileSync, statSync } from 'fs';
+import { join } from 'path';
 import { spawnSync } from 'child_process';
-import { promises as fsp } from 'fs';
-import { join, dirname } from 'path';
-import { parseLocus } from '../parser';
-import { mergeAsts } from '../parser/merger';
-import { validateUnifiedAst } from '../validator/validate';
-// generation now centralized in generator/outputs
-import { BuildError, LocusError, errorToDiagnostic, Diagnostic } from '../errors';
-import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
-// Removed legacy direct fs/path config parsing in favor of loadConfig
-import { loadConfig } from '../config/config';
-import { generateExpressApi, AuthConfig } from '../generator/express';
-import { initPluginManager } from '../plugins/manager';
+import { existsSync } from 'fs';
 import chalk from 'chalk';
+
+import { LocusError, errorToDiagnostic, BuildError } from '../errors';
+import { loadConfig } from '../config/config';
+import { initPluginManager } from '../plugins/manager';
 import { reportError, ErrorOutputFormat } from './reporter';
-export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean; emitJs?: boolean; suppressWarnings?: boolean }) {
-  const srcDir = opts.srcDir;
+import { findLocusFiles } from './utils/files';
+import {
+  parseLocusFiles,
+  mergeAndValidateAsts,
+  generateAndWriteArtifacts,
+} from './build-steps';
+
+export interface BuildOptions {
+  srcDir: string;
+  outDir?: string;
+  debug?: boolean;
+  errorFormat?: ErrorOutputFormat;
+  prismaGenerate?: boolean;
+  dryRun?: boolean;
+  emitJs?: boolean;
+  suppressWarnings?: boolean;
+}
+
+/**
+ * Orchestrates the build process for a Locus project.
+ * This function coordinates parsing, merging, validation, and artifact generation.
+ */
+export async function buildProject(opts: BuildOptions): Promise<any> {
+  const {
+    srcDir,
+    debug = false,
+    errorFormat = 'pretty',
+    prismaGenerate = false,
+  } = opts;
   const outDir = opts.outDir || join(srcDir, 'generated');
-  const debug = !!opts.debug;
   const t0 = Date.now();
 
+  // 1. Find all .locus files
   let files: string[];
   try {
     files = findLocusFiles(srcDir);
   } catch (e) {
     throw new BuildError(`Failed to read source directory: ${srcDir}`, e);
   }
-  const fileMap = new Map<string, string>();
-  const tParse0 = Date.now();
+
   const config = loadConfig(srcDir);
   const pluginMgr = await initPluginManager(srcDir, config);
-  const asts: any[] = [];
-  const diagnostics: Diagnostic[] = [];
-  for (const fp of files) {
-    try {
-      const content = readFileSync(fp, 'utf8');
-      fileMap.set(fp, content);
-      try { await pluginMgr.onParseStart(fp, content); } catch {/* ignore */}
-      const ast = parseLocus(content as any, fp);
-      asts.push(ast);
-    } catch (e) {
-      if (e instanceof LocusError || (e && (e as any).code)) {
-        diagnostics.push(errorToDiagnostic(e as any));
-        continue; // continue parsing others
-      }
-      throw new BuildError(`Failed to parse ${fp}: ${(e as any)?.message || e}`, e);
-    }
-  }
+
+  // 2. Parse, merge, and validate
+  const tParse0 = Date.now();
+  const { asts, fileMap, diagnostics, filePaths } = await parseLocusFiles(files, pluginMgr);
+
   if (diagnostics.length) {
-    reportError([], fileMap, opts.errorFormat); // no-op for pretty
-    if (opts.errorFormat === 'json') {
+    if (errorFormat === 'json') {
       process.stderr.write(JSON.stringify({ diagnostics }) + '\n');
-    } else if (diagnostics.length) {
-      // render first diagnostic via existing reporter path
-      reportError(new LocusError({ code: 'parse_error', message: diagnostics[0].message, filePath: diagnostics[0].filePath, line: diagnostics[0].line, column: diagnostics[0].column, length: diagnostics[0].length }), fileMap, opts.errorFormat);
+    } else {
+      const errors = diagnostics.map(d => new LocusError(d as any));
+      reportError(errors, fileMap, errorFormat);
     }
-    return { outDir, diagnostics, failed: true } as any;
+    return { outDir, diagnostics, failed: true };
   }
+
   const tParse1 = Date.now();
-  // per-file parsed hooks
-  for (let i=0;i<asts.length;i++) {
-    const fp = files[i];
-    try { await pluginMgr.onFileParsed(fp, asts[i]); } catch {/* collect inside manager */}
-  }
-  // parse complete (allow virtual AST injection)
-  try { await pluginMgr.onParseComplete(asts); } catch {/* ignore */}
-  const allAsts = asts.concat(pluginMgr.virtualAsts);
-  let merged;
+  let mergedAst;
   try {
-  merged = mergeAsts(allAsts);
+    mergedAst = await mergeAndValidateAsts(asts, filePaths, pluginMgr);
   } catch (e) {
-    if (e instanceof LocusError || (e && (e as any).code)) {
-      const diag = errorToDiagnostic(e as any);
-      if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
-      else reportError(e as any, fileMap, opts.errorFormat);
-      return { outDir, diagnostics: [diag], failed: true } as any;
-    }
-    throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
-  }
-  // Validate unified AST
-  try {
-    await pluginMgr.onValidate(merged);
-    validateUnifiedAst(merged);
-  } catch (e) {
-    if (e instanceof LocusError || (e && (e as any).code)) {
-      const diag = errorToDiagnostic(e as any);
-      if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
-      else reportError(e as any, fileMap, opts.errorFormat);
-      return { outDir, diagnostics: [diag], failed: true } as any;
+    if (e instanceof LocusError) {
+      const diag = errorToDiagnostic(e);
+      reportError(e, fileMap, errorFormat);
+      return { outDir, diagnostics: [diag], failed: true };
     }
     throw e;
   }
   const tMerge1 = Date.now();
 
-  // Generate artifacts using shared module
+  // 3. Generate and write artifacts
   let genMeta: any = {};
   try {
-    await pluginMgr.onBeforeGenerate(merged);
-    // detect auth configuration via unified config
-    let auth: AuthConfig | undefined;
-    if (config.auth?.jwtSecret || config.raw._sections?.auth) {
-      const aSection = config.raw._sections?.auth || {};
-      auth = { jwtSecret: config.auth?.jwtSecret, adapterPath: aSection.adapter, requireAuth: !!aSection.requireAuth } as any;
-      if (auth?.jwtSecret && !process.env.LOCUS_JWT_SECRET) process.env.LOCUS_JWT_SECRET = auth.jwtSecret;
-    }
-
-    const { files: artifacts, meta } = buildOutputArtifacts(merged, { srcDir });
-    if ((config as any).warnings?.length) {
-      meta.warnings = [...(meta.warnings||[]), ...(config as any).warnings];
-    }
-    // augment express server if auth configured
-    if (auth) {
-      const guarded = (merged.pages||[]).filter((p:any)=>p.guard).map((p:any)=>({ name: p.name, role: p.guard.role }));
-      const expressFiles = generateExpressApi((merged.database?.entities)||[], { auth, pagesWithGuards: guarded });
-      for (const [k,v] of Object.entries(expressFiles)) { artifacts[k] = v; }
-    }
-    // afterGenerate hook may want to add artifacts
-    await pluginMgr.onAfterGenerate({ artifacts, meta });
-  // run any custom generators registered during previous hooks
-  pluginMgr.runCustomGenerators(merged);
-    // merge plugin artifacts
-    Object.assign(artifacts, pluginMgr.extraArtifacts);
-    if (opts.suppressWarnings && meta.warnings?.length) {
-      // Remove warnings artifact if suppression requested
-      delete (artifacts as any)['GENERATED_WARNINGS.txt'];
-    }
-    // add plugin warnings
-  meta.warnings = [...(meta.warnings || []), ...pluginMgr.warnings];
-  (meta as any).pluginTimings = pluginMgr.timings;
-    genMeta = meta;
-    if (opts.dryRun) {
-      const list = Object.keys(artifacts).sort();
-      process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
-  return { outDir, dryRun: true, filesPlanned: list, meta: { hasPages: meta.hasPages, warnings: meta.warnings } } as any;
-    }
-  const entries = Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b));
-    const limit = pLimit(6);
-    await Promise.all(entries.map(([rel, content]) => limit(async () => {
-      const full = join(outDir, rel);
-      const dir = dirname(full);
-      await safeMkdir(dir);
-      await safeWrite(full, content as string);
-    })));
-  const appName = getAppName(srcDir);
-    const pkgPath = join(outDir, 'package.json');
-    if (!existsSync(pkgPath)) writeFileSync(pkgPath, buildPackageJson(meta.hasPages, appName));
-    const readmePath = join(outDir, 'README.md');
-  if (!existsSync(readmePath)) writeFileSync(readmePath, buildGeneratedReadme());
-      // Ensure tsconfig.json exists (Next + ts-node friendliness)
-      const tsconfigPath = join(outDir, 'tsconfig.json');
-      if (!existsSync(tsconfigPath) && !opts.dryRun) {
-        writeFileSync(tsconfigPath, buildTsConfig());
-      }
-      // Optionally compile TS -> JS (tsc) into dist
-      if (opts.emitJs && !opts.dryRun) {
-        try {
-          const res = spawnSync('npx', ['tsc', '--project', tsconfigPath, '--outDir', 'dist', '--declaration', 'false', '--emitDeclarationOnly', 'false'], { cwd: outDir, stdio: 'ignore' });
-          if (res.status !== 0) process.stderr.write('[locus][build] tsc exited with code ' + res.status + '\n');
-        } catch {/* ignore compile errors */}
-      }
-  if (!opts.suppressWarnings && genMeta.warnings && genMeta.warnings.length && !opts.dryRun) {
-        for (const w of genMeta.warnings) {
-          process.stdout.write(chalk.yellow('[locus][warn] ' + w + '\n'));
-        }
-      }
-    } catch (e) {
-      if (e instanceof LocusError || (e && (e as any).code)) {
-        reportError((e as any) as LocusError, fileMap, opts.errorFormat);
-        process.exit(1);
-      }
-      // raw generator error
-      process.stderr.write(String((e as any)?.message || e) + '\n');
+    genMeta = await generateAndWriteArtifacts(mergedAst, config, pluginMgr, srcDir, outDir, opts);
+  } catch (e) {
+    if (e instanceof LocusError) {
+      reportError(e, fileMap, errorFormat);
       process.exit(1);
     }
+    process.stderr.write(String((e as any)?.message || e) + '\n');
+    process.exit(1);
+  }
+
+  // 4. Optionally run prisma generate
+  if (prismaGenerate) {
+    try {
+      const schemaPath = join(outDir, 'prisma', 'schema.prisma');
+      if (existsSync(schemaPath)) {
+        spawnSync('npx', ['prisma', 'generate', '--schema', schemaPath], {
+          stdio: 'ignore',
+        });
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
 
   if (debug) {
     const t1 = Date.now();
@@ -183,90 +114,16 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       generateMs: t1 - tMerge1,
       totalMs: t1 - t0,
     };
-  process.stdout.write('[locus][build][timings] ' + JSON.stringify(timings) + '\n');
+    process.stdout.write(
+      '[locus][build][timings] ' + JSON.stringify(timings) + '\n'
+    );
   }
 
-  if (opts.prismaGenerate) {
-    try {
-      const schema = join(outDir, 'prisma', 'schema.prisma');
-      if (existsSync(schema)) {
-        spawnSync('npx', ['prisma', 'generate', '--schema', schema], { stdio: 'ignore' });
-      }
-    } catch {/* ignore */}
-  }
-
-  return { outDir, meta: { hasPages: (merged as any)?.pages?.length > 0, warnings: genMeta.warnings || [] } } as any;
-}
-
-function findLocusFiles(dir: string): string[] {
-  let entries: any;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true } as any);
-  } catch {
-    entries = readdirSync(dir);
-  }
-  // If mocked fs returns string[]
-  if (Array.isArray(entries) && typeof entries[0] === 'string') {
-    return (entries as string[])
-      .map(name => join(dir, name))
-      .filter(p => p.endsWith('.locus'));
-  }
-  // Real dirents path
-  const results: string[] = [];
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory && entry.isDirectory()) {
-      results.push(...findLocusFiles(full));
-    } else if (entry.isFile && entry.isFile() && full.endsWith('.locus')) {
-      results.push(full);
-    } else if (!entry.isDirectory && !entry.isFile) {
-      // Fallback for environments lacking isFile/isDirectory on dirent
-      try {
-        const st = statSync(full);
-        if (st.isDirectory()) results.push(...findLocusFiles(full));
-        else if (st.isFile() && full.endsWith('.locus')) results.push(full);
-      } catch {
-        // ignore
-      }
-    }
-  }
-  return results;
-}
-
-function pLimit(concurrency: number) {
-  let active = 0;
-  const queue: Array<() => void> = [];
-  const next = () => {
-    if (active >= concurrency) return;
-    const job = queue.shift();
-    if (!job) return;
-    active++;
-    job();
+  return {
+    outDir,
+    meta: {
+      hasPages: (mergedAst as any)?.pages?.length > 0,
+      warnings: genMeta.warnings || [],
+    },
   };
-  return function <T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const run = () => {
-        Promise.resolve(fn()).then(
-          (v) => { active--; resolve(v); next(); },
-          (e) => { active--; reject(e); next(); }
-        );
-      };
-      queue.push(run);
-      next();
-    });
-  };
-}
-
-async function safeMkdir(dir: string) {
-  try {
-    if ((fsp as any)?.mkdir) return await (fsp as any).mkdir(dir, { recursive: true });
-  } catch {/* ignore */}
-  try { mkdirSync(dir, { recursive: true }); } catch {/* ignore */}
-}
-
-async function safeWrite(path: string, content: string) {
-  try {
-    if ((fsp as any)?.writeFile) return await (fsp as any).writeFile(path, content, 'utf8');
-  } catch {/* fall through to sync */}
-  writeFileSync(path, content);
 }

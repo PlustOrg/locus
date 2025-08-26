@@ -18,9 +18,8 @@ program
   .argument('<sub>', 'subcommand: migrate|studio')
   .option('--cwd <dir>', 'working directory')
   .action(async (sub: string, opts: any) => {
-    const cwd = opts.cwd || process.cwd();
-    if (sub === 'migrate') await runDbMigrate({ cwd });
-    else if (sub === 'studio') await runDbStudio({ cwd });
+    if (sub === 'migrate') await runDbMigrate();
+    else if (sub === 'studio') await runDbStudio();
     else program.help();
   });
 
