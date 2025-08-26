@@ -6,38 +6,10 @@ import { readdirSync, statSync, existsSync } from 'fs';
 import { LocusError } from '../errors';
 import { reportError, ErrorOutputFormat } from './reporter';
 import { join, relative } from 'path';
-import chalk from 'chalk';
-// merged into upper import
 import { getAppName } from '../generator/outputs';
 import { loadConfig } from '../config/config';
 import { createIncrementalBuilder } from './incremental';
-
-function formatBanner(info: {
-  appName: string;
-  apiPort: number;
-  hasPages: boolean;
-  nextPort?: number;
-  theme: boolean;
-  prismaClient: boolean;
-  enableCors: boolean;
-  watchPattern: string;
-  routeCount: number;
-  prismaHint: boolean;
-}) {
-  const lines: string[] = [];
-  lines.push(`App: ${info.appName}`);
-  lines.push(`API:  http://localhost:${info.apiPort}  (routes: ${info.routeCount})`);
-  if (info.hasPages) lines.push(`Web:  http://localhost:${info.nextPort || 3000}`);
-  lines.push(`Theme: ${info.theme ? '✓' : '✗'}   Prisma: ${info.prismaClient ? '✓' : '✗'}${info.prismaHint ? ' (run prisma generate)' : ''}`);
-  lines.push(`Watching: ${info.watchPattern}`);
-  lines.push(`CORS: ${info.enableCors ? 'on' : 'off'}  NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-  lines.push(`Ctrl+C to stop`);
-  const width = Math.max(...lines.map(l => l.length)) + 2;
-  const top = '┌' + '─'.repeat(width) + '┐';
-  const bottom = '└' + '─'.repeat(width) + '┘';
-  const body = lines.map(l => '│ ' + l.padEnd(width - 2, ' ') + '│').join('\n');
-  return chalk.cyanBright(top + '\n' + body + '\n' + bottom);
-}
+import * as ui from './beautify';
 
 export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?: ErrorOutputFormat; quiet?: boolean; logFile?: string; emitJs?: boolean; suppressWarnings?: boolean }) {
   const _config = loadConfig(opts.srcDir);
@@ -60,7 +32,7 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   buildMeta = await buildProject({ srcDir: opts.srcDir, debug: opts.debug, emitJs: opts.emitJs });
   if (!opts.suppressWarnings && (buildMeta as any)?.meta?.warnings?.length && !opts.quiet) {
     for (const w of (buildMeta as any).meta.warnings) {
-      process.stdout.write(chalk.yellow('[locus][warn] ' + w + '\n'));
+      ui.warn(w);
     }
   }
   } catch (e) {
@@ -74,7 +46,7 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   const basePort = Number(process.env.API_PORT || process.env.PORT) || 3001; // TODO: config.server.port
   const apiPort = await pickFreePort(basePort);
   if (apiPort !== basePort && !opts.quiet) {
-    process.stdout.write(chalk.yellow(`[locus][dev] port ${basePort} in use, using ${apiPort}`) + '\n');
+    ui.warn(`Port ${basePort} was in use, switched to ${apiPort}`);
   }
   // Propagate chosen port to child processes
   process.env.API_PORT = String(apiPort);
@@ -94,8 +66,8 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
         let prismaClientMissing = false;
         try { require.resolve('@prisma/client'); } catch { prismaClientMissing = true; }
         if (prismaClientMissing) {
-          const line = '[locus][dev] running prisma generate (auto)';
-          if (!opts.quiet) process.stdout.write(chalk.gray(line + '\n'));
+          const line = 'Running `prisma generate` (client missing)';
+          if (!opts.quiet) ui.info(line);
           logMirror(line + '\n');
           const proc = spawnSafe('npx', ['prisma', 'generate', '--schema', schemaPath], workDir);
           proc.stdout.on('data', (d: Buffer) => logMirror(d.toString()));
@@ -109,20 +81,21 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
   // If emitJs, start a tsc --watch to compile to dist and run compiled server when ready
   let tscProc: any = null;
   if (opts.emitJs && process.env.LOCUS_TEST_DISABLE_SPAWN !== '1') {
-    const line = '[locus][dev] starting TypeScript compiler (watch)';
-    if (!opts.quiet) process.stdout.write(chalk.gray(line + '\n'));
+    const line = 'Starting TypeScript compiler in watch mode';
+    if (!opts.quiet) ui.info(line);
     logMirror(line + '\n');
     tscProc = spawnSafe('npx', ['tsc', '--watch', '--preserveWatchOutput', 'false', '--project', 'tsconfig.json', '--outDir', 'dist', '--declaration', 'false', '--emitDeclarationOnly', 'false'], workDir);
     tscProc.stdout.on('data', (d: Buffer) => logMirror(d.toString()));
     tscProc.stderr.on('data', (d: Buffer) => logMirror(d.toString()));
   }
 
-  if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting API on :${apiPort} (cwd=${relative(opts.srcDir, workDir) || '.'})\n`));
+  const relWorkDir = relative(opts.srcDir, workDir) || '.';
+  if (!opts.quiet) ui.info(`Starting API server... (cwd: ${relWorkDir})`);
   logMirror(`[locus][dev] starting API on :${apiPort} (cwd=${workDir})\n`);
   const apiProc = spawnApi(opts.srcDir, workDir, { quiet: opts.quiet, log: logMirror, emitJs: opts.emitJs });
   let nextProc: any = { stdout: { on() {} }, kill() {} };
   if (buildMeta?.meta?.hasPages) {
-    if (!opts.quiet) process.stdout.write(chalk.gray(`[locus][dev] starting Next dev server on :3000 (cwd=${relative(opts.srcDir, workDir) || '.'})\n`));
+    if (!opts.quiet) ui.info(`Starting Next.js dev server... (cwd: ${relWorkDir})`);
     logMirror('[locus][dev] starting Next dev server on :3000\n');
     nextProc = spawnNext(workDir);
   }
@@ -131,7 +104,7 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     proc.stdout.on('data', (d: Buffer) => {
       logMirror(d.toString());
       if (!markStarted.has(name)) {
-        if (!opts.quiet) process.stdout.write(chalk.green(`[locus][dev] ${name} up`)+"\n");
+        if (!opts.quiet) ui.success(`${name} server is up!`);
         logMirror(`[locus][dev] ${name} up\n`);
         markStarted.add(name);
       }
@@ -140,19 +113,19 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
       logMirror(d.toString());
       if (!opts.quiet) process.stderr.write(d.toString());
       if (/ERR_MODULE_NOT_FOUND/.test(d.toString()) && /routes\//.test(d.toString())) {
-        const hint = '[locus][dev] hint: route file missing. Try re-running `locus build` or check generated/routes contents.';
+        const hint = 'Hint: route file not found. Try re-running `locus build` or check `generated/routes`';
         logMirror(hint + '\n');
-        if (!opts.quiet) process.stdout.write(chalk.yellow(hint) + '\n');
+        if (!opts.quiet) ui.warn(hint);
       }
     });
     proc.on('exit', (code: number) => {
-      const line = `[locus][dev] ${name} exited code ${code}`;
-      if (!opts.quiet) process.stdout.write(chalk.red(line)+"\n");
+      const line = `${name} server exited with code ${code}`;
+      if (!opts.quiet) ui.error(line);
       logMirror(line + '\n');
     });
   };
-  watchChild('api', apiProc);
-  if (buildMeta?.meta?.hasPages) watchChild('next', nextProc);
+  watchChild('API', apiProc);
+  if (buildMeta?.meta?.hasPages) watchChild('Web', nextProc);
   nextProc.stdout.on('data', () => {});
   apiProc.stdout.on('data', () => {});
 
@@ -199,13 +172,13 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
 
   // graceful shutdown
   const shutdown = () => {
-  if (!opts.quiet) console.log(chalk.gray('[locus][dev] shutting down...'));
+  if (!opts.quiet) ui.info('Shutting down...');
   logMirror('[locus][dev] shutting down...\n');
     try { watcher.close(); } catch {}
     try { nextProc.kill(); } catch {}
   try { apiProc.kill(); } catch {}
   try { if (tscProc) tscProc.kill(); } catch {}
-  if (!opts.quiet) console.log(chalk.gray('[locus][dev] bye'));
+  if (!opts.quiet) ui.info('Bye!');
   logMirror('[locus][dev] bye\n');
   if (logStream) { try { logStream.end(); } catch {} }
   };
@@ -227,21 +200,22 @@ export async function dev(opts: { srcDir: string; debug?: boolean; errorFormat?:
     } catch {
       prismaClient = false; prismaHint = true;
     }
-    const banner = formatBanner({
-      appName,
-      apiPort,
-      hasPages: !!buildMeta?.meta?.hasPages,
-      nextPort: 3000,
-      theme,
-      prismaClient,
-      prismaHint,
-      enableCors: process.env.ENABLE_CORS === '1',
-      watchPattern: '**/*.locus',
-      routeCount,
-    });
-  if (!opts.quiet) process.stdout.write(banner + '\n');
-  logMirror(banner + '\n');
+    if (!opts.quiet) {
+      ui.devServerBanner({
+        appName,
+        apiPort,
+        hasPages: !!buildMeta?.meta?.hasPages,
+        nextPort: 3000,
+        theme,
+        prismaClient,
+        prismaHint,
+        enableCors: process.env.ENABLE_CORS === '1',
+        watchPattern: '**/*.locus',
+        routeCount,
+      });
+    }
   } catch {/* ignore banner errors */}
+  return { shutdown };
 }
 
 async function ensureDependencies(dir: string, io: { quiet?: boolean; log: (s: string)=>void }) {
@@ -250,8 +224,8 @@ async function ensureDependencies(dir: string, io: { quiet?: boolean; log: (s: s
   if (!existsSync(pkgPath)) return;
   const nm = join(dir, 'node_modules');
   if (existsSync(nm)) return; // already installed
-  const line = '[locus][dev] installing dependencies (first run)...';
-  if (!io.quiet) process.stdout.write(chalk.gray(line + '\n'));
+  const line = 'Installing dependencies (this may take a minute)...';
+  if (!io.quiet) ui.info(line);
   io.log(line + '\n');
   // Detect package manager via lockfile
   const useYarn = existsSync(join(dir, 'yarn.lock'));

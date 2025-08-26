@@ -6,9 +6,10 @@ jest.mock('chokidar', () => ({ watch: jest.fn(() => ({ on: jest.fn() })) }), { v
 
 describe('CLI dev command', () => {
   test('dev sets up watcher and starts processes', async () => {
-    await dev({ srcDir: '/proj' } as any);
+    const { shutdown } = await dev({ srcDir: '/proj' } as any);
     // If it returns without throwing, consider it okay for now.
     expect(true).toBe(true);
+    shutdown();
   });
   test('incremental ignores non-locus files on update/remove', async () => {
     const fileMap = new Map();

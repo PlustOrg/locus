@@ -12,26 +12,30 @@ import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppNam
 import { loadConfig } from '../config/config';
 import { generateExpressApi, AuthConfig } from '../generator/express';
 import { initPluginManager } from '../plugins/manager';
-import chalk from 'chalk';
 import { reportError, ErrorOutputFormat } from './reporter';
+import * as ui from './beautify';
+
 export async function buildProject(opts: { srcDir: string; outDir?: string; debug?: boolean; errorFormat?: ErrorOutputFormat; prismaGenerate?: boolean; dryRun?: boolean; emitJs?: boolean; suppressWarnings?: boolean }) {
   const srcDir = opts.srcDir;
   const outDir = opts.outDir || join(srcDir, 'generated');
   const debug = !!opts.debug;
   const t0 = Date.now();
 
+  ui.info(`Building project in ${srcDir}`);
   let files: string[];
   try {
     files = findLocusFiles(srcDir);
   } catch (e) {
     throw new BuildError(`Failed to read source directory: ${srcDir}`, e);
   }
+  ui.info(`Found ${files.length} source files`);
   const fileMap = new Map<string, string>();
   const tParse0 = Date.now();
   const config = loadConfig(srcDir);
   const pluginMgr = await initPluginManager(srcDir, config);
   const asts: any[] = [];
   const diagnostics: Diagnostic[] = [];
+  ui.step('Parsing and validating files...');
   for (const fp of files) {
     try {
       const content = readFileSync(fp, 'utf8');
@@ -95,6 +99,7 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
 
   // Generate artifacts using shared module
   let genMeta: any = {};
+  ui.step('Generating code...');
   try {
     await pluginMgr.onBeforeGenerate(merged);
     // detect auth configuration via unified config
@@ -131,7 +136,10 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
     genMeta = meta;
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
-      process.stdout.write('[locus][build][dry-run] files that would be written:\n' + list.map(f => ' - ' + f).join('\n') + '\n');
+      ui.info('[dry-run] Files that would be written:');
+      for (const f of list) {
+        console.log('  - ' + f);
+      }
   return { outDir, dryRun: true, filesPlanned: list, meta: { hasPages: meta.hasPages, warnings: meta.warnings } } as any;
     }
   const entries = Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b));
@@ -154,14 +162,17 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       }
       // Optionally compile TS -> JS (tsc) into dist
       if (opts.emitJs && !opts.dryRun) {
+        ui.info('Compiling TypeScript to JavaScript...');
         try {
           const res = spawnSync('npx', ['tsc', '--project', tsconfigPath, '--outDir', 'dist', '--declaration', 'false', '--emitDeclarationOnly', 'false'], { cwd: outDir, stdio: 'ignore' });
-          if (res.status !== 0) process.stderr.write('[locus][build] tsc exited with code ' + res.status + '\n');
-        } catch {/* ignore compile errors */}
+          if (res.status !== 0) ui.warn(`tsc exited with code ${res.status}`);
+        } catch (e) {
+          ui.warn(`Could not run tsc: ${e}`);
+        }
       }
   if (!opts.suppressWarnings && genMeta.warnings && genMeta.warnings.length && !opts.dryRun) {
         for (const w of genMeta.warnings) {
-          process.stdout.write(chalk.yellow('[locus][warn] ' + w + '\n'));
+          ui.warn(w);
         }
       }
     } catch (e) {
@@ -183,18 +194,29 @@ export async function buildProject(opts: { srcDir: string; outDir?: string; debu
       generateMs: t1 - tMerge1,
       totalMs: t1 - t0,
     };
-  process.stdout.write('[locus][build][timings] ' + JSON.stringify(timings) + '\n');
+    const timingSummary = `
+Files: ${timings.files}
+Parse: ${timings.parseMs}ms
+Merge: ${timings.mergeMs}ms
+Generate: ${timings.generateMs}ms
+Total: ${timings.totalMs}ms
+    `;
+    ui.box(timingSummary, 'Build Timings');
   }
 
   if (opts.prismaGenerate) {
+    ui.info('Running `prisma generate`...');
     try {
       const schema = join(outDir, 'prisma', 'schema.prisma');
       if (existsSync(schema)) {
         spawnSync('npx', ['prisma', 'generate', '--schema', schema], { stdio: 'ignore' });
       }
-    } catch {/* ignore */}
+    } catch (e) {
+      ui.warn(`Could not run prisma generate: ${e}`);
+    }
   }
 
+  ui.success('Build complete');
   return { outDir, meta: { hasPages: (merged as any)?.pages?.length > 0, warnings: genMeta.warnings || [] } } as any;
 }
 

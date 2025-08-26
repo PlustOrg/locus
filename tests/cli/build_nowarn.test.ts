@@ -24,11 +24,11 @@ jest.mock('fs', () => {
 
 describe('build --no-warn suppresses warnings artifact and output', () => {
   // mockFs defined above
-  let stdoutData = '';
-  const origWrite = process.stdout.write;
+  let consoleOutput = '';
+  const origLog = console.log;
   beforeEach(() => {
-    stdoutData='';
-    (process.stdout as any).write = (chunk: any) => { stdoutData += String(chunk); return true; };
+    consoleOutput = '';
+    console.log = (chunk: any) => { consoleOutput += chunk + '\n'; };
   (parser.parseLocus as any).mockReturnValue({ databases: [], designSystems: [], pages: [], components: [{ name: 'Card', params: [], ui: 'ui { <div>{children}</div> }', styleOverride: '.x { }' }], stores: [] });
   (merger.mergeAsts as any).mockReturnValue({ database: { entities: [] }, pages: [], components: [{ name: 'Card', styleOverride: '.x { }', params: [], ui: 'ui { <div>{children}</div> }' }], stores: [] });
     (fs.readdirSync as any).mockReturnValue(['a.locus']);
@@ -37,18 +37,18 @@ describe('build --no-warn suppresses warnings artifact and output', () => {
     (fs.existsSync as any).mockReturnValue(false);
     (fs.mkdirSync as any).mockImplementation(()=>{});
   });
-  afterEach(()=>{ (process.stdout as any).write = origWrite; });
+  afterEach(()=>{ console.log = origLog; });
   test('warnings file present when not suppressed', async () => {
     await buildProject({ srcDir: '/proj', outDir: '/out', emitJs: false, suppressWarnings: false } as any);
     const keys = Object.keys(mockFs);
     expect(keys.some(k=>k.includes('GENERATED_WARNINGS.txt'))).toBe(true);
-    expect(stdoutData).toMatch(/warn/);
+    expect(consoleOutput).toMatch(/!/);
   });
   test('warnings file absent and no stdout warn with suppressWarnings', async () => {
     Object.keys(mockFs).forEach(k=>delete mockFs[k]);
     await buildProject({ srcDir: '/proj', outDir: '/out', emitJs: false, suppressWarnings: true } as any);
     const keys = Object.keys(mockFs);
     expect(keys.some(k=>k.includes('GENERATED_WARNINGS.txt'))).toBe(false);
-    expect(stdoutData).not.toMatch(/warn/);
+    expect(consoleOutput).not.toContain('!');
   });
 });
