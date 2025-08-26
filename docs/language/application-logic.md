@@ -1,80 +1,126 @@
-# Application Logic in Locus
+# Application Logic Reference
 
-Locus lets you define interactive features using `page`, `component`, and `store` blocks. These blocks co-locate state, actions, and UI, making your code easy to reason about and maintain.
+The "brains" of your Locus application are defined within `page` and `store` blocks. This is where you declare your data, handle user interactions, and manage the logic that makes your application interactive.
 
-## Pages and Components
+## Pages vs. Stores
+Locus has two main places to define application logic:
 
-- **`page`**: Routable top-level feature (e.g., `/dashboard`).
-- **`component`**: Reusable UI and logic.
+-   **`page`**: Contains the state and logic for a single, routable screen in your application. State defined in a page is **local** to that page.
+-   **`store`**: Contains state and logic that needs to be **global**—accessible from any page or component in your entire application. This is perfect for things like user authentication status or shopping cart data.
 
-Each block contains:
-1. `state` (reactive data)
-2. Lifecycle hooks (`on load`, `on unload`)
-3. `action` (business logic)
-4. `ui` (declarative interface)
+Both `page` and `store` blocks are structured similarly, using `state` and `action` blocks.
+
+## The `state` Block
+The `state` block is where you define the reactive data for your page or store. Every variable you declare here is automatically wired up to the UI. When you change a state variable, any part of the UI that uses it will automatically re-render.
 
 ```locus
-page CustomerList {
-  state {
-    customers: list of Customer = []
-    isLoading: true
-  }
-  on load {
-    customers = find(Customer)
-    isLoading = false
-  }
-  action deleteCustomer(customer: Customer) {
-    delete(customer)
-    customers.remove(customer)
-  }
-  ui {
-    <Stack>
-      <Header>Customers</Header>
-      <Button on:click={refresh}>Refresh</Button>
-      <Table items={customers} />
-    </Stack>
-  }
+state {
+  // A simple counter, starting at 0
+  count: Integer = 0
+
+  // A boolean flag
+  isLoading: Boolean = true
+
+  // A list of data models, initialized as an empty list
+  customers: list of Customer = []
+}
+```
+> **How it works:** Under the hood, each state variable is powered by a React `useState` hook. This is important for understanding how to modify state.
+
+## Modifying State
+You **cannot** modify a state variable directly (e.g., `count = count + 1`). Instead, for every state variable you declare, Locus automatically provides you with a **setter function**.
+
+The rule is simple: for a state variable named `myVar`, the setter function is named `setMyVar`.
+
+```locus
+state {
+  count: Integer = 0
+}
+
+action increment() {
+  // CORRECT: Use the setter function
+  setCount(count + 1)
+
+  // INCORRECT: This will not work
+  // count = count + 1
+}
+```
+This is the most important concept in Locus application logic. Always use the setter function to change state.
+
+## The `on load` Hook
+The `on load` block contains code that runs exactly once, right after the page has been loaded and is ready. It's the perfect place to fetch initial data from your database.
+
+```locus
+state {
+  products: list of Product = []
+}
+
+// Fetch all products as soon as the page loads
+on load {
+  const allProducts = find(Product)
+  setProducts(allProducts)
+}
+```
+> **How it works:** The `on load` block is implemented as a React `useEffect` hook with an empty dependency array (`[]`), which ensures it only runs on the initial mount.
+
+## The `action` Block
+Actions are functions that contain your business logic. You can call them from the UI (e.g., `on:click`) or from other actions.
+
+### Defining Actions
+```locus
+action myAction() {
+  // logic goes here
+  log("Action executed!")
 }
 ```
 
-## State Management
-
-- **Local State:** Defined in `state` blocks, reactive within the page/component.
-- **Global State:** Defined in `store` blocks, accessible everywhere.
+### Actions with Parameters
+Actions can accept parameters, which you can provide when calling them from the UI.
 
 ```locus
-store Auth {
-  currentUser: User?
-  isLoggedIn: false
+action greet(name: String) {
+  log("Hello, " + name)
+}
+
+ui {
+  <Button on:click={greet("World")}>Greet</Button>
 }
 ```
 
-## Actions and Data Fetching
-
-Actions are async functions called from UI events or other actions. Locus provides built-in data access functions:
-- `find(Entity)`
-- `findOne(Entity, where: { ... })`
-- `create(Entity, { ... })`
-- `update(record, { ... })`
-- `delete(record)`
-
-## Lifecycle Hooks
-
-- `on load`: Runs when the page/component mounts.
-- `on unload`: Runs before unmounting.
-
-## Parameters
-
-Components/pages can accept parameters for customization:
+### Async Actions and Data
+Actions are asynchronous by default, so you can use `await` when calling functions that return promises, like the built-in database functions.
 
 ```locus
-component UserAvatar {
-  param user: User
-  param size: Integer = 48
-  ui {
-    <Image src={user.avatarUrl} width={size} height={size} />
-  }
+action createProduct(name: String, price: Decimal) {
+  const newProduct = await create(Product, {
+    name: name,
+    price: price
+  })
+  // Add the new product to our local state list
+  addProduct(newProduct)
 }
 ```
 
-See [UI Syntax](./ui-syntax.md) for more on building interfaces.
+## Built-in Database Functions
+Locus provides a set of simple, powerful functions for interacting with your database from within `on load` or `action` blocks.
+
+-   **`find(Entity)`**: Fetches all records of a given entity.
+    ```locus
+    const allUsers = await find(User)
+    ```
+-   **`findOne(Entity, where: { ... })`**: Finds a single record that matches the `where` clause.
+    ```locus
+    const admin = await findOne(User, where: { email: "admin@example.com" })
+    ```
+-   **`create(Entity, { ... })`**: Creates a new record.
+    ```locus
+    const newUser = await create(User, { name: "Alice", email: "alice@example.com" })
+    ```
+-   **`update(record, { ... })`**: Updates an existing record.
+    ```locus
+    await update(user, { name: "Alice Smith" })
+    ```
+-   **`delete(record)`**: Deletes an existing record.
+    ```locus
+    await delete(user)
+    ```

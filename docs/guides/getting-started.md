@@ -1,73 +1,82 @@
-# Getting Started with Locus
+# Getting Started
 
-This guide will walk you through the entire process of installing the Locus CLI, creating a new project, and running the development server. By the end, you'll have a running full-stack application generated from just a few lines of Locus code.
+Welcome to Locus! This guide will walk you through building your first full-stack application in just a few minutes. We'll install the Locus command-line tools, create a new project, and see the magic of live development in action.
 
-## Prerequisites
+## Before You Begin
 
-Before you begin, ensure you have the following installed:
-*   **Node.js**: Version 18 or higher.
-*   **npm**: The Node.js package manager.
+Make sure you have **Node.js** installed on your computer (version 18 or newer). You can check by opening your terminal and running:
 
-You can verify your Node.js installation by running:
 ```bash
 node --version
+# You should see something like v18.17.0 or higher
 ```
 
-## 1. Install the Locus CLI
+## Step 1: Install the Locus Toolkit
 
-The Locus command-line interface (CLI) is the primary tool for managing your projects. Install it globally on your system using `npm`.
+The Locus command-line interface (CLI) is your main tool for creating and managing projects. Let's install it globally on your system using npm.
 
 ```bash
 npm install -g @plust/locus
 ```
 
-This makes the `locus` command available in your terminal. You can verify the installation by running:
+> **What's happening?**
+> This command downloads the `locus` package from the npm registry and makes the `locus` command available everywhere in your terminal.
+
+To make sure it's installed correctly, you can ask for its version number:
 
 ```bash
 locus --version
 ```
 
-## 2. Create a New Project
+## Step 2: Create a New Project
 
-The `locus new` command scaffolds a complete project structure for you, including initial `.locus` files and a configuration file.
+Next, let's create a new project. The `locus new` command sets up a starter project for you with all the necessary files and folders.
 
 ```bash
 locus new my-first-app
 cd my-first-app
 ```
 
-This creates a new directory named `my-first-app` with the following structure:
+This creates a new folder called `my-first-app` and navigates you into it. Inside, you'll find:
 
 ```
 my-first-app/
 ├── src/
-│   ├── app.locus         # For pages and components
-│   ├── database.locus    # For data models
-│   └── theme.locus       # For design tokens
-└── Locus.toml            # Project configuration
+│   ├── app.locus         # For your pages and components
+│   ├── database.locus    # For your data models
+│   └── theme.locus       # For your app's styling
+└── Locus.toml            # Your project's configuration file
 ```
 
-*   `Locus.toml`: The main configuration file for your project, including deployment settings.
-*   `src/`: The source directory where all your `.locus` files live.
+This simple structure is the foundation of your new app.
 
-## 3. Start the Development Server
+## Step 3: Start the Development Server
 
-The `locus dev` command is the heart of the development workflow. It compiles your project, starts the frontend and backend servers, and watches for any changes you make.
+This is where the fun begins. The `locus dev` command compiles your `.locus` files, builds your entire application, starts up a development server, and watches for any changes you make.
 
 ```bash
 locus dev
 ```
 
-After a moment, you'll see output indicating that the servers are running. Your application is now available at `http://localhost:3000`.
+After a moment, you'll see a startup banner in your terminal that looks something like this:
 
-Open this URL in your browser. You'll see a simple, pre-built welcome page.
+```
+┌────────────────────────────────────────────┐
+│ App: my-first-app                          │
+│ API:  http://localhost:3001                │
+│ Web:  http://localhost:3000                │
+│ ...                                        │
+└────────────────────────────────────────────┘
+```
 
-## 4. Make Your First Change
+Your app is now running! Open your web browser and navigate to **`http://localhost:3000`**. You should see a welcome page.
 
-Let's make a change to the database and see it reflected in the application.
+## Step 4: Make a Change
 
-1.  **Open `src/database.locus`** in your code editor. It will contain a sample `User` entity.
-2.  **Add a new entity** to the file:
+Locus is all about speed and live feedback. Let's change the database and see what happens.
+
+1.  Open the `src/database.locus` file in your favorite code editor.
+2.  You'll see a pre-made `User` entity. Let's add a new `Product` entity right below it.
 
     ```locus
     database {
@@ -76,39 +85,46 @@ Let's make a change to the database and see it reflected in the application.
         email: String (unique)
       }
 
-      // Add this new entity
+      // Add this new entity to your database
       entity Product {
         name: String
         price: Decimal
-        stock: Integer
+        inStock: Integer (default: 0)
       }
     }
     ```
-
 3.  **Save the file.**
 
-4.  **Apply the database migration.** The `locus dev` server will detect the change to your data model and tell you that a database migration is needed. Open a **new terminal window** (leaving `locus dev` running) and run the suggested command:
+Back in your terminal where `locus dev` is running, you'll see a message that your data model has changed and that you need to run a database migration.
+
+> **What's happening?**
+> Locus detected a change to your `database` block and knows the database schema is out of sync. A migration is a safe way to update your database to match your new code.
+
+4.  Open a **new terminal window** (don't close the `locus dev` server!) and run the command Locus suggests. It will look like this:
 
     ```bash
     locus db migrate 'add-product-entity'
     ```
-    This command safely updates your development database schema to include the new `Product` table.
 
-## 5. View Your Data
+This applies the change to your development database.
 
-With the migration applied, you can now interact with your new `Product` table using the built-in database GUI.
+## Step 5: See Your Data
 
-1.  In the second terminal, run:
-    ```bash
-    locus db studio
-    ```
-2.  This will open a new tab in your browser with Prisma Studio, a powerful tool for viewing and manipulating your data. You will see the `User` and `Product` models on the left. You can click on `Product` to add new records.
+Now that you have a new `Product` table in your database, you can view and manage it with a built-in GUI.
 
-## Next Steps
+In your **second terminal window**, run:
 
-Congratulations! You've successfully created a Locus project, modified the data model, and seen the development tools in action.
+```bash
+locus db studio
+```
 
-From here, you can explore more advanced topics:
-*   **[Building UIs](../language/ui-syntax.md):** Learn how to create pages and components.
-*   **[Data Relationships](./data-relationships.md):** Define how your data models connect to each other.
-*   **[Theming](../design-system/theming.md):** Customize the look and feel of your application.
+This command opens Prisma Studio in a new browser tab. It's a powerful database tool where you can see all your models. Click on `Product` to add a few new products to your database.
+
+## You're All Set!
+
+Congratulations! You've installed Locus, created a project, and experienced the live development workflow.
+
+Now you're ready to dive deeper:
+-   [Learn how to build pages and components](../language/ui-syntax.md)
+-   [Customize your app's look and feel](./design-system.md)
+-   [Explore the development workflow](../toolchain/development-workflow.md)
