@@ -195,17 +195,20 @@ export class DatabaseCstParser extends CstParser {
   private actionDecl = this.RULE('actionDecl', () => {
     this.CONSUME(Action);
     this.CONSUME(Identifier); // name
-    this.CONSUME(LParen);
+    // Parentheses with parameters are optional; allow omission for zero-arg actions.
     this.OPTION(() => {
-      this.SUBRULE(this.actionParam);
-      this.MANY(() => {
-        this.CONSUME(Comma);
-        this.SUBRULE1(this.actionParam);
+      this.CONSUME(LParen);
+    this.OPTION1(() => {
+        this.SUBRULE(this.actionParam);
+        this.MANY(() => {
+          this.CONSUME(Comma);
+          this.SUBRULE1(this.actionParam);
+        });
       });
+      this.CONSUME(RParen);
     });
-    this.CONSUME(RParen);
     this.CONSUME(LCurly);
-  this.OPTION1(() => this.SUBRULE(this.rawContent));
+  this.OPTION2(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);
   });
 

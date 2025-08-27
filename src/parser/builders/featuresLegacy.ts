@@ -82,7 +82,8 @@ export function buildFeatureBlocksLegacy(pageNodes: CstNode[], compNodes: CstNod
       const ach = a.children as CstChildrenDictionary;
       const ids = (ach['Identifier'] as IToken[]) || [];
       const name = ids[0]?.image;
-      const params = ids.slice(1).map(t => t.image);
+  // Params only appear if parentheses provided; if omitted, no actionParam nodes.
+  const params = ids.slice(1).map(t => t.image);
       const raw = (ach['rawContent'] as CstNode[]) || [];
       const body = raw[0] ? sliceFrom(raw[0], originalSource) : '';
       page.actions.push({ name, params, body });
