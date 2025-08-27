@@ -1,0 +1,14 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`React generator: built-in runtime component imports should handle a mix of user and built-in components and match snapshot for import order 1`] = `
+"import React from 'react';
+import { Input, Stack, Text } from '../runtime/_locusRuntime';
+import UserCard from '../components/UserCard'
+
+export default function ComplexPage() {
+  return (
+     <Stack><UserCard /><Text>Welcome</Text><Input placeholder="Search..." /></Stack>
+  );
+}
+"
+`;

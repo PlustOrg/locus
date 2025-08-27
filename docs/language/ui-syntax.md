@@ -28,6 +28,122 @@ You pass data to elements using attributes, which are called "props". Prop value
 <Button disabled={true}>Cannot click</Button>
 ```
 
+## Built-in UI Components
+
+Locus provides a small set of built-in UI components that you can use out-of-the-box to quickly build your user interfaces. These components are designed to be simple, flexible, and automatically styled by your application's design system.
+
+When you use these components in your `.locus` files, the Locus generator will automatically add the necessary imports to your generated React code.
+
+### Available Components
+
+Here are the built-in components and their available properties:
+
+#### `<Button>`
+
+A standard button element.
+
+-   `variant`: `'primary'` (default) or `'secondary'`.
+-   `onClick`: An action to perform when the button is clicked.
+-   `disabled`: A boolean to disable the button.
+
+Example:
+```locus
+page HomePage {
+  action sayHello {
+    log("Hello, World!")
+  }
+  ui {
+    <Button onClick={sayHello}>Click Me</Button>
+  }
+}
+```
+
+#### `<Stack>`
+
+A flexbox container for arranging items in a vertical or horizontal stack.
+
+-   `direction`: `'column'` (default) or `'row'`.
+-   `gap`: The space between children (e.g., `"1rem"`, `8`).
+-   `align`: The `align-items` CSS property.
+-   `justify`: The `justify-content` CSS property.
+-   `wrap`: A boolean to allow items to wrap.
+
+Example:
+```locus
+ui {
+  <Stack direction="row" gap="1rem">
+    <Text>Item 1</Text>
+    <Text>Item 2</Text>
+  </Stack>
+}
+```
+
+#### `<Input>`
+
+A text input field.
+
+-   `value`: The current value of the input.
+-   `onChange`: An action that receives the new value when the input changes.
+-   `placeholder`: The placeholder text.
+-   `disabled`: A boolean to disable the input.
+
+Example:
+```locus
+page FormPage {
+  state name: string = ""
+  ui {
+    <Input bind:value={name} placeholder="Enter your name" />
+  }
+}
+```
+
+#### `<Text>`
+
+A component for rendering text content.
+
+-   `as`: The HTML tag to render as (e.g., `'p'`, `'h1'`, `'span'`). Defaults to `'p'`.
+-   `variant`: `'body'` (default), `'heading'`, or `'subtle'`.
+
+Example:
+```locus
+ui {
+  <Stack>
+    <Text as="h1" variant="heading">This is a heading</Text>
+    <Text>This is body text.</Text>
+    <Text variant="subtle">This is subtle text.</Text>
+  </Stack>
+}
+```
+
+### Overriding Built-in Components
+
+If you define your own component with the same name as a built-in component (e.g., `Button`), the Locus generator will prioritize your version. When it detects `<Button />` in your UI, it will import your custom component instead of the built-in one.
+
+This allows you to create your own design system and component library that seamlessly replaces the default Locus components.
+
+Example:
+If you have `components/Button.locus` defined:
+```locus
+// components/Button.locus
+component Button {
+  ui {
+    <button class="my-custom-button">{children}</button>
+  }
+}
+```
+
+And you use it in a page:
+```locus
+// pages/MyPage.locus
+page MyPage {
+  ui {
+    // This will use your custom Button, not the built-in one.
+    <Button>Custom Button</Button>
+  }
+}
+```
+The generated code will contain `import Button from '../components/Button';` instead of the built-in runtime import.
+
 ## Data Binding
 For form inputs, Locus provides two-way data binding with the `bind:value` directive. This creates a direct link between an input and a state variable.
 

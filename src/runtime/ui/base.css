@@ -1,0 +1,75 @@
+/* Minimalist styles for Locus built-in components, using theme variables */
+
+.locus-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-medium);
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.locus-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.locus-btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
+.locus-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.locus-btn-secondary {
+  background-color: var(--color-secondary);
+  color: var(--color-secondary-contrast);
+  border-color: var(--color-secondary);
+}
+
+.locus-btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-secondary-hover);
+}
+
+.locus-input {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.locus-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-focus-ring);
+}
+
+.locus-text-heading {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-heading);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+}
+
+.locus-text-body {
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  color: var(--color-text);
+}
+
+.locus-text-subtle {
+  font-family: var(--font-body);
+  font-size: var(--font-size-small);
+  color: var(--color-text-subtle);
+}
+
+.locus-stack {
+  /* Base styles are applied via props */
+}

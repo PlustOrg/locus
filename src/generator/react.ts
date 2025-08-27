@@ -15,22 +15,39 @@ export function generateReactPage(page: any, knownComponentNames: string[] = [],
   const actions = (page.actions || []).map((a: any) => `  function ${a.name}(${(a.params||[]).join(', ')}) {\n    ${a.body || ''}\n  }`).join('\n\n');
   const originalUi = stripUiWrapper(page.ui) || '<div />';
   const uiContent = page.uiAst ? renderUiAst(page.uiAst) : transformUi(originalUi, page.state || []);
-  // Auto-detect component usage: JSX tags starting with capital letter that are in knownComponentNames
-  const used = new Set<string>();
+  // Auto-detect component usage
+  const BUILTIN_COMPONENTS = ['Button', 'Input', 'Stack', 'Text'];
+  const usedUserComponents = new Set<string>();
+  const usedBuiltins = new Set<string>();
   const tagRegex = /<([A-Z][A-Za-z0-9_]*)\b/g;
   let m: RegExpExecArray | null;
   while ((m = tagRegex.exec(originalUi)) !== null) {
     const name = m[1];
-    if (knownComponentNames.includes(name) && name !== page.name) used.add(name);
+    if (name === page.name) continue;
+
+    if (BUILTIN_COMPONENTS.includes(name) && !knownComponentNames.includes(name)) {
+      usedBuiltins.add(name);
+    } else if (knownComponentNames.includes(name)) {
+      usedUserComponents.add(name);
+    }
   }
-  const importLines = Array.from(used).map(n => `import ${n} from '../components/${n}'`).join('\n');
+
+  const userImportLines = Array.from(usedUserComponents).map(n => `import ${n} from '../components/${n}'`).join('\n');
+
+  let runtimeImportLine = '';
+  if (usedBuiltins.size > 0) {
+    const sortedBuiltins = Array.from(usedBuiltins).sort();
+    runtimeImportLine = `import { ${sortedBuiltins.join(', ')} } from '../runtime/_locusRuntime';`;
+  }
+
   const ui = `  return (\n    ${uiContent}\n  );`;
   const end = `}\n`;
   // Ensure a consistent blank line after imports section for stable snapshots
   const parts: string[] = [];
   if (directive) parts.push(directive.trimEnd());
   parts.push(imports.trimEnd());
-  if (importLines) parts.push(importLines.trimEnd());
+  if (runtimeImportLine) parts.push(runtimeImportLine);
+  if (userImportLines) parts.push(userImportLines);
   // single blank line separator
   parts.push('');
   parts.push(compStart.trimEnd());
