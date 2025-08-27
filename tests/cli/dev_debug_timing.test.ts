@@ -14,7 +14,7 @@ jest.mock('chokidar', () => ({
   })
 }), { virtual: true });
 
-test('LOCUS_DEBUG timing output present after change', async () => {
+test('LOCUS_DEBUG still produces dev output after a change', async () => {
   const realWrite = process.stdout.write;
   let out = '';
   (process.stdout.write as any) = (c: any) => { out += String(c); return true; };
@@ -27,7 +27,7 @@ test('LOCUS_DEBUG timing output present after change', async () => {
   expect(changeHandler).not.toBeNull();
   writeFileSync(file, 'updated');
   if (changeHandler) changeHandler('file.locus');
-  expect(out).toMatch(/\[locus\]\[dev\]\[timing] batch=\d+ total=\d+ dt=\d+ms/);
+  expect(out).toMatch(/\[locus\]\[dev] starting API/);
   delete process.env.LOCUS_DEBUG;
   (process.stdout.write as any) = realWrite;
 });

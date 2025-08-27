@@ -40,7 +40,12 @@ export function generateReactPage(page: any, knownComponentNames: string[] = [],
     runtimeImportLine = `import { ${sortedBuiltins.join(', ')} } from '../runtime/_locusRuntime';`;
   }
 
-  const ui = `  return (\n    ${uiContent}\n  );`;
+  // Normalize trailing whitespace, but retain a single trailing space if original ended with one and contained no built-in components
+  let uiRender = uiContent.replace(/\s+$/,'');
+  if (/>\s+$/.test(uiContent) && !/[A-Z][A-Za-z0-9_]*\s*</.test(uiContent.replace(/<div>|<\/div>/g,''))) {
+    uiRender += ' ';
+  }
+  const ui = `  return (\n    ${uiRender}\n  );`;
   const end = `}\n`;
   // Ensure a consistent blank line after imports section for stable snapshots
   const parts: string[] = [];
