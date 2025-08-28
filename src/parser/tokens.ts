@@ -92,6 +92,8 @@ export const Branch = createToken({ name: 'Branch', pattern: /branch\b/ });
 export const ForEach = createToken({ name: 'ForEach', pattern: /forEach\b/ });
 export const SendEmail = createToken({ name: 'SendEmail', pattern: /send_email\b/ });
 export const HttpRequest = createToken({ name: 'HttpRequest', pattern: /http_request\b/ });
+export const ConstKw = createToken({ name: 'ConstKw', pattern: /const\b/ });
+export const RunKw = createToken({ name: 'RunKw', pattern: /run\b/ });
 // Style override keywords
 
 export const Unknown = createToken({ name: 'Unknown', pattern: /[\s\S]/ });
@@ -145,6 +147,8 @@ export const AllTokens = [
   ForEach,
   SendEmail,
   HttpRequest,
+  ConstKw,
+  RunKw,
   // types
   StringT,
   TextT,

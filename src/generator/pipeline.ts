@@ -33,7 +33,7 @@ const reactRuntimeStep: GeneratorStep = {
       }
 
       readAndAddFiles(runtimeDir, targetDir);
-    } catch (e) {
+  } catch {
       // If the runtime directory cannot be read (e.g., in a test with a mocked fs),
       // we silently skip this step. This prevents tests from breaking.
       // A real `locus build` would have the files present, so this is safe.
@@ -81,6 +81,28 @@ export function createContext(unified: any, options: { includeNext?: boolean; in
 
 export const builtinSteps: GeneratorStep[] = [
   reactRuntimeStep,
+  {
+    name: 'workflows-manifest',
+    run(ctx) {
+      const wfs = ctx.unified.workflows || [];
+      if (!wfs.length) return;
+      const sorted = [...wfs].sort((a: any,b: any)=>a.name.localeCompare(b.name));
+      for (const w of sorted) {
+        const manifest: any = {
+          name: w.name,
+          trigger: w.trigger?.raw?.trim() || null,
+          steps: Array.isArray(w.steps) ? (w.steps as any[]).map((s, i) => ({ index: i, raw: (s.raw||'').trim() })) : [],
+          concurrency: w.concurrency?.raw?.trim() || null,
+          onError: w.onError?.raw?.trim() || null,
+          version: 1
+        };
+        // Deterministic key ordering
+        const ordered: Record<string, any> = {};
+        for (const k of ['name','trigger','steps','concurrency','onError','version']) ordered[k] = manifest[k];
+        ctx.files[`workflows/${w.name}.json`] = JSON.stringify(ordered, null, 2) + '\n';
+      }
+    }
+  },
   {
     name: 'prisma',
     run(ctx) {

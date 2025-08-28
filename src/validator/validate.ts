@@ -20,6 +20,22 @@ export function validateUnifiedAst(ast: UnifiedAST) {
       const loc = w.nameLoc;
       throw new VError(`Workflow '${w.name}' cannot combine 'on:webhook' with entity triggers in MVP.`, (w as any).sourceFile, loc?.line, loc?.column);
     }
+    // Naive binding extraction: scan step raw strings for 'const <ident>' and ensure uniqueness
+    const seen = new Set<string>();
+    const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+    for (const s of steps) {
+      const raw = s.raw as string;
+      const m = /const\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+      let r: RegExpExecArray | null;
+      while ((r = m.exec(raw))) {
+        const name = r[1];
+        if (seen.has(name)) {
+          const loc = w.nameLoc;
+          throw new VError(`Workflow '${w.name}' redeclares binding '${name}'.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+        seen.add(name);
+      }
+    }
   }
   const ds = ast.designSystem;
   if (ds) {

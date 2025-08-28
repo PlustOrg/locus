@@ -22,21 +22,20 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Detect duplicate workflow names (merger).
 - [ ] Binding namespace reservation (deferred to step grammar phase) — will finalize in Phase 6.
 
-### Phase 4: Step Grammar (Structural Parsing)
-- [ ] Replace raw `steps` content with structured parsing for step statements (run, http_request, delay, branch, forEach).
-- [ ] Add CST rules + AST transformation.
-- [ ] Negative tests (unknown step kind, malformed branch, nested branch restricted).
+### Phase 4: Step Grammar (DONE)
+- [x] Structured parsing for step statements (run, http_request, delay, branch, forEach) with binding prefix.
+- [x] CST rules added; builder captures steps as raw slices (full structured AST deferred).
+- [x] Basic positive test (`workflow_steps.test.ts`).
+- [ ] Negative tests (malformed/nested) deferred to later hardening.
 
-### Phase 5: Expression Mini-Parser (Optional Early Slice)
-- [ ] Implement minimal expression parsing (ident, literals, property access, ==, &&, ||, parentheses).
-- [ ] Map to AST nodes with location spans.
-- [ ] Update branch condition parsing + trigger `where`.
+### Phase 5: Expression Mini-Parser (Deferred)
+- Deferred; branch conditions remain raw text.
 
-### Phase 6: Validator (Data Flow & Semantics)
-- [ ] Name resolution for const bindings, forbidding shadowing.
-- [ ] Validate referenced actions exist (reuse action registry or page/store scanning output).
-- [ ] Validate forEach iterable expression type (best-effort heuristic initially).
-- [ ] Retry strategy registry with validation.
+### Phase 6: Validator (PARTIAL DONE)
+- [x] Name resolution duplicate detection (regex-based) forbidding shadowing.
+- [ ] Action existence validation (needs action registry exposure).
+- [ ] forEach iterable heuristic (deferred until expressions parsed).
+- [ ] Retry strategy validation (retry syntax not yet parsed).
 
 ### Phase 7: Code Generation Manifest
 - [ ] Produce deterministic JSON manifest per workflow (in build output folder, e.g. `workflows/<name>.json`).
@@ -88,3 +87,6 @@ Progress Log (append entries):
 - Phase 1: Completed (tokens + grammar + basic AST placeholder + tests green)
 - Phase 2: Completed (typed workflow AST + merger integration)
 - Phase 3: Completed (basic validation; binding reservation deferred)
+- Phase 4: Completed (step grammar + tests)
+- Phase 5: Deferred
+- Phase 6: Partial (binding shadowing implemented)

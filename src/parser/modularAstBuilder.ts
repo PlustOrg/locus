@@ -10,6 +10,19 @@ import { defineHidden } from './builderUtils';
  * Keeps logic very close to legacy buildDatabaseAst but delegates to small focused modules.
  */
 export function buildAstModular(cst: CstNode, originalSource?: string, filePath?: string): LocusFileAST {
+  function extractText(node: CstNode): string {
+    if (!originalSource) return '';
+    // attempt to use first and last token offsets
+    const anyNode: any = node as any;
+    const childrenTokens: any[] = (anyNode.children && Object.values(anyNode.children).flat()) as any[];
+    let min = Infinity, max = -1;
+    for (const c of childrenTokens) {
+      if (c.startOffset != null) min = Math.min(min, c.startOffset);
+      if (c.endOffset != null) max = Math.max(max, c.endOffset);
+    }
+    if (min === Infinity || max < 0) return '';
+    return originalSource.slice(min, max + 1);
+  }
   const databases: any[] = [];
   const designSystems: any[] = [];
   const pages: any[] = [];
@@ -57,7 +70,13 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         capture(chW.triggerBlock, 'trigger');
         capture(chW.inputBlock, 'input');
         capture(chW.stateBlock, 'state');
-        capture(chW.stepsWorkflowBlock, 'steps');
+        // structured steps: iterate CST children for workflowStepStmt if present
+        const stepsArr = chW.stepsWorkflowBlock?.[0];
+        if (stepsArr) {
+          const stepChildren = (stepsArr.children.workflowStepStmt as any[]) || [];
+          (block as any).steps = stepChildren.map(st => ({ raw: extractText(st) }));
+        }
+        else capture(chW.stepsWorkflowBlock, 'steps');
         capture(chW.onErrorWorkflowBlock, 'onError');
         capture(chW.concurrencyBlock, 'concurrency');
         workflows.push(block);

@@ -68,6 +68,12 @@ import {
   OnError,
   Concurrency,
   // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
+  ConstKw,
+  RunKw,
+  Delay,
+  HttpRequest,
+  Branch,
+  ForEach,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -131,7 +137,102 @@ export class DatabaseCstParser extends CstParser {
   private stepsWorkflowBlock = this.RULE('stepsWorkflowBlock', () => {
     this.CONSUME(Steps);
     this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
+    this.CONSUME(RCurly);
+  });
+
+  private workflowStepStmt = this.RULE('workflowStepStmt', () => {
+    // const binding optional
+    this.OPTION(() => {
+      this.CONSUME(ConstKw);
+      this.CONSUME1(Identifier);
+      this.CONSUME(Equals);
+    });
+    this.SUBRULE(this.workflowSimpleStep);
+  });
+
+  private workflowSimpleStep = this.RULE('workflowSimpleStep', () => {
+    this.OR([
+      { ALT: () => this.SUBRULE(this.runStep) },
+      { ALT: () => this.SUBRULE(this.delayStep) },
+      { ALT: () => this.SUBRULE(this.branchStep) },
+      { ALT: () => this.SUBRULE(this.forEachStep) },
+      { ALT: () => this.SUBRULE(this.httpRequestStep) },
+    ]);
+  });
+
+  private runStep = this.RULE('runStep', () => {
+    this.CONSUME(RunKw);
+    this.CONSUME(Identifier); // action name
+    this.CONSUME(LParen);
+    this.OPTION(() => {
+      this.SUBRULE(this.runArg);
+      this.MANY(() => { this.CONSUME(Comma); this.SUBRULE1(this.runArg); });
+    });
+    this.CONSUME(RParen);
+  });
+
+  private runArg = this.RULE('runArg', () => {
+    // simple key: value pair or bare Identifier
+    this.CONSUME(Identifier);
+    this.OPTION(() => {
+      this.CONSUME(Colon);
+      this.SUBRULE(this.argExpr);
+    });
+  });
+
+  private argExpr = this.RULE('argExpr', () => {
+    // For MVP just accept identifiers / string / number
+    this.OR([
+      { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(NumberLiteral) },
+    ]);
+  });
+
+  private delayStep = this.RULE('delayStep', () => {
+    this.CONSUME(Delay);
+    this.CONSUME(LCurly);
     this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private httpRequestStep = this.RULE('httpRequestStep', () => {
+    this.CONSUME(HttpRequest);
+  // optional name (Identifier) without duplicating OPTION patterns later
+  this.OPTION(() => this.CONSUME(Identifier));
+    this.CONSUME(LCurly);
+  // raw inner content allowed (optional)
+  this.OPTION1(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private branchStep = this.RULE('branchStep', () => {
+    this.CONSUME(Branch);
+    this.CONSUME(LCurly);
+    // condition block
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    // optional steps {...}
+    this.MANY(() => this.SUBRULE(this.branchInner));
+    this.CONSUME(RCurly);
+  });
+
+  private branchInner = this.RULE('branchInner', () => {
+    // either steps { ... } or else { ... } using keywords already defined (Steps) and literal 'else' via Identifier fallback
+    this.OR([
+      { ALT: () => { this.CONSUME(Steps); this.CONSUME(LCurly); this.MANY(() => this.SUBRULE(this.workflowStepStmt)); this.CONSUME(RCurly); } },
+      { ALT: () => { this.CONSUME1(Identifier); /* expect 'else' */ this.CONSUME1(LCurly); this.MANY1(() => this.SUBRULE1(this.workflowStepStmt)); this.CONSUME1(RCurly); } },
+    ]);
+  });
+
+  private forEachStep = this.RULE('forEachStep', () => {
+    this.CONSUME(ForEach);
+    this.CONSUME(Identifier); // loop variable
+  // treat 'in' as generic identifier to avoid affecting UI attribute parsing
+  this.CONSUME1(Identifier); // expected literal 'in'
+    this.SUBRULE(this.argExpr); // iterable expression
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
     this.CONSUME(RCurly);
   });
 
