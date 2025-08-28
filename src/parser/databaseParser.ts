@@ -68,6 +68,8 @@ import {
   OnError,
   Concurrency,
   Retry,
+  Group,
+  Limit,
   // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
   ConstKw,
   RunKw,
@@ -480,6 +482,8 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(HasMany) },
       { ALT: () => this.CONSUME(BelongsTo) },
       { ALT: () => this.CONSUME(HasOne) },
+  { ALT: () => this.CONSUME(Group) },
+  { ALT: () => this.CONSUME(Limit) },
       { ALT: () => this.CONSUME(LParen) },
       { ALT: () => this.CONSUME(RParen) },
       { ALT: () => this.CONSUME(Colon) },

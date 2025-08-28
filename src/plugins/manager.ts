@@ -9,6 +9,7 @@ export class PluginManager {
   virtualAsts: any[] = [];
   extraArtifacts: Record<string,string> = {};
   registeredGenerators: Array<{ plugin: string; name: string; fn: (u:any)=>Record<string,string> }> = [];
+  workflowStepKinds: Record<string, { run?(step:any, execCtx:any): any; plugin: string }> = {};
   timings: Record<string, Record<string, number>> = {};
   constructor(public srcDir: string, private config?: LocusConfig) {}
 
@@ -98,6 +99,8 @@ export class PluginManager {
   async onParseStart(file: string, src: string) { await this.run('onParseStart', file, src); }
   async onFileParsed(file: string, ast: any) { await this.run('onFileParsed', file, ast); }
   async onParseComplete(asts: any[]) { await this.run('onParseComplete', asts); }
+  async onWorkflowParse(workflow: any) { await this.run('onWorkflowParse', workflow); }
+  async onWorkflowValidate(workflow: any) { await this.run('onWorkflowValidate', workflow); }
   async onValidate(unified: any) { await this.run('onValidate', unified); }
   async onBeforeGenerate(unified: any) { await this.run('onBeforeGenerate', unified); }
   async onAfterGenerate(result: { artifacts: Record<string,string>; meta: any }) { await this.run('onAfterGenerate', result); }
@@ -124,6 +127,19 @@ export class PluginManager {
         for (const [hName, ms] of Object.entries(hooks)) {
           if (ms > perfWarnMs) this.warnings.push(`[plugin ${pName}] performance: hook ${hName} ${ms}ms > ${perfWarnMs}ms`);
         }
+      }
+    }
+  }
+
+  collectWorkflowStepKinds() {
+    for (const p of this.plugins) {
+      const reg = p.registerWorkflowStepKinds?.();
+      if (!reg) continue;
+      const plugin = p.name || 'anonymous';
+      for (const ent of reg) {
+        if (!ent.kind) continue;
+        if (this.workflowStepKinds[ent.kind]) { this.warnings.push(`[plugin ${plugin}] step kind '${ent.kind}' already registered; keeping first`); continue; }
+        this.workflowStepKinds[ent.kind] = { run: ent.run, plugin };
       }
     }
   }

@@ -4,7 +4,7 @@ import { join, dirname } from 'path';
 import { findLocusFiles, pLimit, safeMkdir, safeWrite } from './utils';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
-import { validateUnifiedAst } from '../validator/validate';
+import { validateUnifiedAstWithPlugins } from '../validator/validate';
 import { BuildError, LocusError, errorToDiagnostic, Diagnostic } from '../errors';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
 import { loadConfig } from '../config/config';
@@ -103,8 +103,9 @@ export async function buildProject(opts: {
   }
   // Validate unified AST
   try {
-    await pluginMgr.onValidate(merged);
-    validateUnifiedAst(merged);
+  pluginMgr.collectWorkflowStepKinds();
+  await pluginMgr.onValidate(merged);
+  await validateUnifiedAstWithPlugins(merged, pluginMgr);
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
       const diag = errorToDiagnostic(e as any);

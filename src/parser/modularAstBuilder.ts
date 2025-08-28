@@ -186,6 +186,19 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         capture(chW.onErrorWorkflowBlock, 'onError');
   capture(chW.concurrencyBlock, 'concurrency');
   capture(chW.retryBlock, 'retry');
+        // attempt to parse retry raw into simple key-value map stored on block for validator
+        if (block.retry?.raw) {
+          const map: Record<string,string> = {};
+          block.retry.raw.split(/[\n,]/).forEach(line => {
+            const m = line.split(/:/);
+            if (m.length >= 2) {
+              const key = m[0].trim();
+              const val = m.slice(1).join(':').trim();
+              if (key) map[key] = val.replace(/[,}]$/,'').trim();
+            }
+          });
+          (block as any).retryConfig = map;
+        }
         workflows.push(block);
       }
     }

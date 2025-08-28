@@ -1,12 +1,49 @@
 import { VError } from '../errors';
 import { UnifiedAST } from '../parser/merger';
+import { PluginManager } from '../plugins/manager';
 
+// Backward-compatible synchronous validator (tests rely on sync throws)
 export function validateUnifiedAst(ast: UnifiedAST) {
+  return _coreValidate(ast);
+}
+
+// New async wrapper that invokes plugin workflow hooks then core validator.
+export async function validateUnifiedAstWithPlugins(ast: UnifiedAST, pluginMgr: PluginManager) {
+  // invoke hooks prior to validation
+  for (const w of ast.workflows || []) await pluginMgr.onWorkflowParse(w);
+  const res = _coreValidate(ast);
+  for (const w of ast.workflows || []) await pluginMgr.onWorkflowValidate(w);
+  return res;
+}
+
+function _coreValidate(ast: UnifiedAST) {
   // Basic workflow validations (Phase 3)
   for (const w of ast.workflows || []) {
     if (!w.trigger) {
       const loc = w.nameLoc;
       throw new VError(`Workflow '${w.name}' is missing required 'trigger' block.`, (w as any).sourceFile, loc?.line, loc?.column);
+    }
+    // retry strategy validation (basic)
+    if ((w as any).retryConfig) {
+      const cfg = (w as any).retryConfig as Record<string,string>;
+      const allowed = new Set(['max','backoff','factor','delay']);
+      for (const k of Object.keys(cfg)) {
+        if (!allowed.has(k)) {
+          throw new VError(`Workflow '${w.name}' retry.${k} is not supported.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        }
+      }
+      if (cfg.max) {
+        const n = Number(cfg.max.replace(/[^0-9-]/g,''));
+        if (!Number.isInteger(n) || n < 0 || n > 100) {
+          throw new VError(`Workflow '${w.name}' retry.max invalid (${cfg.max}). Expected 0..100.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        }
+      }
+      if (cfg.backoff && !/^(fixed|exponential)$/.test(cfg.backoff)) {
+        throw new VError(`Workflow '${w.name}' retry.backoff must be 'fixed' or 'exponential'.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (cfg.factor && Number(cfg.factor) <= 1 && cfg.backoff === 'exponential') {
+        throw new VError(`Workflow '${w.name}' retry.factor must be >1 for exponential backoff.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
     }
     if (!w.steps) {
       const loc = w.nameLoc;
@@ -47,7 +84,7 @@ export function validateUnifiedAst(ast: UnifiedAST) {
           throw new VError(`Workflow '${w.name}' for_each missing iterable expression.`, (w as any).sourceFile, loc?.line, loc?.column);
         }
       }
-    }
+  }
   }
   const ds = ast.designSystem;
   if (ds) {
@@ -192,3 +229,6 @@ export function validateDatabase(ast: UnifiedAST) {
     }
   }
 }
+
+// Backwards-compatible alias for tests referencing validateProject
+export const validateProject = validateUnifiedAst;

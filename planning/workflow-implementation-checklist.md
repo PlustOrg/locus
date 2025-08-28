@@ -41,7 +41,7 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Basic run step arg expr parse presence (no semantic resolution yet).
 - [x] Action presence validation (placeholder ensures action token exists).
 - [x] forEach iterable expression presence validation.
-- [ ] Retry strategy validation (retry syntax parsed; semantic rules pending).
+- [x] Retry strategy validation (max/backoff/factor/delay basic constraints).
 
 ### Phase 7: Code Generation Manifest (DONE MVP + ENRICHED)
 - [x] Deterministic JSON per workflow (`workflows/<name>.json`).
@@ -55,19 +55,23 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Lightweight in-process executor (sequential) with context & binding table.
 - [x] Implemented: run (records invocation), delay (simulated), branch (condition eval), for_each (iter array binding).
 - [x] Basic execution test (order & counts).
-- [ ] Data propagation tests (binding resolution deeper, member access).
-- [ ] Error surfacing & onError path stub.
-	- NOTE: Branch condition evaluation & for_each execution validated; need negative path tests.
+- [x] Data propagation tests (binding resolution inside branch & for_each).
+- [x] Error surfacing & onError path stub (raw on_error tokens executed as actions).
+	- NOTE: Need future negative path & member access tests.
 
-### Phase 9: Retry & Concurrency Simulation (NOT STARTED)
- - Grammar & AST capture for retry block added (raw). Transitioning to PARTIAL.
- - [ ] Retry loop (fixed + exp backoff) using simulated clock.
- - [ ] Concurrency groups: simple in-memory lock table with queue length & drop policy.
- - [ ] Tests: lock contention, retry exhaustion, backoff ordering.
+### Phase 9: Retry & Concurrency Simulation (IN PROGRESS)
+ - Grammar & AST capture + validation done.
+ - Manifest includes retry raw + structured retryConfig.
+ - [x] Runtime retry loop (fixed + exponential placeholder) with log entries.
+ - [x] Concurrency groups scaffold (drop when active >= limit) + test.
+ - [x] Tests: retry success, retry exhaustion, concurrency drop.
+ - [ ] Future: proper simulated clock + queued execution instead of drop.
 
-### Phase 10: Plugin Extension Points
-- [ ] Add hooks: `onWorkflowParse`, `onWorkflowValidate`, `registerWorkflowStep`.
-- [ ] Test registering custom step kind.
+### Phase 10: Plugin Extension Points (PARTIAL)
+- [x] Add hooks: `onWorkflowParse`, `onWorkflowValidate`, `registerWorkflowStepKinds`.
+- [x] Collect custom step kinds in plugin manager.
+- [ ] Execute custom step kinds via runtime (pending injection path).
+- [ ] Test registering & executing custom step kind.
 
 ### Phase 11: send_email + on_failure
 - [ ] Parse & AST for `send_email` step.
@@ -86,8 +90,9 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 
 ### Phase 14: Hardening & Polish
 - [ ] Improve error messages with precise spans for all new constructs.
-- [ ] Enforce deterministic ordering for manifest object keys.
+- [ ] Enforce deterministic ordering for manifest object keys (ensure new retryConfig keys sorted; verify custom steps serialization).
 - [ ] Performance baseline test for parsing N workflows.
+- [ ] Performance warnings for slow plugin workflow hooks.
 
 ### Phase 15: Future (Not in MVP)
 - [ ] State mutation (`update_state`).
@@ -107,3 +112,4 @@ Progress Log (append entries):
 - Phase 5: Partial (expression parser core implemented, not yet integrated)
 - Phase 8: Added branch condition heuristics, executor covers branch/for_each; test updated.
 - Phase 9: Introduced retryBlock grammar + AST capture + parsing test.
+- Phase 6: Added retry validation & tests.

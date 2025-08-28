@@ -103,17 +103,19 @@ export const builtinSteps: GeneratorStep[] = [
           }
           return base;
         });
-        const manifest: any = {
+  const manifest: any = {
           name: w.name,
           trigger: w.trigger?.raw?.trim() || null,
           steps: stepManif,
           concurrency: w.concurrency?.raw?.trim() || null,
+    retry: w.retry?.raw?.trim() || null,
           onError: w.onError?.raw?.trim() || null,
-          version: 1
+    retryConfig: (w as any).retryConfig || null,
+    version: 1
         };
         // Deterministic key ordering
         const ordered: Record<string, any> = {};
-  for (const k of ['name','trigger','steps','concurrency','onError','version']) ordered[k] = manifest[k];
+  for (const k of ['name','trigger','steps','concurrency','retry','retryConfig','onError','version']) ordered[k] = manifest[k];
         ctx.files[`workflows/${w.name}.json`] = JSON.stringify(ordered, null, 2) + '\n';
       }
     }
