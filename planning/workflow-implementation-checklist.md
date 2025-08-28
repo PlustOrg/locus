@@ -28,8 +28,10 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Basic positive test (`workflow_steps.test.ts`).
 - [ ] Negative tests (malformed/nested) deferred to later hardening.
 
-### Phase 5: Expression Mini-Parser (Deferred)
-- Deferred; branch conditions remain raw text.
+### Phase 5: Expression Mini-Parser (PARTIAL DONE)
+- [x] Pratt parser for identifiers, literals, member access, unary !/-, binary == != && || + - * / with precedence.
+- [x] Tests: precedence, logical chaining, member + parens.
+- [ ] Integration into workflow branch conditions (still raw; to wire in Phase 6+).
 
 ### Phase 6: Validator (PARTIAL DONE)
 - [x] Name resolution duplicate detection (regex-based) forbidding shadowing.
@@ -37,10 +39,11 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [ ] forEach iterable heuristic (deferred until expressions parsed).
 - [ ] Retry strategy validation (retry syntax not yet parsed).
 
-### Phase 7: Code Generation Manifest
-- [ ] Produce deterministic JSON manifest per workflow (in build output folder, e.g. `workflows/<name>.json`).
-- [ ] Include: name, triggers[], steps[], retry?, concurrency?, input schema (normalized), state schema.
-- [ ] Snapshot tests for manifest.
+### Phase 7: Code Generation Manifest (DONE MVP)
+- [x] Deterministic JSON per workflow (`workflows/<name>.json`).
+- [x] Included fields: name, trigger (raw), steps (raw list), concurrency, onError, version.
+- [ ] Retry, input schema, state schema deferred.
+- [x] Test added (`workflow_manifest.test.ts`).
 
 ### Phase 8: Runtime Stub
 - [ ] Add lightweight in-process executor for tests (sequential, no queue yet).
@@ -90,3 +93,5 @@ Progress Log (append entries):
 - Phase 4: Completed (step grammar + tests)
 - Phase 5: Deferred
 - Phase 6: Partial (binding shadowing implemented)
+- Phase 7: Completed (workflow manifests JSON + tests; retry/input/state deferred)
+- Phase 5: Partial (expression parser core implemented, not yet integrated)

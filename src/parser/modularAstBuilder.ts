@@ -1,5 +1,6 @@
 import { CstChildrenDictionary, CstNode } from 'chevrotain';
 import { LocusFileAST, WorkflowBlock, RawWorkflowSection } from '../ast';
+import { parseExpression } from './expr';
 import { buildDatabaseBlocks } from './builders/databaseBuilder';
 import { buildDesignSystemBlocks } from './builders/designSystemBuilder';
 import { buildFeatureBlocksLegacy } from './builders/featuresLegacy';
@@ -10,6 +11,12 @@ import { defineHidden } from './builderUtils';
  * Keeps logic very close to legacy buildDatabaseAst but delegates to small focused modules.
  */
 export function buildAstModular(cst: CstNode, originalSource?: string, filePath?: string): LocusFileAST {
+  function findFirstChildByName(node: any, name: string): CstNode | undefined {
+    if (!node || !node.children) return undefined;
+    const arr = node.children[name];
+    if (Array.isArray(arr) && arr.length) return arr[0];
+    return undefined;
+  }
   function extractText(node: CstNode): string {
     if (!originalSource) return '';
     // attempt to use first and last token offsets
@@ -74,7 +81,41 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         const stepsArr = chW.stepsWorkflowBlock?.[0];
         if (stepsArr) {
           const stepChildren = (stepsArr.children.workflowStepStmt as any[]) || [];
-          (block as any).steps = stepChildren.map(st => ({ raw: extractText(st) }));
+          (block as any).steps = stepChildren.map(st => {
+            const raw = extractText(st);
+            // Try structured extraction for run step expression (single arg only for now)
+            let runNode = findFirstChildByName(st, 'runStep');
+            if (!runNode) {
+              // search deeper one level
+              const keys = Object.keys((st as any).children || {});
+              for (const k of keys) {
+                const arr: any[] = (st as any).children[k];
+                if (Array.isArray(arr)) {
+                  for (const sub of arr) {
+                    runNode = findFirstChildByName(sub, 'runStep');
+                    if (runNode) break;
+                  }
+                }
+                if (runNode) break;
+              }
+            }
+            let runMeta: any = undefined;
+            if (runNode) {
+              const rChildren: any = runNode.children || {};
+              const actionTok = rChildren.Identifier?.[0];
+              const lparen = rChildren.LParen?.[0];
+              const rparen = rChildren.RParen?.[0];
+              if (lparen && rparen && actionTok) {
+                const inner = (originalSource || '').slice(lparen.endOffset + 1, rparen.startOffset).trim();
+                if (inner && !inner.includes(',')) {
+                  try { runMeta = { action: actionTok.image, argsRaw: inner, expr: parseExpression(inner) }; } catch { runMeta = { action: actionTok.image, argsRaw: inner }; }
+                } else {
+                  runMeta = { action: actionTok.image, argsRaw: inner };
+                }
+              }
+            }
+            return { raw, run: runMeta };
+          });
         }
         else capture(chW.stepsWorkflowBlock, 'steps');
         capture(chW.onErrorWorkflowBlock, 'onError');

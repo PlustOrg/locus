@@ -75,6 +75,12 @@ export const Param = createToken({ name: 'Param', pattern: /param\b/ });
 export const List = createToken({ name: 'List', pattern: /list\b/ });
 export const Of = createToken({ name: 'Of', pattern: /of\b/ });
 export const Equals = createToken({ name: 'Equals', pattern: /=/ });
+// Expression operators (multi-char before single char '=')
+export const EqEq = createToken({ name: 'EqEq', pattern: /==/ });
+export const NotEq = createToken({ name: 'NotEq', pattern: /!=/ });
+export const AndAnd = createToken({ name: 'AndAnd', pattern: /&&/ });
+export const OrOr = createToken({ name: 'OrOr', pattern: /\|\|/ });
+export const Bang = createToken({ name: 'Bang', pattern: /!/ });
 // Workflow / orchestration keywords (Phase 1 scaffold)
 export const Workflow = createToken({ name: 'Workflow', pattern: /workflow\b/ });
 export const Trigger = createToken({ name: 'Trigger', pattern: /trigger\b/ });
@@ -130,6 +136,11 @@ export const AllTokens = [
   Param,
   List,
   Of,
+  EqEq,
+  NotEq,
+  AndAnd,
+  OrOr,
+  Bang,
   Equals,
   Workflow,
   Trigger,

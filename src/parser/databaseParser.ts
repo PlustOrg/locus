@@ -175,16 +175,21 @@ export class DatabaseCstParser extends CstParser {
   private runArg = this.RULE('runArg', () => {
     // simple key: value pair or bare Identifier
     this.CONSUME(Identifier);
-    this.OPTION(() => {
-      this.CONSUME(Colon);
-      this.SUBRULE(this.argExpr);
-    });
+    this.OR([
+      { ALT: () => {
+        this.CONSUME(Colon);
+        this.SUBRULE(this.argExpr);
+      }},
+      { ALT: () => {
+        // treat potential dotted chain as expression continuation
+        this.MANY(() => { this.CONSUME(DotTok); this.CONSUME1(Identifier); });
+      }}
+    ]);
   });
 
   private argExpr = this.RULE('argExpr', () => {
-    // For MVP just accept identifiers / string / number
     this.OR([
-      { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => { this.CONSUME(Identifier); this.MANY(() => { this.CONSUME(DotTok); this.CONSUME1(Identifier); }); } },
       { ALT: () => this.CONSUME(StringLiteral) },
       { ALT: () => this.CONSUME(NumberLiteral) },
     ]);
@@ -210,9 +215,12 @@ export class DatabaseCstParser extends CstParser {
   private branchStep = this.RULE('branchStep', () => {
     this.CONSUME(Branch);
     this.CONSUME(LCurly);
-    // condition block
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    // optional steps {...}
+    // condition raw content (optional)
+    this.OPTION(() => {
+  // const _condStart = this.LA(1).startOffset; // reserved for expression slice
+      this.SUBRULE(this.rawContent);
+  // future: capture condition inner text & parse
+    });
     this.MANY(() => this.SUBRULE(this.branchInner));
     this.CONSUME(RCurly);
   });
