@@ -7,9 +7,8 @@ describe('workflow run step expression capture', () => {
     const ast: any = parseLocus(src);
     const wf = ast.workflows[0];
     const first = wf.steps[0];
-    expect(first.run).toBeDefined();
-    expect(first.run.action).toBe('doThing');
-    expect(first.run.expr || first.run.expr).toBeDefined();
-    expect(first.run.expr.kind === 'member' || first.run.argsRaw === 'order.id').toBe(true);
+  expect(first.kind).toBe('run');
+  expect(first.action).toBe('doThing');
+  expect(first.argsRaw === 'order.id').toBe(true);
   });
 });

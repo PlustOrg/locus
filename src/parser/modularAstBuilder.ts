@@ -1,5 +1,5 @@
 import { CstChildrenDictionary, CstNode } from 'chevrotain';
-import { LocusFileAST, WorkflowBlock, RawWorkflowSection } from '../ast';
+import { LocusFileAST, WorkflowBlock, RawWorkflowSection, WorkflowStep } from '../ast';
 import { parseExpression } from './expr';
 import { buildDatabaseBlocks } from './builders/databaseBuilder';
 import { buildDesignSystemBlocks } from './builders/designSystemBuilder';
@@ -81,45 +81,111 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         const stepsArr = chW.stepsWorkflowBlock?.[0];
         if (stepsArr) {
           const stepChildren = (stepsArr.children.workflowStepStmt as any[]) || [];
-          (block as any).steps = stepChildren.map(st => {
+          const splitArgsPreserve = (inner: string): string[] => {
+            if (!inner.trim()) return [];
+            const parts: string[] = [];
+            let buf = '';
+            let depth = 0;
+            for (let i=0;i<inner.length;i++) {
+              const ch = inner[i];
+              if (ch === '(') depth++;
+              if (ch === ')') depth = Math.max(0, depth-1);
+              if (ch === ',' && depth === 0) { parts.push(buf.trim()); buf=''; continue; }
+              buf += ch;
+            }
+            if (buf.trim()) parts.push(buf.trim());
+            return parts;
+          };
+          const buildStepsFromNodes = (nodes: any[]): WorkflowStep[] => nodes.map(st => {
             const raw = extractText(st);
-            // Try structured extraction for run step expression (single arg only for now)
             let runNode = findFirstChildByName(st, 'runStep');
-            if (!runNode) {
-              // search deeper one level
-              const keys = Object.keys((st as any).children || {});
-              for (const k of keys) {
-                const arr: any[] = (st as any).children[k];
+            let branchNode = findFirstChildByName(st, 'branchStep');
+            let forEachNode = findFirstChildByName(st, 'forEachStep');
+            let delayNode = findFirstChildByName(st, 'delayStep');
+            if (!runNode || !branchNode || !forEachNode || !delayNode) {
+              const kids = (st as any).children || {};
+              for (const arr of Object.values(kids)) {
                 if (Array.isArray(arr)) {
-                  for (const sub of arr) {
-                    runNode = findFirstChildByName(sub, 'runStep');
-                    if (runNode) break;
+                  for (const sub of arr as any[]) {
+                    if (!runNode) runNode = findFirstChildByName(sub, 'runStep');
+                    if (!branchNode) branchNode = findFirstChildByName(sub, 'branchStep');
+                    if (!forEachNode) forEachNode = findFirstChildByName(sub, 'forEachStep');
+                    if (!delayNode) delayNode = findFirstChildByName(sub, 'delayStep');
                   }
                 }
-                if (runNode) break;
               }
             }
-            let runMeta: any = undefined;
+            // RUN
             if (runNode) {
               const rChildren: any = runNode.children || {};
               const actionTok = rChildren.Identifier?.[0];
               const lparen = rChildren.LParen?.[0];
               const rparen = rChildren.RParen?.[0];
-              if (lparen && rparen && actionTok) {
-                const inner = (originalSource || '').slice(lparen.endOffset + 1, rparen.startOffset).trim();
-                if (inner && !inner.includes(',')) {
-                  try { runMeta = { action: actionTok.image, argsRaw: inner, expr: parseExpression(inner) }; } catch { runMeta = { action: actionTok.image, argsRaw: inner }; }
-                } else {
-                  runMeta = { action: actionTok.image, argsRaw: inner };
-                }
+              let args: string[] = [];
+              let inner = '';
+              if (lparen && rparen) {
+                inner = (originalSource || '').slice(lparen.endOffset + 1, rparen.startOffset).trim();
+                args = splitArgsPreserve(inner);
               }
+              let expr: any;
+              if (args.length === 1 && !/:|=/.test(args[0])) { try { expr = parseExpression(args[0]); } catch {} }
+              let binding: string | undefined;
+              const bm = /^\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(raw);
+              if (bm) binding = bm[1];
+              return { kind: 'run', raw, action: actionTok?.image, argsRaw: inner, args, expr, binding } as any;
             }
-            return { raw, run: runMeta };
+            // BRANCH
+            if (branchNode) {
+              const rawContentNode: any = (branchNode.children.rawContent || [])[0];
+              let conditionRaw: string | undefined; let conditionExpr: any;
+              if (rawContentNode) {
+                const rawTxt = extractText(rawContentNode as CstNode).trim();
+                // heuristics: allow formats like 'condition: { expr }' or 'condition: expr' or direct 'expr'
+                let exprText = rawTxt;
+                const condIdx = rawTxt.indexOf('condition:');
+                if (condIdx !== -1) {
+                  exprText = rawTxt.slice(condIdx + 'condition:'.length).trim();
+                }
+                if (exprText.startsWith('{') && exprText.endsWith('}')) {
+                  exprText = exprText.slice(1, -1).trim();
+                }
+                conditionRaw = exprText;
+                if (conditionRaw) { try { conditionExpr = parseExpression(conditionRaw); } catch {} }
+              }
+              const innerNodes: any[] = branchNode.children.branchInner || [];
+              let thenSteps: WorkflowStep[] = []; let elseSteps: WorkflowStep[] = [];
+              for (const inn of innerNodes) {
+                const stepsBlocks = inn.children.workflowStepStmt || [];
+                const idTok = inn.children.Identifier?.[0];
+                if (idTok && idTok.image === 'else') elseSteps = buildStepsFromNodes(stepsBlocks);
+                else if (stepsBlocks.length) thenSteps = buildStepsFromNodes(stepsBlocks);
+              }
+              return { kind: 'branch', raw, conditionRaw, conditionExpr, steps: thenSteps, elseSteps } as any;
+            }
+            // FOR EACH
+            if (forEachNode) {
+              const fChildren: any = forEachNode.children || {};
+              const loopVarTok = fChildren.Identifier?.[0];
+              const argExprNode = fChildren.argExpr?.[0];
+              let iterRaw = ''; let iterExpr: any;
+              if (argExprNode) { iterRaw = extractText(argExprNode).trim(); try { iterExpr = parseExpression(iterRaw); } catch {} }
+              const bodySteps = buildStepsFromNodes(fChildren.workflowStepStmt || []);
+              return { kind: 'for_each', raw, loopVar: loopVarTok?.image, iterRaw, iterExpr, steps: bodySteps } as any;
+            }
+            // DELAY
+            if (delayNode) return { kind: 'delay', raw } as any;
+            // fallback heuristic
+            const trimmed = raw.trim();
+            if (/^(?:const\s+\w+\s*=\s*)?delay\b/.test(trimmed)) return { kind: 'delay', raw } as any;
+            if (/^\s*http_request\b/.test(raw)) return { kind: 'http_request', raw } as any;
+            return { kind: 'unknown', raw } as any;
           });
+          (block as any).steps = buildStepsFromNodes(stepChildren);
         }
         else capture(chW.stepsWorkflowBlock, 'steps');
         capture(chW.onErrorWorkflowBlock, 'onError');
-        capture(chW.concurrencyBlock, 'concurrency');
+  capture(chW.concurrencyBlock, 'concurrency');
+  capture(chW.retryBlock, 'retry');
         workflows.push(block);
       }
     }

@@ -28,32 +28,42 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Basic positive test (`workflow_steps.test.ts`).
 - [ ] Negative tests (malformed/nested) deferred to later hardening.
 
-### Phase 5: Expression Mini-Parser (PARTIAL DONE)
+### Phase 5: Expression Mini-Parser (UPDATED)
 - [x] Pratt parser for identifiers, literals, member access, unary !/-, binary == != && || + - * / with precedence.
 - [x] Tests: precedence, logical chaining, member + parens.
-- [ ] Integration into workflow branch conditions (still raw; to wire in Phase 6+).
+- [x] Single-arg run() step argument expression capture (member/id) via CST offsets.
+- [x] Multi-arg run() parsing (args array + per-arg capture).
+- [x] Branch condition expression capture + parse.
+- [x] forEach iterable expression capture.
 
-### Phase 6: Validator (PARTIAL DONE)
+### Phase 6: Validator (UPDATED)
 - [x] Name resolution duplicate detection (regex-based) forbidding shadowing.
-- [ ] Action existence validation (needs action registry exposure).
-- [ ] forEach iterable heuristic (deferred until expressions parsed).
-- [ ] Retry strategy validation (retry syntax not yet parsed).
+- [x] Basic run step arg expr parse presence (no semantic resolution yet).
+- [x] Action presence validation (placeholder ensures action token exists).
+- [x] forEach iterable expression presence validation.
+- [ ] Retry strategy validation (retry syntax parsed; semantic rules pending).
 
-### Phase 7: Code Generation Manifest (DONE MVP)
+### Phase 7: Code Generation Manifest (DONE MVP + ENRICHED)
 - [x] Deterministic JSON per workflow (`workflows/<name>.json`).
 - [x] Included fields: name, trigger (raw), steps (raw list), concurrency, onError, version.
+- [x] Run step enriched with args array + single-arg expr when applicable.
+- [x] Branch step metadata (condition, branch counts), for_each metadata (loopVar, iterRaw).
 - [ ] Retry, input schema, state schema deferred.
 - [x] Test added (`workflow_manifest.test.ts`).
 
-### Phase 8: Runtime Stub
-- [ ] Add lightweight in-process executor for tests (sequential, no queue yet).
-- [ ] Execute run + delay (no real waiting; mock), branch, forEach semantics.
-- [ ] Tests verifying execution order & data propagation.
+### Phase 8: Runtime Stub (IN PROGRESS)
+- [x] Lightweight in-process executor (sequential) with context & binding table.
+- [x] Implemented: run (records invocation), delay (simulated), branch (condition eval), for_each (iter array binding).
+- [x] Basic execution test (order & counts).
+- [ ] Data propagation tests (binding resolution deeper, member access).
+- [ ] Error surfacing & onError path stub.
+	- NOTE: Branch condition evaluation & for_each execution validated; need negative path tests.
 
-### Phase 9: Retry & Concurrency Simulation
-- [ ] Implement retry loop with exponential/fixed strategies (time simulated).
-- [ ] Concurrency group locking (in-memory map) with queue & drop policies (cancel deferred).
-- [ ] Tests for edge cases.
+### Phase 9: Retry & Concurrency Simulation (NOT STARTED)
+ - Grammar & AST capture for retry block added (raw). Transitioning to PARTIAL.
+ - [ ] Retry loop (fixed + exp backoff) using simulated clock.
+ - [ ] Concurrency groups: simple in-memory lock table with queue length & drop policy.
+ - [ ] Tests: lock contention, retry exhaustion, backoff ordering.
 
 ### Phase 10: Plugin Extension Points
 - [ ] Add hooks: `onWorkflowParse`, `onWorkflowValidate`, `registerWorkflowStep`.
@@ -95,3 +105,5 @@ Progress Log (append entries):
 - Phase 6: Partial (binding shadowing implemented)
 - Phase 7: Completed (workflow manifests JSON + tests; retry/input/state deferred)
 - Phase 5: Partial (expression parser core implemented, not yet integrated)
+- Phase 8: Added branch condition heuristics, executor covers branch/for_each; test updated.
+- Phase 9: Introduced retryBlock grammar + AST capture + parsing test.

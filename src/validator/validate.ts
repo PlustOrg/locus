@@ -35,6 +35,18 @@ export function validateUnifiedAst(ast: UnifiedAST) {
         }
         seen.add(name);
       }
+      // run step action existence placeholder
+      if (s.kind === 'run' && !s.action) {
+        const loc = w.nameLoc;
+        throw new VError(`Workflow '${w.name}' has run step missing action name.`, (w as any).sourceFile, loc?.line, loc?.column);
+      }
+      // for_each iterable validation
+      if (s.kind === 'for_each') {
+        if (!s.iterRaw) {
+          const loc = w.nameLoc;
+          throw new VError(`Workflow '${w.name}' for_each missing iterable expression.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+      }
     }
   }
   const ds = ast.designSystem;

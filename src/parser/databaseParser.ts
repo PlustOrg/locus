@@ -67,6 +67,7 @@ import {
   Steps,
   OnError,
   Concurrency,
+  Retry,
   // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
   ConstKw,
   RunKw,
@@ -108,11 +109,12 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.stateBlock) }, // reuse existing
       { ALT: () => this.SUBRULE(this.stepsWorkflowBlock) },
       { ALT: () => this.SUBRULE(this.onErrorWorkflowBlock) },
-      { ALT: () => this.SUBRULE(this.concurrencyBlock) },
+  { ALT: () => this.SUBRULE(this.concurrencyBlock) },
+  { ALT: () => this.SUBRULE(this.retryBlock) },
       {
         GATE: () => {
           const t = this.LA(1).tokenType;
-          return ![Trigger, InputKw, State, Steps, OnError, Concurrency, RCurly].includes(t as any);
+          return ![Trigger, InputKw, State, Steps, OnError, Concurrency, Retry, RCurly].includes(t as any);
         },
         ALT: () => this.SUBRULE(this.rawContent)
       }
@@ -254,6 +256,14 @@ export class DatabaseCstParser extends CstParser {
   private concurrencyBlock = this.RULE('concurrencyBlock', () => {
     this.CONSUME(Concurrency);
     this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private retryBlock = this.RULE('retryBlock', () => {
+    this.CONSUME(Retry);
+    this.CONSUME(LCurly);
+    // allow key:value pairs simple raw for now (max, backoff, factor)
     this.OPTION(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);
   });

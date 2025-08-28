@@ -84,21 +84,36 @@ export const builtinSteps: GeneratorStep[] = [
   {
     name: 'workflows-manifest',
     run(ctx) {
-      const wfs = ctx.unified.workflows || [];
+  const wfs = ctx.unified.workflows || [];
       if (!wfs.length) return;
       const sorted = [...wfs].sort((a: any,b: any)=>a.name.localeCompare(b.name));
       for (const w of sorted) {
+        const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+        const stepManif = steps.map((s: any, i: number) => {
+          const base: any = { index: i, kind: s.kind, raw: (s.raw||'').trim() };
+          if (s.kind === 'run') {
+            base.action = s.action;
+            if (Array.isArray(s.args)) base.args = s.args;
+          } else if (s.kind === 'for_each') {
+            base.loopVar = s.loopVar; if (s.iterRaw) base.iter = s.iterRaw;
+          } else if (s.kind === 'branch') {
+            if (s.conditionRaw) base.condition = s.conditionRaw;
+            base.thenCount = (s.steps||[]).length;
+            base.elseCount = (s.elseSteps||[]).length;
+          }
+          return base;
+        });
         const manifest: any = {
           name: w.name,
           trigger: w.trigger?.raw?.trim() || null,
-          steps: Array.isArray(w.steps) ? (w.steps as any[]).map((s, i) => ({ index: i, raw: (s.raw||'').trim() })) : [],
+          steps: stepManif,
           concurrency: w.concurrency?.raw?.trim() || null,
           onError: w.onError?.raw?.trim() || null,
           version: 1
         };
         // Deterministic key ordering
         const ordered: Record<string, any> = {};
-        for (const k of ['name','trigger','steps','concurrency','onError','version']) ordered[k] = manifest[k];
+  for (const k of ['name','trigger','steps','concurrency','onError','version']) ordered[k] = manifest[k];
         ctx.files[`workflows/${w.name}.json`] = JSON.stringify(ordered, null, 2) + '\n';
       }
     }

@@ -100,10 +100,21 @@ export interface WorkflowBlock {
   trigger?: RawWorkflowSection; // raw until step grammar implemented
   input?: RawWorkflowSection;
   state?: RawWorkflowSection; // placeholder
-  steps?: RawWorkflowSection;
+  steps?: RawWorkflowSection | WorkflowStep[]; // structured vs raw
   onError?: RawWorkflowSection;
   concurrency?: RawWorkflowSection;
+  retry?: RawWorkflowSection;
 }
+
+// Structured workflow step (Phase 4+ incremental)
+export type WorkflowStep = RunStep | DelayStep | BranchStep | ForEachStep | HttpRequestStep | UnknownStep;
+export interface BaseStep { kind: string; raw: string; }
+export interface RunStep extends BaseStep { kind: 'run'; action: string; argsRaw?: string; args?: string[]; expr?: ExprNode }
+export interface DelayStep extends BaseStep { kind: 'delay' }
+export interface HttpRequestStep extends BaseStep { kind: 'http_request'; name?: string }
+export interface ForEachStep extends BaseStep { kind: 'for_each'; loopVar: string; iterRaw: string; }
+export interface BranchStep extends BaseStep { kind: 'branch'; conditionRaw?: string; conditionExpr?: ExprNode; steps?: WorkflowStep[]; elseSteps?: WorkflowStep[] }
+export interface UnknownStep extends BaseStep { kind: 'unknown' }
 
 export interface RawWorkflowSection {
   raw: string; // raw inner text slice for future structured parsing
