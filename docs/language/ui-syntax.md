@@ -90,7 +90,10 @@ A text input field.
 Example:
 ```locus
 page FormPage {
-  state name: string = ""
+  // State must be declared inside a state block
+  state {
+    name: String = ""
+  }
   ui {
     <Input bind:value={name} placeholder="Enter your name" />
   }
