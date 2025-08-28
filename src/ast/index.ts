@@ -6,6 +6,7 @@ export interface LocusFileAST {
   pages: PageBlock[];
   components: ComponentBlock[];
   stores: StoreBlock[];
+  workflows?: WorkflowBlock[]; // Phase 2 typed
   // optional: file this AST came from (for diagnostics)
   sourceFile?: string;
 }
@@ -90,6 +91,24 @@ export interface DesignSystemBlock {
 export interface PageBlock { type: 'page'; name: string; nameLoc?: { line: number; column: number } }
 export interface ComponentBlock { type: 'component'; name: string; nameLoc?: { line: number; column: number }; styleOverride?: string }
 export interface StoreBlock { type: 'store'; name: string; nameLoc?: { line: number; column: number } }
+
+// --- Workflow (Phase 2 minimal AST) ---
+export interface WorkflowBlock {
+  type: 'workflow';
+  name: string;
+  nameLoc?: { line: number; column: number };
+  trigger?: RawWorkflowSection; // raw until step grammar implemented
+  input?: RawWorkflowSection;
+  state?: RawWorkflowSection; // placeholder
+  steps?: RawWorkflowSection;
+  onError?: RawWorkflowSection;
+  concurrency?: RawWorkflowSection;
+}
+
+export interface RawWorkflowSection {
+  raw: string; // raw inner text slice for future structured parsing
+  loc?: { line: number; column: number };
+}
 
 export interface ProjectAST {
   files: LocusFileAST[];

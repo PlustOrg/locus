@@ -75,6 +75,23 @@ export const Param = createToken({ name: 'Param', pattern: /param\b/ });
 export const List = createToken({ name: 'List', pattern: /list\b/ });
 export const Of = createToken({ name: 'Of', pattern: /of\b/ });
 export const Equals = createToken({ name: 'Equals', pattern: /=/ });
+// Workflow / orchestration keywords (Phase 1 scaffold)
+export const Workflow = createToken({ name: 'Workflow', pattern: /workflow\b/ });
+export const Trigger = createToken({ name: 'Trigger', pattern: /trigger\b/ });
+export const InputKw = createToken({ name: 'InputKw', pattern: /input\b/ });
+export const Steps = createToken({ name: 'Steps', pattern: /steps\b/ });
+export const OnError = createToken({ name: 'OnError', pattern: /on_error\b/ });
+export const Concurrency = createToken({ name: 'Concurrency', pattern: /concurrency\b/ });
+export const Retry = createToken({ name: 'Retry', pattern: /retry\b/ });
+export const OnFailure = createToken({ name: 'OnFailure', pattern: /on_failure\b/ });
+export const Group = createToken({ name: 'Group', pattern: /group\b/ });
+export const Limit = createToken({ name: 'Limit', pattern: /limit\b/ });
+export const Policy = createToken({ name: 'Policy', pattern: /policy\b/ });
+export const Delay = createToken({ name: 'Delay', pattern: /delay\b/ });
+export const Branch = createToken({ name: 'Branch', pattern: /branch\b/ });
+export const ForEach = createToken({ name: 'ForEach', pattern: /forEach\b/ });
+export const SendEmail = createToken({ name: 'SendEmail', pattern: /send_email\b/ });
+export const HttpRequest = createToken({ name: 'HttpRequest', pattern: /http_request\b/ });
 // Style override keywords
 
 export const Unknown = createToken({ name: 'Unknown', pattern: /[\s\S]/ });
@@ -112,6 +129,22 @@ export const AllTokens = [
   List,
   Of,
   Equals,
+  Workflow,
+  Trigger,
+  InputKw,
+  Steps,
+  OnError,
+  Concurrency,
+  Retry,
+  OnFailure,
+  Group,
+  Limit,
+  Policy,
+  Delay,
+  Branch,
+  ForEach,
+  SendEmail,
+  HttpRequest,
   // types
   StringT,
   TextT,

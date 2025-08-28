@@ -1,5 +1,5 @@
 import { CstChildrenDictionary, CstNode } from 'chevrotain';
-import { LocusFileAST } from '../ast';
+import { LocusFileAST, WorkflowBlock, RawWorkflowSection } from '../ast';
 import { buildDatabaseBlocks } from './builders/databaseBuilder';
 import { buildDesignSystemBlocks } from './builders/designSystemBuilder';
 import { buildFeatureBlocksLegacy } from './builders/featuresLegacy';
@@ -15,6 +15,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
   const pages: any[] = [];
   const components: any[] = [];
   const stores: any[] = [];
+  const workflows: any[] = [];
 
   const topChildren = cst.children as CstChildrenDictionary;
   const blocks = (topChildren['topLevel'] as CstNode[]) || [];
@@ -26,13 +27,44 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
     if (dsNodes.length) designSystems.push(...buildDesignSystemBlocks(dsNodes));
     const pageNodes = (ch['pageBlock'] as CstNode[]) || [];
     const compNodes = (ch['componentBlock'] as CstNode[]) || [];
-    const storeNodes = (ch['storeBlock'] as CstNode[]) || [];
+  const storeNodes = (ch['storeBlock'] as CstNode[]) || [];
+  const workflowNodes = (ch['workflowBlock'] as CstNode[]) || [];
     if (pageNodes.length || compNodes.length || storeNodes.length) {
       const f = buildFeatureBlocksLegacy(pageNodes, compNodes, storeNodes, originalSource || '');
       pages.push(...f.pages); components.push(...f.components); stores.push(...f.stores);
     }
+    if (workflowNodes.length) {
+      for (const w of workflowNodes) {
+        const nameTok = (w.children.Identifier?.[0] as any);
+        const block: WorkflowBlock = {
+          type: 'workflow',
+          name: nameTok?.image,
+          nameLoc: nameTok ? { line: nameTok.startLine, column: nameTok.startColumn } : undefined,
+        };
+        const capture = (childArray: any[] | undefined, key: keyof WorkflowBlock) => {
+          if (!childArray || !childArray.length) return;
+          const node = childArray[0];
+          const lcurly = node.children?.LCurly?.[0];
+            const rcurly = node.children?.RCurly?.[node.children.RCurly.length - 1];
+          if (lcurly && rcurly) {
+            const start = lcurly.endOffset + 1;
+            const end = rcurly.startOffset - 1;
+            const raw = (originalSource || '').slice(start, end + 1);
+            (block as any)[key] = { raw } as RawWorkflowSection;
+          }
+        };
+        const chW = w.children as any;
+        capture(chW.triggerBlock, 'trigger');
+        capture(chW.inputBlock, 'input');
+        capture(chW.stateBlock, 'state');
+        capture(chW.stepsWorkflowBlock, 'steps');
+        capture(chW.onErrorWorkflowBlock, 'onError');
+        capture(chW.concurrencyBlock, 'concurrency');
+        workflows.push(block);
+      }
+    }
   }
-  const ast: LocusFileAST = { databases, designSystems, pages, components, stores } as any;
+  const ast: LocusFileAST = { databases, designSystems, pages, components, stores, workflows } as any;
   if (filePath) defineHidden(ast as any, 'sourceFile', filePath);
   return ast;
 }

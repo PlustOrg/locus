@@ -1,4 +1,4 @@
-import { DesignSystemBlock, Entity, LocusFileAST } from '../ast';
+import { DesignSystemBlock, Entity, LocusFileAST, WorkflowBlock } from '../ast';
 import { LocusError } from '../errors';
 
 export class MergeError extends LocusError {
@@ -13,6 +13,7 @@ export interface UnifiedAST {
   pages: any[];
   components: any[];
   stores: any[];
+  workflows: WorkflowBlock[];
 }
 
 export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
@@ -80,6 +81,17 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
     storeNames.add(s.name); stores.push(s);
   }
 
-  return { database: { entities }, designSystem, pages, components, stores };
+  // Merge workflows with duplicate detection
+  const workflows: WorkflowBlock[] = [];
+  const wfNames = new Set<string>();
+  for (const f of files) for (const w of (f.workflows || [])) {
+    if (wfNames.has(w.name)) {
+      const loc = w.nameLoc;
+      throw new MergeError(`Workflow '${w.name}' defined multiple times`, f.sourceFile, loc?.line, loc?.column);
+    }
+    wfNames.add(w.name); workflows.push(w);
+  }
+
+  return { database: { entities }, designSystem, pages, components, stores, workflows };
 }
 

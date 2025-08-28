@@ -31,6 +31,7 @@ describe('Parser: database blocks', () => {
       pages: [],
       components: [],
       stores: [],
+  workflows: [],
     };
     expect(ast).toEqual(expected);
   });

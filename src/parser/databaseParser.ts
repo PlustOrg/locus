@@ -60,6 +60,14 @@ import {
   StyleKw,
   OverrideKw,
   HexColor,
+  // workflow tokens
+  Workflow,
+  Trigger,
+  InputKw,
+  Steps,
+  OnError,
+  Concurrency,
+  // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -79,7 +87,66 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.pageBlock) },
       { ALT: () => this.SUBRULE(this.componentBlock) },
       { ALT: () => this.SUBRULE(this.storeBlock) },
+      { ALT: () => this.SUBRULE(this.workflowBlock) },
     ]);
+  });
+
+  // --- Workflow scaffold (Phase 1) ---
+  private workflowBlock = this.RULE('workflowBlock', () => {
+    this.CONSUME(Workflow);
+    this.CONSUME(Identifier);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.SUBRULE(this.triggerBlock) },
+      { ALT: () => this.SUBRULE(this.inputBlock) },
+      { ALT: () => this.SUBRULE(this.stateBlock) }, // reuse existing
+      { ALT: () => this.SUBRULE(this.stepsWorkflowBlock) },
+      { ALT: () => this.SUBRULE(this.onErrorWorkflowBlock) },
+      { ALT: () => this.SUBRULE(this.concurrencyBlock) },
+      {
+        GATE: () => {
+          const t = this.LA(1).tokenType;
+          return ![Trigger, InputKw, State, Steps, OnError, Concurrency, RCurly].includes(t as any);
+        },
+        ALT: () => this.SUBRULE(this.rawContent)
+      }
+    ]));
+    this.CONSUME(RCurly);
+  });
+
+  private triggerBlock = this.RULE('triggerBlock', () => {
+    this.CONSUME(Trigger);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private inputBlock = this.RULE('inputBlock', () => {
+    this.CONSUME(InputKw);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private stepsWorkflowBlock = this.RULE('stepsWorkflowBlock', () => {
+    this.CONSUME(Steps);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private onErrorWorkflowBlock = this.RULE('onErrorWorkflowBlock', () => {
+    this.CONSUME(OnError);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private concurrencyBlock = this.RULE('concurrencyBlock', () => {
+    this.CONSUME(Concurrency);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
   });
 
   private pageBlock = this.RULE('pageBlock', () => {

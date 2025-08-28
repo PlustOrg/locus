@@ -2,6 +2,25 @@ import { VError } from '../errors';
 import { UnifiedAST } from '../parser/merger';
 
 export function validateUnifiedAst(ast: UnifiedAST) {
+  // Basic workflow validations (Phase 3)
+  for (const w of ast.workflows || []) {
+    if (!w.trigger) {
+      const loc = w.nameLoc;
+      throw new VError(`Workflow '${w.name}' is missing required 'trigger' block.`, (w as any).sourceFile, loc?.line, loc?.column);
+    }
+    if (!w.steps) {
+      const loc = w.nameLoc;
+      throw new VError(`Workflow '${w.name}' is missing required 'steps' block.`, (w as any).sourceFile, loc?.line, loc?.column);
+    }
+    // Incompatible trigger combos placeholder: detect both 'on:webhook' and entity event markers simultaneously (simple textual scan for now)
+    const trig = w.trigger.raw;
+    const hasWebhook = /on:webhook/.test(trig);
+    const hasEntity = /on:(create|update|delete)\(/.test(trig);
+    if (hasWebhook && hasEntity) {
+      const loc = w.nameLoc;
+      throw new VError(`Workflow '${w.name}' cannot combine 'on:webhook' with entity triggers in MVP.`, (w as any).sourceFile, loc?.line, loc?.column);
+    }
+  }
   const ds = ast.designSystem;
   if (ds) {
     const sourceFile = (ds as any).sourceFile;
