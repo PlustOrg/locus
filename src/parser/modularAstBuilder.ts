@@ -77,6 +77,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         capture(chW.triggerBlock, 'trigger');
         capture(chW.inputBlock, 'input');
         capture(chW.stateBlock, 'state');
+    capture(chW.onFailureWorkflowBlock, 'onFailure');
         // structured steps: iterate CST children for workflowStepStmt if present
         const stepsArr = chW.stepsWorkflowBlock?.[0];
         if (stepsArr) {
@@ -102,7 +103,8 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             let branchNode = findFirstChildByName(st, 'branchStep');
             let forEachNode = findFirstChildByName(st, 'forEachStep');
             let delayNode = findFirstChildByName(st, 'delayStep');
-            if (!runNode || !branchNode || !forEachNode || !delayNode) {
+            let sendEmailNode = findFirstChildByName(st, 'sendEmailStep');
+            if (!runNode || !branchNode || !forEachNode || !delayNode || !sendEmailNode) {
               const kids = (st as any).children || {};
               for (const arr of Object.values(kids)) {
                 if (Array.isArray(arr)) {
@@ -111,6 +113,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
                     if (!branchNode) branchNode = findFirstChildByName(sub, 'branchStep');
                     if (!forEachNode) forEachNode = findFirstChildByName(sub, 'forEachStep');
                     if (!delayNode) delayNode = findFirstChildByName(sub, 'delayStep');
+                    if (!sendEmailNode) sendEmailNode = findFirstChildByName(sub, 'sendEmailStep');
                   }
                 }
               }
@@ -174,10 +177,32 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             }
             // DELAY
             if (delayNode) return { kind: 'delay', raw } as any;
+            // SEND EMAIL (structured block) - capture raw section between braces (already in raw)
+            if (sendEmailNode) {
+              // attempt field extraction from inner content between braces using offsets
+              let inner = raw;
+              try {
+                const sc: any = sendEmailNode.children?.LCurly?.[0];
+                const ecArr: any[] = sendEmailNode.children?.RCurly || [];
+                const ec: any = ecArr[ecArr.length - 1];
+                if (sc && ec && originalSource) {
+                  inner = originalSource.slice(sc.endOffset + 1, ec.startOffset).trim();
+                }
+              } catch {}
+              const grab = (key: string) => {
+                const m = new RegExp(key + "\\s*(?::)?\\s*([^,}\\n]+)").exec(inner);
+                return m?.[1]?.trim();
+              };
+              const to = grab('to');
+              const subject = grab('subject');
+              const template = grab('template');
+              return { kind: 'send_email', raw, to, subject, template } as any;
+            }
             // fallback heuristic
             const trimmed = raw.trim();
             if (/^(?:const\s+\w+\s*=\s*)?delay\b/.test(trimmed)) return { kind: 'delay', raw } as any;
             if (/^\s*http_request\b/.test(raw)) return { kind: 'http_request', raw } as any;
+            // legacy heuristic fallback retains for free-form steps (kept for unknown kinds)
             return { kind: 'unknown', raw } as any;
           });
           (block as any).steps = buildStepsFromNodes(stepChildren);

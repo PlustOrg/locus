@@ -29,7 +29,7 @@ export function evaluateExpr(expr: ExprNode | undefined, ctx: WorkflowContext): 
   return undefined;
 }
 
-export interface ExecuteOptions { inputs?: Record<string,any>; actions?: Record<string, (...args:any[])=>any>; }
+export interface ExecuteOptions { inputs?: Record<string,any>; actions?: Record<string, (...args:any[])=>any>; pluginManager?: PluginManager }
 
 export const globalConcurrency: Record<string,{ limit:number; active:number }> = {};
 
@@ -61,7 +61,7 @@ export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {})
     return ctx.log;
   }
   try {
-    runWorkflowSteps(block, steps, ctx);
+    runWorkflowSteps(block, steps, ctx, opts.pluginManager);
   } catch (e: any) {
     ctx.log.push({ kind: 'error', detail: { message: e.message } });
     // naive onError execution: interpret raw onError block as pseudo steps separated by newlines containing 'run <action>'
@@ -80,12 +80,22 @@ export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {})
         }
       }
     }
+    else if (block.onFailure?.raw) {
+      // minimal onFailure: treat raw as whitespace-separated action names
+      const tokens = block.onFailure.raw.split(/\s+/).map(t=>t.trim()).filter(Boolean);
+      for (const tk of tokens) {
+        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(tk)) {
+          const fn = ctx.actions?.[tk];
+          let result: any; try { result = fn ? fn() : undefined; } catch {}
+          ctx.log.push({ kind: 'run', detail: { action: tk, args: [], result, onFailure: true } });
+        }
+      }
+    }
   }
   return ctx.log;
 }
 
-function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: WorkflowContext) {
-  const pm: PluginManager | undefined = undefined; // plugin manager injection deferred
+function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: WorkflowContext, pm?: PluginManager) {
   for (const step of steps) {
     // plugin custom kind
     if (pm) {
@@ -98,19 +108,19 @@ function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: Work
         }
       }
     }
-    runStepWithRetry(step, ctx, (block as any).retryConfig);
+  runStepWithRetry(step, ctx, (block as any).retryConfig, pm);
   }
 }
 
-function runStepWithRetry(step: WorkflowStep, ctx: WorkflowContext, retryCfg: any) {
-  if (!retryCfg) return runStep(step, ctx);
+function runStepWithRetry(step: WorkflowStep, ctx: WorkflowContext, retryCfg: any, pm?: PluginManager) {
+  if (!retryCfg) return runStep(step, ctx, pm);
   const max = retryCfg.max != null ? Number(retryCfg.max) : 0;
   const backoff = retryCfg.backoff === 'exponential' ? 'exponential' : 'fixed';
   const factor = retryCfg.factor ? Number(retryCfg.factor) : 2;
   let attempt = 0;
   while (true) {
     try {
-      runStep(step, ctx);
+    runStep(step, ctx, pm);
       if (attempt>0) ctx.log.push({ kind: 'retry_success', detail: { attempts: attempt+1 } });
       return;
     } catch (e:any) {
@@ -122,7 +132,7 @@ function runStepWithRetry(step: WorkflowStep, ctx: WorkflowContext, retryCfg: an
   }
 }
 
-function runStep(step: WorkflowStep, ctx: WorkflowContext) {
+function runStep(step: WorkflowStep, ctx: WorkflowContext, pm?: PluginManager) {
   switch (step.kind) {
     case 'run': {
       const run: any = step as any;
@@ -163,8 +173,13 @@ function runStep(step: WorkflowStep, ctx: WorkflowContext) {
       ctx.log.push({ kind: 'for_each', detail: { count: iterable.length } });
       for (const item of iterable) {
         ctx.bindings[fe.loopVar] = item;
-        for (const s of fe.steps || []) runStep(s as any, ctx);
+        for (const s of fe.steps || []) runStep(s as any, ctx, pm);
       }
+      break;
+    }
+    case 'send_email': {
+      const se: any = step as any;
+      ctx.log.push({ kind: 'send_email', detail: { to: se.to, subject: se.subject, template: se.template } });
       break;
     }
     default: ctx.log.push({ kind: step.kind });

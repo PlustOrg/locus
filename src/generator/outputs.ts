@@ -92,12 +92,16 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
       const manifest = {
         name: w.name,
         trigger: w.trigger?.raw?.trim() || null,
-        steps: stepsArr.map((s, idx) => ({ index: idx, raw: (s.raw || '').trim() })),
+        triggerMeta: (w as any).triggerMeta || null,
+        steps: stepsArr.map((s, idx) => ({ index: idx, kind: s.kind, raw: (s.raw || '').trim() })),
         concurrency: w.concurrency?.raw?.trim() || null,
+        retry: w.retry?.raw?.trim() || null,
+        retryConfig: (w as any).retryConfig || null,
         onError: w.onError?.raw?.trim() || null,
+        onFailure: w.onFailure?.raw?.trim() || null,
         version: 1,
       } as const;
-      const orderedKeys = ['name','trigger','steps','concurrency','onError','version'];
+      const orderedKeys = ['name','trigger','triggerMeta','steps','concurrency','retry','retryConfig','onError','onFailure','version'];
       const ordered: any = {};
       for (const k of orderedKeys) ordered[k] = (manifest as any)[k];
       files[`workflows/${w.name}.json`] = JSON.stringify(ordered, null, 2) + '\n';

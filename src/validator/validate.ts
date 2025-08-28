@@ -57,6 +57,11 @@ function _coreValidate(ast: UnifiedAST) {
       const loc = w.nameLoc;
       throw new VError(`Workflow '${w.name}' cannot combine 'on:webhook' with entity triggers in MVP.`, (w as any).sourceFile, loc?.line, loc?.column);
     }
+    if (hasWebhook) {
+      // simple secret detection pattern: secret:<IDENT>
+      const m = /secret\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/.exec(trig);
+      (w as any).triggerMeta = { type: 'webhook', secretRef: m?.[1] };
+    }
     // Naive binding extraction: scan step raw strings for 'const <ident>' and ensure uniqueness
     const seen = new Set<string>();
     const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
@@ -82,6 +87,21 @@ function _coreValidate(ast: UnifiedAST) {
         if (!s.iterRaw) {
           const loc = w.nameLoc;
           throw new VError(`Workflow '${w.name}' for_each missing iterable expression.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+      }
+      if (s.kind === 'send_email') {
+        const se: any = s;
+        // fallback extraction if builder missed structured fields
+        const raw = se.raw || '';
+  if (!se.to) se.to = /to\s*(?::)?\s*([^\s}]+)/.exec(raw)?.[1];
+  if (!se.to) se.to = /to[^A-Za-z0-9]{1,10}([A-Za-z0-9_@.]+)/.exec(raw)?.[1];
+        if (!se.subject) se.subject = /subject\s*(?::|)\s*([^,}\n]+)/.exec(raw)?.[1]?.trim();
+        if (!se.template) se.template = /template\s*(?::|)\s*([^,}\n]+)/.exec(raw)?.[1]?.trim();
+        if (!se.to) {
+          const loc = w.nameLoc; throw new VError(`Workflow '${w.name}' send_email missing 'to'.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+        if (!se.subject && !se.template) {
+          const loc = w.nameLoc; throw new VError(`Workflow '${w.name}' send_email requires 'subject' or 'template'.`, (w as any).sourceFile, loc?.line, loc?.column);
         }
       }
   }

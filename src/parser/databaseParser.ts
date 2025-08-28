@@ -68,6 +68,7 @@ import {
   OnError,
   Concurrency,
   Retry,
+  OnFailure,
   Group,
   Limit,
   // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
@@ -77,6 +78,7 @@ import {
   HttpRequest,
   Branch,
   ForEach,
+  SendEmail,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -110,13 +112,14 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.inputBlock) },
       { ALT: () => this.SUBRULE(this.stateBlock) }, // reuse existing
       { ALT: () => this.SUBRULE(this.stepsWorkflowBlock) },
-      { ALT: () => this.SUBRULE(this.onErrorWorkflowBlock) },
+  { ALT: () => this.SUBRULE(this.onErrorWorkflowBlock) },
+  { ALT: () => this.SUBRULE(this.onFailureWorkflowBlock) },
   { ALT: () => this.SUBRULE(this.concurrencyBlock) },
   { ALT: () => this.SUBRULE(this.retryBlock) },
       {
         GATE: () => {
           const t = this.LA(1).tokenType;
-          return ![Trigger, InputKw, State, Steps, OnError, Concurrency, Retry, RCurly].includes(t as any);
+          return ![Trigger, InputKw, State, Steps, OnError, OnFailure, Concurrency, Retry, RCurly].includes(t as any);
         },
         ALT: () => this.SUBRULE(this.rawContent)
       }
@@ -162,6 +165,7 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.branchStep) },
       { ALT: () => this.SUBRULE(this.forEachStep) },
       { ALT: () => this.SUBRULE(this.httpRequestStep) },
+  { ALT: () => this.SUBRULE(this.sendEmailStep) },
     ]);
   });
 
@@ -216,6 +220,13 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(RCurly);
   });
 
+  private sendEmailStep = this.RULE('sendEmailStep', () => {
+    this.CONSUME(SendEmail);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
   private branchStep = this.RULE('branchStep', () => {
     this.CONSUME(Branch);
     this.CONSUME(LCurly);
@@ -250,6 +261,13 @@ export class DatabaseCstParser extends CstParser {
 
   private onErrorWorkflowBlock = this.RULE('onErrorWorkflowBlock', () => {
     this.CONSUME(OnError);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private onFailureWorkflowBlock = this.RULE('onFailureWorkflowBlock', () => {
+    this.CONSUME(OnFailure);
     this.CONSUME(LCurly);
     this.OPTION(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);

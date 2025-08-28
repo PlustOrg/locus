@@ -70,19 +70,27 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 ### Phase 10: Plugin Extension Points (PARTIAL)
 - [x] Add hooks: `onWorkflowParse`, `onWorkflowValidate`, `registerWorkflowStepKinds`.
 - [x] Collect custom step kinds in plugin manager.
-- [ ] Execute custom step kinds via runtime (pending injection path).
-- [ ] Test registering & executing custom step kind.
+- [x] Runtime supports executing custom step kinds (injected `pluginManager` into `executeWorkflow`).
+- [ ] CLI/runtime integration wiring (passing plugin manager automatically) (optional for MVP).
+- [ ] Tests: registering & executing custom step kind (manifest + execution log).
 
-### Phase 11: send_email + on_failure
-- [ ] Parse & AST for `send_email` step.
-- [ ] Validation of required fields (to, subject OR template minimal, etc.).
-- [ ] Include in manifest.
-- [ ] Support on_failure mini step list (subset of step kinds).
+### Phase 11: send_email + on_failure (PARTIAL)
+- [x] Parse & AST for `send_email` step (grammar + modularAstBuilder extraction).
+- [x] Validation of required fields (`to` plus `subject` or `template`).
+- [x] Include in manifest (kind surfaced per-step, send_email fields kept only in raw for now).
+- [x] Support `on_failure` block (executed when error and no `on_error`).
+- [x] Tests: parsing & manifest snapshot for send_email (runtime-focused parse/validate test added).
+- [x] Tests: validation errors (missing to / both subject+template absent).
+- [x] Tests: runtime on_failure path triggers when no on_error.
+- [ ] Future: structured field serialization (to/subject/template) in manifest.
 
-### Phase 12: Webhook Trigger
-- [ ] Add webhook trigger AST shape.
-- [ ] Generate route definition stub (manifest entry) with secret key.
-- [ ] Validation for unsupported combos.
+### Phase 12: Webhook Trigger (PARTIAL)
+- [x] Basic detection of `on:webhook` in trigger raw with secret extraction (`secret:NAME`).
+- [x] Validation preventing combination with entity triggers (already in validator).
+- [x] Manifest includes `triggerMeta` with `{ type: 'webhook', secretRef }`.
+- [ ] Generate route definition stub (express/manifest artifact) with secret key.
+- [x] Tests: triggerMeta extraction (covered in send_email test).
+- [ ] Test: invalid combo scenario (webhook + entity event) expected validation error.
 
 ### Phase 13: Documentation & Examples
 - [ ] Add docs section referencing implemented subset (mark future features clearly).
