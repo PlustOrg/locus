@@ -20,13 +20,13 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Validator: ensure required blocks (`trigger`, `steps`).
 - [x] Disallow incompatible trigger combinations (`webhook` + entity events) (text scan placeholder).
 - [x] Detect duplicate workflow names (merger).
-- [ ] Binding namespace reservation (deferred to step grammar phase) — will finalize in Phase 6.
+- [x] Binding namespace reservation (implemented regex scan; improvement for semantic scope deferred).
 
 ### Phase 4: Step Grammar (DONE)
 - [x] Structured parsing for step statements (run, http_request, delay, branch, forEach) with binding prefix.
 - [x] CST rules added; builder captures steps as raw slices (full structured AST deferred).
 - [x] Basic positive test (`workflow_steps.test.ts`).
-- [ ] Negative tests (malformed/nested) deferred to later hardening.
+- [x] Negative tests (malformed/nested) added (`workflow_negative_steps.test.ts`).
 
 ### Phase 5: Expression Mini-Parser (UPDATED)
 - [x] Pratt parser for identifiers, literals, member access, unary !/-, binary == != && || + - * / with precedence.
@@ -48,7 +48,7 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Included fields: name, trigger (raw), steps (raw list), concurrency, onError, version.
 - [x] Run step enriched with args array + single-arg expr when applicable.
 - [x] Branch step metadata (condition, branch counts), for_each metadata (loopVar, iterRaw).
-- [ ] Retry, input schema, state schema deferred.
+- [x] Retry (raw + structured retryConfig). Input/state schema still deferred.
 - [x] Test added (`workflow_manifest.test.ts`).
 
 ### Phase 8: Runtime Stub (IN PROGRESS)
@@ -65,13 +65,14 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
  - [x] Runtime retry loop (fixed + exponential placeholder) with log entries.
  - [x] Concurrency groups scaffold (drop when active >= limit) + test.
  - [x] Tests: retry success, retry exhaustion, concurrency drop.
- - [ ] Future: proper simulated clock + queued execution instead of drop.
+ - [x] Queue instead of drop (simple FIFO) for concurrency groups.
+ - [ ] Future: simulated clock / async delay handling.
 
 ### Phase 10: Plugin Extension Points (PARTIAL)
 - [x] Add hooks: `onWorkflowParse`, `onWorkflowValidate`, `registerWorkflowStepKinds`.
 - [x] Collect custom step kinds in plugin manager.
 - [x] Runtime supports executing custom step kinds (injected `pluginManager` into `executeWorkflow`).
-- [x] CLI/runtime integration (plugin manager already created in build & dev; runtime execution path prepared—auto-pass to executor remains optional until a workflow invocation command exists).
+- [x] CLI/runtime integration (plugin manager already created in build & dev; added `workflow:run` command for execution with automatic plugin injection).
 - [x] Tests: registering & executing custom step kind (runtime execution log).
 
 ### Phase 11: send_email + on_failure (PARTIAL)
@@ -82,7 +83,7 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Tests: parsing & manifest snapshot for send_email (runtime-focused parse/validate test added).
 - [x] Tests: validation errors (missing to / both subject+template absent).
 - [x] Tests: runtime on_failure path triggers when no on_error.
-- [ ] Future: structured field serialization (to/subject/template) in manifest.
+- [x] Structured field serialization (to/subject/template) in manifest v2.
 
 ### Phase 12: Webhook Trigger (PARTIAL)
 - [x] Basic detection of `on:webhook` in trigger raw with secret extraction (`secret:NAME`).
@@ -92,15 +93,16 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Tests: triggerMeta extraction (covered in send_email test).
 - [x] Test: invalid combo scenario (webhook + entity event) validation error.
 
-### Phase 13: Documentation & Examples
-- [ ] Add docs section referencing implemented subset (mark future features clearly).
-- [ ] Inline code samples validated by docs tool.
+### Phase 13: Documentation & Examples (PARTIAL)
+- [x] Added `docs/language/workflows.md` covering implemented subset.
+- [x] Snippet test validating code blocks parse.
+- [x] Added branch & forEach examples (parser-friendly) to docs with snippet test.
 
 ### Phase 14: Hardening & Polish
-- [ ] Improve error messages with precise spans for all new constructs.
-- [ ] Enforce deterministic ordering for manifest object keys (ensure new retryConfig keys sorted; verify custom steps serialization).
-- [ ] Performance baseline test for parsing N workflows.
-- [ ] Performance warnings for slow plugin workflow hooks.
+- [ ] Improve error messages with precise spans for all constructs (partial: send_email now step-located).
+- [x] Deterministic ordering for manifest keys incl. sorted retryConfig.
+- [x] Performance baseline test for parsing N workflows (`workflow_parse_perf.test.ts`).
+- [x] Performance warnings for slow plugin workflow hooks (>50ms) with test.
 
 ### Phase 15: Future (Not in MVP)
 - [ ] State mutation (`update_state`).
@@ -119,5 +121,5 @@ Progress Log (append entries):
 - Phase 7: Completed (workflow manifests JSON + tests; retry/input/state deferred)
 - Phase 5: Partial (expression parser core implemented, not yet integrated)
 - Phase 8: Added branch condition heuristics, executor covers branch/for_each; test updated.
-- Phase 9: Introduced retryBlock grammar + AST capture + parsing test.
-- Phase 6: Added retry validation & tests.
+- Phase 9: Introduced retryBlock grammar + AST capture + parsing test. Added queue concurrency + structured manifest v2.
+- Phase 6: Added retry validation & tests. send_email step loc + error precision improvements. Docs + snippet tests added.

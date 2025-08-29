@@ -91,6 +91,7 @@ export class PluginManager {
         } finally {
           const dur = Date.now() - start;
           (this.timings[name] ||= {})[String(hook)] = dur;
+          if (dur > 50) this.warnings.push(`[plugin ${name}] slow ${String(hook)} ${dur}ms >50ms`);
         }
       }
     }

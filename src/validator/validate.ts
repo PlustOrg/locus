@@ -64,6 +64,14 @@ function _coreValidate(ast: UnifiedAST) {
     }
     // Naive binding extraction: scan step raw strings for 'const <ident>' and ensure uniqueness
     const seen = new Set<string>();
+    // Reserve names from inputs/state blocks (raw textual scan placeholder)
+    const reserved = new Set<string>();
+    if (w.input?.raw) {
+      const im = /([A-Za-z_][A-Za-z0-9_]*)/g; let r:RegExpExecArray|null; while((r=im.exec(w.input.raw))) reserved.add(r[1]);
+    }
+    if (w.state?.raw) {
+      const sm = /([A-Za-z_][A-Za-z0-9_]*)/g; let r:RegExpExecArray|null; while((r=sm.exec(w.state.raw))) reserved.add(r[1]);
+    }
     const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
     for (const s of steps) {
       const raw = s.raw as string;
@@ -71,6 +79,10 @@ function _coreValidate(ast: UnifiedAST) {
       let r: RegExpExecArray | null;
       while ((r = m.exec(raw))) {
         const name = r[1];
+        if (reserved.has(name)) {
+          const loc = w.nameLoc;
+          throw new VError(`Workflow '${w.name}' binding '${name}' shadows reserved input/state name.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
         if (seen.has(name)) {
           const loc = w.nameLoc;
           throw new VError(`Workflow '${w.name}' redeclares binding '${name}'.`, (w as any).sourceFile, loc?.line, loc?.column);
@@ -98,10 +110,10 @@ function _coreValidate(ast: UnifiedAST) {
         if (!se.subject) se.subject = /subject\s*(?::|)\s*([^,}\n]+)/.exec(raw)?.[1]?.trim();
         if (!se.template) se.template = /template\s*(?::|)\s*([^,}\n]+)/.exec(raw)?.[1]?.trim();
         if (!se.to) {
-          const loc = w.nameLoc; throw new VError(`Workflow '${w.name}' send_email missing 'to'.`, (w as any).sourceFile, loc?.line, loc?.column);
+          const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email missing 'to'.`, (w as any).sourceFile, loc?.line, loc?.column);
         }
         if (!se.subject && !se.template) {
-          const loc = w.nameLoc; throw new VError(`Workflow '${w.name}' send_email requires 'subject' or 'template'.`, (w as any).sourceFile, loc?.line, loc?.column);
+          const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email requires 'subject' or 'template'.`, (w as any).sourceFile, loc?.line, loc?.column);
         }
       }
   }

@@ -103,13 +103,20 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
         name: w.name,
         trigger: w.trigger?.raw?.trim() || null,
         triggerMeta: (w as any).triggerMeta || null,
-        steps: stepsArr.map((s, idx) => ({ index: idx, kind: s.kind, raw: (s.raw || '').trim() })),
+        steps: stepsArr.map((s, idx) => {
+          const base: any = { index: idx, kind: s.kind, raw: (s.raw || '').trim() };
+          if (s.kind === 'run') { base.action = (s as any).action; base.args = (s as any).args || []; }
+          if (s.kind === 'for_each') { base.loopVar = (s as any).loopVar; base.iterRaw = (s as any).iterRaw; }
+          if (s.kind === 'branch') { base.condition = (s as any).conditionRaw; base.thenCount = ((s as any).steps||[]).length; base.elseCount = ((s as any).elseSteps||[]).length; }
+          if (s.kind === 'send_email') { base.email = { to: (s as any).to || null, subject: (s as any).subject || null, template: (s as any).template || null }; }
+          return base;
+        }),
         concurrency: w.concurrency?.raw?.trim() || null,
         retry: w.retry?.raw?.trim() || null,
-        retryConfig: (w as any).retryConfig || null,
+        retryConfig: (() => { const rc = (w as any).retryConfig; if (!rc) return null; const ordered: any = {}; Object.keys(rc).sort().forEach(k=>ordered[k]=rc[k]); return ordered; })(),
         onError: w.onError?.raw?.trim() || null,
         onFailure: w.onFailure?.raw?.trim() || null,
-        version: 1,
+        version: 2,
       } as const;
       const orderedKeys = ['name','trigger','triggerMeta','steps','concurrency','retry','retryConfig','onError','onFailure','version'];
       const ordered: any = {};

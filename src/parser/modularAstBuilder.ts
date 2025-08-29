@@ -135,7 +135,8 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               let binding: string | undefined;
               const bm = /^\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(raw);
               if (bm) binding = bm[1];
-              return { kind: 'run', raw, action: actionTok?.image, argsRaw: inner, args, expr, binding } as any;
+              const loc = actionTok ? { line: actionTok.startLine, column: actionTok.startColumn } : undefined;
+              return { kind: 'run', raw, action: actionTok?.image, argsRaw: inner, args, expr, binding, loc } as any;
             }
             // BRANCH
             if (branchNode) {
@@ -163,7 +164,10 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
                 if (idTok && idTok.image === 'else') elseSteps = buildStepsFromNodes(stepsBlocks);
                 else if (stepsBlocks.length) thenSteps = buildStepsFromNodes(stepsBlocks);
               }
-              return { kind: 'branch', raw, conditionRaw, conditionExpr, steps: thenSteps, elseSteps } as any;
+              // use first token inside branchNode (it should start with Branch token)
+              const brTok: any = (branchNode as any).children?.Branch?.[0];
+              const loc = brTok ? { line: brTok.startLine, column: brTok.startColumn } : undefined;
+              return { kind: 'branch', raw, conditionRaw, conditionExpr, steps: thenSteps, elseSteps, loc } as any;
             }
             // FOR EACH
             if (forEachNode) {
@@ -173,10 +177,16 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               let iterRaw = ''; let iterExpr: any;
               if (argExprNode) { iterRaw = extractText(argExprNode).trim(); try { iterExpr = parseExpression(iterRaw); } catch {} }
               const bodySteps = buildStepsFromNodes(fChildren.workflowStepStmt || []);
-              return { kind: 'for_each', raw, loopVar: loopVarTok?.image, iterRaw, iterExpr, steps: bodySteps } as any;
+              const feTok: any = (forEachNode as any).children?.ForEach?.[0];
+              const loc = feTok ? { line: feTok.startLine, column: feTok.startColumn } : undefined;
+              return { kind: 'for_each', raw, loopVar: loopVarTok?.image, iterRaw, iterExpr, steps: bodySteps, loc } as any;
             }
             // DELAY
-            if (delayNode) return { kind: 'delay', raw } as any;
+            if (delayNode) {
+              const dTok: any = (delayNode as any).children?.Delay?.[0];
+              const loc = dTok ? { line: dTok.startLine, column: dTok.startColumn } : undefined;
+              return { kind: 'delay', raw, loc } as any;
+            }
             // SEND EMAIL (structured block) - capture raw section between braces (already in raw)
             if (sendEmailNode) {
               // attempt field extraction from inner content between braces using offsets
@@ -196,14 +206,20 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               const to = grab('to');
               const subject = grab('subject');
               const template = grab('template');
-              return { kind: 'send_email', raw, to, subject, template } as any;
+              const seTok: any = (sendEmailNode as any).children?.SendEmail?.[0];
+              const loc = seTok ? { line: seTok.startLine, column: seTok.startColumn } : undefined;
+              return { kind: 'send_email', raw, to, subject, template, loc } as any;
             }
             // fallback heuristic
             const trimmed = raw.trim();
             if (/^(?:const\s+\w+\s*=\s*)?delay\b/.test(trimmed)) return { kind: 'delay', raw } as any;
             if (/^\s*http_request\b/.test(raw)) return { kind: 'http_request', raw } as any;
             // legacy heuristic fallback retains for free-form steps (kept for unknown kinds)
-            return { kind: 'unknown', raw } as any;
+            const childVals: any[] = (st as any).children ? (Object.values((st as any).children) as any[]) : [];
+            const firstArr: any = childVals.length ? childVals[0] : undefined;
+            const firstTok: any = Array.isArray(firstArr) ? firstArr[0] : firstArr;
+            const loc = firstTok && firstTok.startLine ? { line: firstTok.startLine, column: firstTok.startColumn } : undefined;
+            return { kind: 'unknown', raw, loc } as any;
           });
           (block as any).steps = buildStepsFromNodes(stepChildren);
         }

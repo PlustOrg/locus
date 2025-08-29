@@ -9,6 +9,12 @@ import { readFileSync } from 'fs';
 import { newProject } from './cli/new';
 import { deploy as deployCmd } from './cli/deploy';
 import { listPlugins, doctorPlugins } from './cli/plugins';
+import { initPluginManager } from './plugins/manager';
+import { findLocusFiles } from './cli/utils';
+import { parseLocus } from './parser';
+import { mergeAsts } from './parser/merger';
+import { validateUnifiedAstWithPlugins } from './validator/validate';
+import { executeWorkflow } from './workflow/runtime';
 
 const program = new Command();
 program.name('locus').description('Locus compiler CLI');
@@ -101,7 +107,6 @@ program
     process.exit(0);
   });
 
-program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });
 
 program
   .command('plugins')
@@ -131,3 +136,37 @@ program
     const cwd = path.resolve(opts.cwd);
     await deployCmd({ cwd, env });
   });
+  program
+    .command('workflow:run')
+    .description('Execute a workflow by name (experimental)')
+    .argument('<name>', 'workflow name')
+    .option('--src <dir>', 'source dir', '.')
+    .option('--inputs <json>', 'JSON object of input bindings', '{}')
+    .option('--dry-run', 'parse/validate only, do not execute', false)
+    .action(async (name: string, opts: any) => {
+      const srcDir = path.resolve(opts.src || '.');
+      const config = (await import('./config/config')).loadConfig(srcDir);
+      const pluginMgr = await initPluginManager(srcDir, config);
+      const files = findLocusFiles(srcDir);
+      const asts: any[] = [];
+      for (const f of files) {
+        const content = readFileSync(f, 'utf8');
+        const ast = parseLocus(content, f);
+        asts.push(ast);
+      }
+      await pluginMgr.onParseComplete(asts);
+      const merged = mergeAsts(asts.concat(pluginMgr.virtualAsts));
+      pluginMgr.collectWorkflowStepKinds();
+      await pluginMgr.onValidate(merged);
+      await validateUnifiedAstWithPlugins(merged, pluginMgr);
+      const wf = (merged.workflows || []).find(w => w.name === name);
+      if (!wf) { process.stderr.write(`Workflow not found: ${name}\n`); process.exit(1); }
+      if (opts.dryRun) { process.stdout.write(`Workflow '${name}' validated successfully.\n`); return; }
+      let inputs: any = {};
+      try { inputs = JSON.parse(opts.inputs || '{}'); } catch { process.stderr.write('Invalid --inputs JSON.\n'); process.exit(1); }
+      const log = executeWorkflow(wf as any, { inputs, pluginManager: pluginMgr });
+      process.stdout.write(JSON.stringify(log, null, 2) + '\n');
+    });
+
+  program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });
+
