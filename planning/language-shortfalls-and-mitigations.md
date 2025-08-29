@@ -227,6 +227,233 @@ Near-Term: Establish `MIGRATIONS.md`; each breaking change adds codemod script r
 Longer-Term: Built-in `locus migrate` command scanning and auto-fixing outdated constructs.
 Owner Hint: CLI maintainer.
 
+### 26. Retry Loop Semantics Lack Backoff Timing & Jitter (Runtime)
+**Symptom:** Retry implementation logs `retry_wait` with implied delay but performs no actual asynchronous wait; exponential backoff uses `Math.pow(factor, attempt)` starting at 1 without initial delay parameter.
+**Root Cause:** Synchronous executor design chosen for determinism; timing not modeled.
+**Impact:** Manifest suggests resilience that does not exist; production adoption could overrun downstream systems due to tight retry loops.
+**Mitigation:**
+Near-Term: Add `simulatedDelayMs` option in executor for test determinism & inject actual `await` in future async mode; adjust log to include effective wait.
+Longer-Term: Pluggable scheduler interface with real timers + jitter policy; integrate clock abstraction for tests.
+Owner Hint: Runtime engineer.
+
+### 27. Prisma Generator Mapping Simplicity
+**Symptom:** All unknown scalar types mapped to `String`; `Text` mapped to `String` with no explicit Prisma attribute; list optionality rules hard-coded; no enum or decimal precision support.
+**Root Cause:** Minimal mapping table; absence of extended type metadata in AST.
+**Impact:** Silent misrepresentation of domain intent; potential migration pain when adding richer types.
+**Mitigation:**
+Near-Term: Expand `mapType` with explicit exhaustive switch + diagnostic when encountering unknown type (fail fast instead of default String).
+Longer-Term: Introduce `(precision: , scale:)` attributes and enum DSL; emit correct Prisma attributes (`@db.Text`).
+Owner Hint: Prisma generator maintainer.
+
+### 28. UI AST Transformation Heuristics (Regex-Based)
+**Symptom:** UI transformation uses regex for events, for:each loops, and if/elseif/else ternary rewriting; potential false positives or missed patterns for nested tags or attributes reordering.
+**Root Cause:** Early heuristic approach preceding full CST/UI AST normalization for all constructs.
+**Impact:** Edge-case rendering bugs; difficult to extend features (e.g., additional directives) safely.
+**Mitigation:**
+Near-Term: Route all UI to `uiAst` path; retire regex transformations; add golden tests for nested conditional inside loops.
+Longer-Term: Unified UI directive grammar + transformer passes (desugar to canonical AST) with explicit invariants.
+Owner Hint: UI parser engineer.
+
+### 29. Token Ordering Fragility
+**Symptom:** `tokens.ts` relies on manual ordering to ensure keyword precedence over `Identifier`; adding new tokens risks subtle lex regressions.
+**Root Cause:** Chevrotain matching precedence; manual maintenance.
+**Impact:** Hard-to-diagnose lexing bugs when new keywords added; potential mis-tokenization leading to confusing parse errors.
+**Mitigation:**
+Near-Term: Add test enumerating all keyword patterns verifying they tokenize before `Identifier`; fail build on regression.
+Longer-Term: Generate token list programmatically by category ordering arrays to eliminate manual reorder mistakes.
+Owner Hint: Parser maintainer.
+
+### 30. Validator Scope Gaps (Design System & Theme Cross-Refs)
+**Symptom:** Design tokens validated for naming & hex format but not cross-referenced (e.g., shadow references, typography base size consistency) beyond simple checks.
+**Root Cause:** Minimal initial DS validation layer.
+**Impact:** Inconsistent tokens may compile but produce broken CSS theme output.
+**Mitigation:**
+Near-Term: Add cross-field rules (typography base size must exist, referenced weight keys must be defined) with targeted tests.
+Longer-Term: Introduce dependency graph for design tokens enabling impact analysis & future theming variants.
+Owner Hint: Validator engineer.
+
+### 31. Workflow Execution Log Lacks Step Source Mapping
+**Symptom:** Log entries record `kind` and minimal detail but not original step index or source line/column for correlating runtime events to code.
+**Root Cause:** Simplicity of execution entries; AST node location omitted.
+**Impact:** Harder debugging in multi-step workflows; tooling cannot implement “click log → highlight source”.
+**Mitigation:**
+Near-Term: Include `idx` and `loc` (line, col) fields in log entries pulled from step AST.
+Longer-Term: Structured trace ID per workflow run + per-step span IDs for future distributed tracing.
+Owner Hint: Runtime + AST builder.
+
+### 32. Missing Security for Webhook Secret Exposure
+**Symptom:** Webhook secret captured in manifest as plaintext; no hashing or environment indirection.
+**Root Cause:** Direct raw inclusion for simplicity.
+**Impact:** Generated artifacts risk committing secrets if user forgets to treat as placeholder.
+**Mitigation:**
+Near-Term: Treat `secret:` value as symbolic reference only; enforce pattern (UPPER_SNAKE) & do not inline actual secret in generated route — require env var lookup.
+Longer-Term: Secret manager plugin interface mapping symbolic names to runtime retrieval.
+Owner Hint: Generator & validator.
+
+### 33. Lack of Multi-File Workflow Composition
+**Symptom:** Cannot split large workflow across files (e.g., common step sequences) other than copy-paste.
+**Root Cause:** Merger only concatenates distinct workflow blocks; no include/import semantics.
+**Impact:** DRY violations; maintenance overhead in large orchestrations.
+**Mitigation:**
+Near-Term: Allow `workflow <Name> extends <BaseWorkflow>` with shallow merge of steps blocks (ordered append) and validation for cycles.
+Longer-Term: Reusable named step macros and import syntax with namespace isolation.
+Owner Hint: Parser + merger.
+
+### 34. Absence of Structured HTTP Step Schema
+**Symptom:** `http_request` placeholder lacks fields (method, url, headers); impossible to validate or generate code.
+**Root Cause:** Deferred design.
+**Impact:** Users may assume functionality exists; later semantic addition could be breaking.
+**Mitigation:**
+Near-Term: Explicit validation error if `http_request` used (flag as not yet implemented) unless behind experimental flag.
+Longer-Term: Define schema: `http_request { method: GET, url: SomeEndpoint, headers: { ... }, body: expr }` + codegen into fetch wrapper with retry integration.
+Owner Hint: Workflow feature lead.
+
+### 35. CLI Build Feedback Limited for Workflow Changes
+**Symptom:** Reporter doesn’t summarize which workflows regenerated or diff counts beyond file list.
+**Root Cause:** Minimal output to keep noise low.
+**Impact:** Hard to reason about incremental rebuild impact; debugging stale state slower.
+**Mitigation:**
+Near-Term: Add summary: “Regenerated 3 workflows (A,B,C)” after build.
+Longer-Term: Diff summary (steps added/removed) and optional verbose mode JSON for tooling.
+Owner Hint: CLI build engineer.
+
+### 36. React Generation Assumes Hook Semantics Without Flexibility
+**Symptom:** All state mapped to `useState`; no support for derived selectors, memoization, or effect dependency arrays beyond empty.
+**Root Cause:** Simplified mapping.
+**Impact:** Performance and correctness limitations for complex pages.
+**Mitigation:**
+Near-Term: Add `(derived: expr)` attribute for computed read-only variables rendered via `useMemo`.
+Longer-Term: Abstract state backend to allow alternative runtime (signal-based) with consistent DSL.
+Owner Hint: React generator maintainer.
+
+### 37. UI Slot Auto-Addition May Hide Missing Declarations
+**Symptom:** Components auto-add slot params when referenced; only warning emitted; potential silent misuse if warnings ignored.
+**Impact:** API surface implicit; refactors risk breaking code when auto-add removed.
+**Mitigation:**
+Near-Term: Upgrade warning to validator error in strict mode; document explicit declaration requirement.
+Longer-Term: Lint rule disallowing undeclared slot references unless `allowImplicitSlots` flag set.
+Owner Hint: UI generator + validator.
+
+### 38. Action Async Behavior Ambiguity
+**Symptom:** Actions treated as async-by-default narratively, but generator doesn’t enforce `async` keyword; potential mismatch when awaiting non-promise values.
+**Mitigation:**
+Near-Term: Insert `async` keyword in generated action stubs when body contains `await` pattern.
+Longer-Term: Static pass verifying all awaited identifiers correspond to async-capable functions (DB helpers, other actions).
+Owner Hint: Application logic generator.
+
+### 39. Missing LSP / Editor Integration Path
+**Symptom:** No protocol for providing diagnostics/code completion externally.
+**Impact:** Hard for ecosystem to build rich editor tooling; reliance on CLI only.
+**Mitigation:**
+Near-Term: Expose `parseAndValidateToDiagnostics(source, filePath)` API returning structured diagnostics JSON.
+Longer-Term: Ship official LSP server referencing manifest + AST schema.
+Owner Hint: DX / tooling.
+
+### 40. Inadequate Handling of Large Projects (Memory Footprint)
+**Symptom:** Full AST for all files resident in memory; no paging or lazy loading.
+**Impact:** Potential memory pressure for very large codebases.
+**Mitigation:**
+Near-Term: Track aggregate AST size; warn when threshold exceeded.
+Longer-Term: Introduce incremental AST cache with weak references & re-hydration from parsed file on demand.
+Owner Hint: Core compiler architect.
+
+### 41. Lack of Deterministic Ordering in Some Generator Sections
+**Symptom:** React component import order for user components depends on discovery order; currently set but edge cases (slot auto-add) could reorder unpredictably.
+**Mitigation:**
+Near-Term: Globally sort all dynamic import lists & added slot params before emission; add snapshot tests.
+Longer-Term: Central deterministic ordering utility reused by all generators.
+Owner Hint: Generators maintainer.
+
+### 42. Minimal Config Validation (config loader unconstrained)
+**Symptom:** Configuration schema exists (`locus-config.schema.json`) but loader may not enforce all constraints.
+**Mitigation:**
+Near-Term: Validate loaded config against JSON Schema at build start; surface rich diagnostics.
+Longer-Term: Versioned config schema with migration helper (auto-fix outdated keys).
+Owner Hint: Config module maintainer.
+
+### 43. Absent Telemetry on Generator Warnings Consumption
+**Symptom:** Warnings captured in JSON but not aggregated for trend analysis.
+**Mitigation:**
+Near-Term: Count warnings by category; emit summary.
+Longer-Term: Optionally export metrics endpoint or file for CI dashboards.
+Owner Hint: CLI & generator pipeline.
+
+### 44. Style Override CSS Generation Safety
+**Symptom:** Style overrides include raw fragments; no sanitization or property whitelist.
+**Mitigation:**
+Near-Term: Basic validation against allowed CSS property regex; warn on unknown tokens.
+Longer-Term: AST-based CSS parser integration for safe transformation (e.g., postcss) with config.
+Owner Hint: Theme / UI generator.
+
+### 45. Missing Internationalization (i18n) Foundations
+**Symptom:** Strings embedded directly in UI/action code; no extraction mechanism.
+**Mitigation:**
+Near-Term: Lint rule detecting raw string literals in UI returning suggestion to wrap in `t("...")`.
+Longer-Term: Provide `i18n` block & extraction CLI producing translation JSON bundles.
+Owner Hint: DX / i18n lead.
+
+### 46. Incomplete Test Coverage for Workflow Concurrency Queue Behavior
+**Symptom:** Tests cover basic queue; not stress scenario with multiple interleaved groups and draining.
+**Mitigation:**
+Near-Term: Add test simulating > limit + sequential completions verifying FIFO ordering.
+Longer-Term: Property-based tests (random enqueue/complete) verifying invariants.
+Owner Hint: Workflow runtime tests.
+
+### 47. Lack of Secure Defaults for Email (send_email)
+**Symptom:** No enforcement of template or subject presence beyond existing rule; no output sanitization guidance.
+**Mitigation:**
+Near-Term: Require either `template` or `subject`+`body:` field; warn if template missing extension.
+Longer-Term: Pluggable email renderer with safe HTML sanitizer built-in.
+Owner Hint: Workflow feature maintainer.
+
+### 48. Potential Identifier Collisions Across Domains (Entities, Components, Workflows)
+**Symptom:** Same name may exist in multiple domains without consolidated conflict warning; manifests may override generated file names.
+**Mitigation:**
+Near-Term: Global namespace registry built during merge; emit warnings for collisions (advice on renaming).
+Longer-Term: Namespacing syntax or explicit domain qualifiers.
+Owner Hint: Merger & validator.
+
+### 49. Missing Formal Hashing for Generated Artifacts (Change Detection)
+**Symptom:** Incremental engine may regenerate all when partial changes; no content hash store per artifact.
+**Mitigation:**
+Near-Term: Compute SHA-256 of generated contents; skip write if unchanged (improves watch perf).
+Longer-Term: Persist artifact hash map enabling cross-session cache.
+Owner Hint: Incremental build engineer.
+
+### 50. Limited Support for Non-PostgreSQL Targets
+**Symptom:** Prisma datasource fixed to `postgresql` in generator.
+**Mitigation:**
+Near-Term: Surface `db.provider` in config; template datasource accordingly.
+Longer-Term: Multi-provider mapping table for field types (e.g., MySQL, SQLite) with compatibility validation.
+Owner Hint: Prisma generator.
+
+---
+## Prioritized Action Plan (Updated)
+
+| Priority | Item | Rationale | Success Metric |
+| -------- | ---- | --------- | -------------- |
+| P0 | Error span precision (3) | DX clarity | 95% diagnostics include length & loc |
+| P0 | Expression identifier validation (2) | Prevent silent logic bugs | Unknown id test suite passes |
+| P0 | Retry semantics realism (26) | Avoid misleading resilience | Async-aware retry implemented + doc updated |
+| P1 | Manifest redundancy plan (4) | Reduce drift | Manifest v3 draft & migration doc |
+| P1 | Token ordering guard (29) | Prevent lex regressions | Token precedence test added |
+| P1 | Performance benchmarks expansion (12) | Guard perf | CI gate on >5% slowdown |
+| P1 | Prisma type mapping diagnostics (27) | Data correctness | Unknown type causes parse/validate error |
+| P2 | Concurrency backend abstraction (5) | Future scaling | Interface + second backend stub |
+| P2 | HTTP step explicit disable (34) | Avoid misunderstanding | Using http_request raises clear error |
+| P2 | Accessibility lint (22) | Inclusive defaults | Lint warns on missing alt/labels |
+| P2 | Aggregated plugin perf stats (15) | Insight | Profile report lists slowest plugins |
+| P2 | Slot explicit declaration enforcement (37) | API clarity | Strict mode errors on implicit slots |
+| P3 | Policy blocks draft (11) | Security baseline | Spec doc + parser placeholder |
+| P3 | Artifact version headers (16) | Traceability | Headers present in all artifacts |
+| P3 | Scheduler abstraction (26/5) | Resilience | Delay/jitter pluggable with tests |
+| P3 | Global namespace collision warnings (48) | Predictability | Collision test passes |
+| P3 | Config schema enforcement (42) | Stability | Invalid config fails early |
+
+---
+## Summary (Updated)
+The deeper audit extends prior findings with runtime semantics (retry & concurrency), generator determinism, UI transformation robustness, token precedence, and security/data correctness concerns. Addressing the P0 and P1 groups early will harden correctness without large architectural upheaval, while laying groundwork for richer semantic analysis, resilient orchestration, and safer extensibility.
+
 ---
 ## Prioritized Action Plan (Suggested Next 90 Days)
 
