@@ -85,6 +85,16 @@ export function buildGeneratedReadme(): string {
 
 export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOptions) {
   const { files, meta } = runPipeline(unified, { includeNext: opts.includeNext, includeTheme: opts.includeTheme });
+  // Collect webhook triggers for express route stubs
+  const webhookRoutes: { name: string; secret?: string }[] = [];
+  for (const wf of (unified.workflows || [])) {
+    let tm: any = (wf as any).triggerMeta;
+    if (!tm && wf.trigger?.raw && /on:webhook/.test(wf.trigger.raw)) {
+      const m = /secret\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/.exec(wf.trigger.raw);
+      tm = { type: 'webhook', secretRef: m?.[1] };
+    }
+    if (tm?.type === 'webhook') webhookRoutes.push({ name: wf.name, secret: tm.secretRef });
+  }
   if (unified.workflows && unified.workflows.length) {
     const sorted = [...unified.workflows].sort((a, b) => a.name.localeCompare(b.name));
     for (const w of sorted) {
@@ -106,6 +116,11 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
       for (const k of orderedKeys) ordered[k] = (manifest as any)[k];
       files[`workflows/${w.name}.json`] = JSON.stringify(ordered, null, 2) + '\n';
     }
+  }
+  // If webhook routes exist, augment or create server extension snippet
+  if (webhookRoutes.length) {
+    const stubLines = webhookRoutes.map(r => `app.post('/webhooks/${r.name.toLowerCase()}', (req,res)=> { const provided=req.headers['x-locus-secret']; if (${r.secret?`provided!==process.env.${r.secret}`:'false'}) return res.status(401).json({ error: 'invalid secret' }); /* TODO invoke workflow ${r.name} */ res.json({ ok:true, workflow:'${r.name}' }); })`).join('\n');
+    files['webhooks.stub.ts'] = withHeader(`import app from './server';\n${stubLines}\n`,'webhooks');
   }
   return { files, meta } as any;
 }

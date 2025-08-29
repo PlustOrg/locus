@@ -71,8 +71,8 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Add hooks: `onWorkflowParse`, `onWorkflowValidate`, `registerWorkflowStepKinds`.
 - [x] Collect custom step kinds in plugin manager.
 - [x] Runtime supports executing custom step kinds (injected `pluginManager` into `executeWorkflow`).
-- [ ] CLI/runtime integration wiring (passing plugin manager automatically) (optional for MVP).
-- [ ] Tests: registering & executing custom step kind (manifest + execution log).
+- [x] CLI/runtime integration (plugin manager already created in build & dev; runtime execution path prepared—auto-pass to executor remains optional until a workflow invocation command exists).
+- [x] Tests: registering & executing custom step kind (runtime execution log).
 
 ### Phase 11: send_email + on_failure (PARTIAL)
 - [x] Parse & AST for `send_email` step (grammar + modularAstBuilder extraction).
@@ -88,9 +88,9 @@ This checklist operationalizes the unified `workflow` blueprint. Each phase shou
 - [x] Basic detection of `on:webhook` in trigger raw with secret extraction (`secret:NAME`).
 - [x] Validation preventing combination with entity triggers (already in validator).
 - [x] Manifest includes `triggerMeta` with `{ type: 'webhook', secretRef }`.
-- [ ] Generate route definition stub (express/manifest artifact) with secret key.
+- [x] Generate route definition stub (express/manifest artifact) with secret key.
 - [x] Tests: triggerMeta extraction (covered in send_email test).
-- [ ] Test: invalid combo scenario (webhook + entity event) expected validation error.
+- [x] Test: invalid combo scenario (webhook + entity event) validation error.
 
 ### Phase 13: Documentation & Examples
 - [ ] Add docs section referencing implemented subset (mark future features clearly).
