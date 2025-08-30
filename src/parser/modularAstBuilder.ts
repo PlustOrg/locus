@@ -162,6 +162,9 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
                 const stepsBlocks = inn.children.workflowStepStmt || [];
                 const idTok = inn.children.Identifier?.[0];
                 if (idTok && idTok.image === 'else') elseSteps = buildStepsFromNodes(stepsBlocks);
+                // New explicit Else token path
+                const elseTokArr: any[] = (inn.children as any).Else || [];
+                if (elseTokArr.length) elseSteps = buildStepsFromNodes(stepsBlocks);
                 else if (stepsBlocks.length) thenSteps = buildStepsFromNodes(stepsBlocks);
               }
               // use first token inside branchNode (it should start with Branch token)

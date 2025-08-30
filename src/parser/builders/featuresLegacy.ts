@@ -60,9 +60,10 @@ export function buildFeatureBlocksLegacy(pageNodes: CstNode[], compNodes: CstNod
     if (ch['guardClause']) {
       const gc = (ch['guardClause'] as CstNode[])[0];
       const gch = gc.children as CstChildrenDictionary;
-      const ids = (gch['Identifier'] as IToken[]);
-      if (ids.length >= 2 && ids[0].image === 'guard') {
-        page.guard = { role: ids[1].image };
+      // New grammar uses explicit Guard token + Identifier role
+      const roleIds = (gch['Identifier'] as IToken[]) || [];
+      if (roleIds.length >= 1) {
+        page.guard = { role: roleIds[0].image };
       }
     }
     const stateBlocks = (ch['stateBlock'] as CstNode[]) || [];

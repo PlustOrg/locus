@@ -23,14 +23,19 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         const fieldName = fieldNameTok.image;
         const typeAlt = (fdCh['fieldType'] as CstNode[])[0];
         const typeCh = typeAlt.children as CstChildrenDictionary;
+  // scalarType nested rule may appear as 'scalarType' or 'scalarType1'
+  const scalarNodes = (typeCh['scalarType'] as CstNode[] || []).concat(typeCh['scalarType1'] as any || []);
+  let primitiveTokenName: string | undefined;
         const isList = !!typeCh['List'];
   const typeTokenName = Object.keys(typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT' ].includes(k));
         const optional = !!typeCh['Question'];
         let fieldType: any;
         if (isList) {
-          fieldType = { kind: 'list', of: mapPrimitiveToken(typeTokenName!), optional };
+          primitiveTokenName = Object.keys(scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT' ].includes(k));
+          fieldType = { kind: 'list', of: mapPrimitiveToken(primitiveTokenName!), optional };
         } else {
-          fieldType = { kind: 'primitive', name: mapPrimitiveToken(typeTokenName!) } as FieldType;
+          primitiveTokenName = scalarNodes.length ? Object.keys(scalarNodes[0].children as CstChildrenDictionary).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT' ].includes(k)) : typeTokenName;
+          fieldType = { kind: 'primitive', name: mapPrimitiveToken(primitiveTokenName!) } as FieldType;
           if (optional) fieldType.optional = true;
         }
   const attrGroups = (fdCh['fieldAttributeGroup'] as CstNode[]) || [];

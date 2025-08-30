@@ -29,6 +29,10 @@ import {
   HasMany,
   BelongsTo,
   HasOne,
+  Guard,
+  ElseIf,
+  Else,
+  In,
   Identifier,
   Comma,
   NumberLiteral,
@@ -241,18 +245,17 @@ export class DatabaseCstParser extends CstParser {
   });
 
   private branchInner = this.RULE('branchInner', () => {
-    // either steps { ... } or else { ... } using keywords already defined (Steps) and literal 'else' via Identifier fallback
+    // steps { ... } or else { ... }
     this.OR([
-      { ALT: () => { this.CONSUME(Steps); this.CONSUME(LCurly); this.MANY(() => this.SUBRULE(this.workflowStepStmt)); this.CONSUME(RCurly); } },
-      { ALT: () => { this.CONSUME1(Identifier); /* expect 'else' */ this.CONSUME1(LCurly); this.MANY1(() => this.SUBRULE1(this.workflowStepStmt)); this.CONSUME1(RCurly); } },
+  { ALT: () => { this.CONSUME(Steps); this.CONSUME(LCurly); this.MANY(() => this.SUBRULE(this.workflowStepStmt)); this.CONSUME1(RCurly); } },
+  { ALT: () => { this.CONSUME(Else); this.CONSUME1(LCurly); this.MANY1(() => this.SUBRULE1(this.workflowStepStmt)); this.CONSUME2(RCurly); } },
     ]);
   });
 
   private forEachStep = this.RULE('forEachStep', () => {
     this.CONSUME(ForEach);
     this.CONSUME(Identifier); // loop variable
-  // treat 'in' as generic identifier to avoid affecting UI attribute parsing
-  this.CONSUME1(Identifier); // expected literal 'in'
+    this.CONSUME(In);
     this.SUBRULE(this.argExpr); // iterable expression
     this.CONSUME(LCurly);
     this.MANY(() => this.SUBRULE(this.workflowStepStmt));
@@ -311,9 +314,9 @@ export class DatabaseCstParser extends CstParser {
 
   private guardClause = this.RULE('guardClause', () => {
     this.CONSUME(LParen);
-    this.CONSUME1(Identifier); // expect 'guard'
+    this.CONSUME(Guard);
     this.CONSUME(Colon);
-    this.CONSUME2(Identifier); // role identifier
+    this.CONSUME(Identifier); // role identifier
     this.CONSUME(RParen);
   });
 
@@ -500,6 +503,10 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(HasMany) },
       { ALT: () => this.CONSUME(BelongsTo) },
       { ALT: () => this.CONSUME(HasOne) },
+  { ALT: () => this.CONSUME(Else) },
+  { ALT: () => this.CONSUME(ElseIf) },
+  { ALT: () => this.CONSUME(In) },
+  { ALT: () => this.CONSUME(Guard) },
   { ALT: () => this.CONSUME(Group) },
   { ALT: () => this.CONSUME(Limit) },
       { ALT: () => this.CONSUME(LParen) },
@@ -628,7 +635,7 @@ export class DatabaseCstParser extends CstParser {
     this.MANY(() => this.SUBRULE(this.fieldAttributeGroup));
   });
 
-  private fieldType = this.RULE('fieldType', () => {
+  private scalarType = this.RULE('scalarType', () => {
     this.OR([
       { ALT: () => this.CONSUME(StringT) },
       { ALT: () => this.CONSUME(TextT) },
@@ -637,17 +644,14 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(BooleanT) },
       { ALT: () => this.CONSUME(DateTimeT) },
       { ALT: () => this.CONSUME(JsonT) },
-  { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.OR1([
-          { ALT: () => this.CONSUME1(StringT) },
-          { ALT: () => this.CONSUME1(TextT) },
-          { ALT: () => this.CONSUME1(IntegerT) },
-          { ALT: () => this.CONSUME1(DecimalT) },
-          { ALT: () => this.CONSUME1(BooleanT) },
-          { ALT: () => this.CONSUME1(DateTimeT) },
-          { ALT: () => this.CONSUME1(JsonT) },
-        ]); } },
     ]);
-    this.OPTION(() => this.CONSUME(Question));
+  });
+
+  private fieldType = this.RULE('fieldType', () => {
+    this.OR([
+      { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); } },
+      { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); } },
+    ]);
   });
 
   private relationDecl = this.RULE('relationDecl', () => {

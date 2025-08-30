@@ -17,6 +17,11 @@ export const Weights = createToken({ name: 'Weights', pattern: /weights\b/ });
 export const HasMany = createToken({ name: 'HasMany', pattern: /has_many\b/ });
 export const BelongsTo = createToken({ name: 'BelongsTo', pattern: /belongs_to\b/ });
 export const HasOne = createToken({ name: 'HasOne', pattern: /has_one\b/ });
+// Newly reserved structural keywords (Phase 1 overhaul)
+export const Guard = createToken({ name: 'Guard', pattern: /guard\b/ });
+export const ElseIf = createToken({ name: 'ElseIf', pattern: /elseif\b/ });
+export const Else = createToken({ name: 'Else', pattern: /else\b/ });
+export const In = createToken({ name: 'In', pattern: /in\b/ });
 
 // Types
 export const StringT = createToken({ name: 'StringT', pattern: /String\b/ });
@@ -120,6 +125,10 @@ export const AllTokens = [
   HasMany,
   BelongsTo,
   HasOne,
+  Guard,
+  ElseIf,
+  Else,
+  In,
   // style keywords
   StyleKw,
   OverrideKw,
