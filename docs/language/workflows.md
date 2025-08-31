@@ -14,8 +14,8 @@ workflow WelcomeEmail {
     run hydrateUser(userId)
     branch { condition: userIsAdmin steps { run auditAccess(userId) } else { run recordStandardLogin(userId) } }
     send_email {
-      to: userEmail,
-      subject: Welcome,
+      to: userEmail
+      subject: Welcome
       template: welcome_template.html
     }
   }

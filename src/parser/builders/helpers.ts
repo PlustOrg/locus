@@ -10,6 +10,11 @@ export function mapPrimitiveToken(key: string): FieldType['name'] {
     case 'BooleanT': return 'Boolean';
     case 'DateTimeT': return 'DateTime';
     case 'JsonT': return 'Json';
+  case 'BigIntT': return 'BigInt';
+  case 'FloatT': return 'Float';
+  case 'UUIDT': return 'UUID';
+  case 'EmailT': return 'Email';
+  case 'URLT': return 'URL';
     default: return 'String';
   }
 }
@@ -60,6 +65,11 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
         }
         attributes.push({ kind: 'default', value: { call: fn, args } } as FieldAttributeDefault);
   }
+    } else if (agCh['policyAttr']) {
+      const polNode = (agCh['policyAttr'] as CstNode[])[0];
+      const pch = polNode.children as CstChildrenDictionary;
+      const valTok = (pch['Identifier'] as IToken[])[0];
+      attributes.push({ kind: 'policy', value: valTok.image } as any);
     }
   }
   return attributes;
@@ -70,6 +80,12 @@ export function collectRelationAttributes(attrGroups: CstNode[]): FieldAttribute
   for (const ag of attrGroups) {
     const agCh = (ag.children as CstChildrenDictionary);
     if (agCh['Unique']) attrs.push({ kind: 'unique' } as FieldAttributeUnique);
+    else if (agCh['policyAttr']) {
+      const polNode = (agCh['policyAttr'] as CstNode[])[0];
+      const pch = polNode.children as CstChildrenDictionary;
+      const valTok = (pch['Identifier'] as IToken[])[0];
+      attrs.push({ kind: 'policy', value: valTok.image } as any);
+    }
   }
   return attrs;
 }

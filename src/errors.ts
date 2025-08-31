@@ -1,3 +1,4 @@
+import { incSuggestions } from './metrics';
 export type LocusErrorCode =
   //
   'lex_error' | 'parse_error' | 'merge_error' | 'validation_error';
@@ -24,6 +25,7 @@ export interface LocusErrorOptions {
   column?: number;
   length?: number;
   cause?: unknown;
+  suggestions?: string[];
 }
 
 export class LocusError extends Error {
@@ -33,6 +35,7 @@ export class LocusError extends Error {
   public column?: number;
   public length?: number;
   public cause?: unknown;
+  public suggestions?: string[];
 
   constructor(opts: LocusErrorOptions) {
     super(opts.message);
@@ -43,8 +46,40 @@ export class LocusError extends Error {
     this.column = opts.column;
     this.length = opts.length;
     this.cause = opts.cause;
+    this.suggestions = opts.suggestions;
     (Error as any).captureStackTrace?.(this, LocusError);
   }
+}
+
+// Phase 1: Error code catalog (stable identifiers → human description)
+export const ErrorCatalog: Record<string, string> = {
+  PARSE_ERROR: 'General parse failure while converting source to AST',
+  LEX_ERROR: 'Lexer failure tokenizing source',
+  MERGE_ERROR: 'AST merging failure',
+  VALIDATION_ERROR: 'Semantic validation failure',
+};
+
+// Lightweight keyword suggestion (edit distance <=2)
+const SUGGEST_KEYWORDS = ['workflow','database','entity','page','component','store','state','action','steps','branch','else','elseif','forEach','in','guard','design_system','colors','spacing','radii','shadows','weights'];
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length; const dp = Array.from({length:m+1},()=>Array(n+1).fill(0));
+  for (let i=0;i<=m;i++) dp[i][0]=i; for (let j=0;j<=n;j++) dp[0][j]=j;
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++) {
+    const cost = a[i-1] === b[j-1] ? 0 : 1;
+    dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
+  }
+  return dp[m][n];
+}
+function extractOffendingIdentifier(msg: string): string | undefined {
+  const m = /found --> '([^']+)' <--/.exec(msg) || /Unexpected token:?\s+([^\s]+)/i.exec(msg);
+  return m?.[1];
+}
+function computeSuggestions(msg: string): string[] | undefined {
+  const tok = extractOffendingIdentifier(msg);
+  if (!tok) return undefined;
+  const ranked = SUGGEST_KEYWORDS.map(k => [k, levenshtein(tok, k)] as const).sort((a,b)=>a[1]-b[1]);
+  const best = ranked.filter(r => r[1] <= 2).slice(0,3).map(r=>r[0]);
+  return best.length ? best : undefined;
 }
 
 export function errorToDiagnostic(e: LocusError): Diagnostic {
@@ -111,6 +146,9 @@ export class VError extends LocusError {
 /** Parser Error */
 export class PError extends LocusError {
   constructor(message: string, filePath?: string, line?: number, col?: number, length?: number) {
-    super({ code: 'parse_error', message, filePath, line, column: col, length });
+  super({ code: 'parse_error', message, filePath, line, column: col, length, suggestions: computeSuggestions(message) });
+    if (this.suggestions && this.suggestions.length) {
+      incSuggestions(this.suggestions.length);
+    }
   }
 }

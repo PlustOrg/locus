@@ -74,9 +74,93 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
           }
         };
         const chW = w.children as any;
-        capture(chW.triggerBlock, 'trigger');
+        // Structured trigger
+        if (chW.triggerBlock && chW.triggerBlock[0]) {
+          const tBlock = chW.triggerBlock[0];
+          const decls = (tBlock.children.triggerDecl as any[]) || [];
+          const events: any[] = [];
+          for (const d of decls) {
+            const dch = d.children;
+            if (dch.CreateKw || dch.UpdateKw || dch.DeleteKw) {
+              const kindTok = (dch.CreateKw||dch.UpdateKw||dch.DeleteKw)[0];
+              const entTok = dch.Identifier?.slice(-1)[0];
+              events.push({ kind: kindTok.image, entity: entTok?.image, loc: entTok ? { line: entTok.startLine, column: entTok.startColumn } : undefined });
+            } else if (dch.WebhookKw) {
+              const idents = dch.Identifier || [];
+              let secretRef: string | undefined;
+              if (idents.length === 2) secretRef = idents[1].image; // pattern: webhook( secret: NAME ) simplified
+              events.push({ kind: 'webhook', secret: secretRef });
+            }
+          }
+          (block as any).trigger = { events };
+        }
         capture(chW.inputBlock, 'input');
         capture(chW.stateBlock, 'state');
+        // Structured concurrency
+        if (chW.concurrencyBlock && chW.concurrencyBlock[0]) {
+          const cstNode = chW.concurrencyBlock[0];
+          let limitVal: number | undefined;
+          let groupVal: string | undefined;
+          const entries: any[] = cstNode.children.concurrencyEntry || [];
+          for (const ce of entries) {
+            const ch = ce.children;
+            if (ch.Limit && ch.NumberLiteral) {
+              const numTok = ch.NumberLiteral[0];
+              limitVal = Number(numTok.image);
+            }
+            if (ch.Group && ch.Identifier) {
+              const idTok = ch.Identifier[ch.Identifier.length-1];
+              groupVal = idTok.image;
+            }
+          }
+          (block as any).concurrency = { limit: limitVal, group: groupVal };
+        }
+        // Structured retry
+        if (chW.retryBlock && chW.retryBlock[0]) {
+          const rBlock = chW.retryBlock[0];
+          const entries = rBlock.children.retryEntry || [];
+          const retry: any = {};
+            const parseDuration = (txt: string): number | undefined => {
+              const m = /^([0-9]+)(ms|s|m|h)$/.exec(txt);
+              if (!m) return undefined;
+              const n = Number(m[1]);
+              switch (m[2]) { case 'ms': return n; case 's': return n*1000; case 'm': return n*60000; case 'h': return n*3600000; }
+              return undefined;
+            };
+          for (const e of entries) {
+            const ech = e.children;
+            const neg = !!ech.HyphenTok;
+            if (ech.MaxKw) retry.max = (neg?-1:1)*Number(ech.NumberLiteral[0].image);
+            else if (ech.BackoffKw) retry.backoff = ech.Identifier[0].image;
+            else if (ech.FactorKw) retry.factor = (neg?-1:1)*Number(ech.NumberLiteral.slice(-1)[0].image);
+            else if (ech.Delay) {
+              if (ech.Duration) retry.delayMs = parseDuration(ech.Duration[0].image);
+              else if (ech.NumberLiteral) retry.delayMs = (neg?-1:1)*Number(ech.NumberLiteral.slice(-1)[0].image);
+            } else if (ech.Identifier) {
+              const keyTok = ech.Identifier[0];
+              if (!retry._unknown) retry._unknown = [];
+              retry._unknown.push(keyTok.image);
+            }
+          }
+          (block as any).retry = retry;
+          // Synthesize raw string for backward compatibility (manifest/tests expecting raw-like summary)
+          const parts: string[] = [];
+          if (retry.max != null) parts.push(`max: ${retry.max}`);
+          if (retry.backoff) parts.push(`backoff: ${retry.backoff}`);
+          if (retry.factor != null) parts.push(`factor: ${retry.factor}`);
+          if (retry.delayMs != null) parts.push(`delayMs: ${retry.delayMs}`);
+          (block as any).retry.raw = parts.join(', ');
+          // Provide legacy retryConfig map for downstream runtime until migrated
+          const cfg: any = {};
+          if (retry.max != null) cfg.max = retry.max;
+          if (retry.backoff) cfg.backoff = retry.backoff;
+          if (retry.factor != null) cfg.factor = retry.factor;
+          if (retry.delayMs != null) {
+            // reconstruct human form seconds if divisible
+            if (retry.delayMs % 1000 === 0) cfg.delay = (retry.delayMs/1000)+ 's'; else cfg.delay = retry.delayMs + 'ms';
+          }
+          (block as any).retryConfig = cfg;
+        }
     capture(chW.onFailureWorkflowBlock, 'onFailure');
         // structured steps: iterate CST children for workflowStepStmt if present
         const stepsArr = chW.stepsWorkflowBlock?.[0];
@@ -225,15 +309,20 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             return { kind: 'unknown', raw, loc } as any;
           });
           (block as any).steps = buildStepsFromNodes(stepChildren);
+            // Assign stable numeric ids
+            if (Array.isArray((block as any).steps)) {
+              (block as any).steps.forEach((s: any, idx: number) => { if (!s.id) s.id = idx + 1; });
+            }
         }
         else capture(chW.stepsWorkflowBlock, 'steps');
         capture(chW.onErrorWorkflowBlock, 'onError');
-  capture(chW.concurrencyBlock, 'concurrency');
-  capture(chW.retryBlock, 'retry');
+  if (!(block as any).concurrency) capture(chW.concurrencyBlock, 'concurrency');
+  if (!(block as any).retry) capture(chW.retryBlock, 'retry');
         // attempt to parse retry raw into simple key-value map stored on block for validator
-        if (block.retry?.raw) {
+        if ((block.retry as any)?.raw) {
+          const rawObj: any = block.retry as any;
           const map: Record<string,string> = {};
-          block.retry.raw.split(/[\n,]/).forEach(line => {
+          rawObj.raw.split(/[\n,]/).forEach((line: string) => {
             const m = line.split(/:/);
             if (m.length >= 2) {
               const key = m[0].trim();

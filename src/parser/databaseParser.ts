@@ -20,6 +20,11 @@ import {
   BooleanT,
   DateTimeT,
   JsonT,
+  BigIntT,
+  FloatT,
+  UUIDT,
+  EmailT,
+  URLT,
   Question,
   LParen,
   RParen,
@@ -75,6 +80,7 @@ import {
   OnFailure,
   Group,
   Limit,
+  Policy,
   // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
   ConstKw,
   RunKw,
@@ -83,6 +89,14 @@ import {
   Branch,
   ForEach,
   SendEmail,
+  CreateKw,
+  UpdateKw,
+  DeleteKw,
+  WebhookKw,
+  MaxKw,
+  BackoffKw,
+  FactorKw,
+  Duration,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -134,8 +148,43 @@ export class DatabaseCstParser extends CstParser {
   private triggerBlock = this.RULE('triggerBlock', () => {
     this.CONSUME(Trigger);
     this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.OPTION(() => this.OR([
+      { GATE: () => this.LA(1).tokenType === On, ALT: () => this.MANY(() => this.SUBRULE(this.triggerDecl)) },
+      { ALT: () => this.SUBRULE(this.rawContent) }
+    ]));
     this.CONSUME(RCurly);
+  });
+
+  private triggerDecl = this.RULE('triggerDecl', () => {
+    this.CONSUME(On);
+    this.OR([
+      { ALT: () => {
+        // webhook variant: optional colon after 'on'
+        this.OPTION(() => this.CONSUME(Colon)); // Colon #1
+        this.CONSUME(WebhookKw);
+        this.OPTION1(() => { // parentheses block optional
+          this.CONSUME(LParen); // LParen #1
+          this.OPTION2(() => { // secret assignment optional
+            this.CONSUME(Identifier); // Identifier #1
+            this.CONSUME1(Colon); // Colon #2
+            this.CONSUME1(Identifier); // Identifier #2
+          });
+          this.CONSUME(RParen); // RParen #1
+        });
+      } },
+      { ALT: () => {
+        // entity event variant: optional colon after 'on'
+        this.OPTION3(() => this.CONSUME2(Colon)); // Colon #3
+        this.OR1([
+          { ALT: () => this.CONSUME(CreateKw) },
+          { ALT: () => this.CONSUME(UpdateKw) },
+          { ALT: () => this.CONSUME(DeleteKw) }
+        ]);
+        this.CONSUME1(LParen); // LParen #2
+        this.CONSUME2(Identifier); // Identifier #3
+        this.CONSUME1(RParen); // RParen #2
+      } }
+    ]);
   });
 
   private inputBlock = this.RULE('inputBlock', () => {
@@ -279,16 +328,32 @@ export class DatabaseCstParser extends CstParser {
   private concurrencyBlock = this.RULE('concurrencyBlock', () => {
     this.CONSUME(Concurrency);
     this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
+  this.AT_LEAST_ONE(() => { this.SUBRULE(this.concurrencyEntry); this.OPTION(() => this.CONSUME(Comma)); });
     this.CONSUME(RCurly);
+  });
+
+  private concurrencyEntry = this.RULE('concurrencyEntry', () => {
+    this.OR([
+      { ALT: () => { this.CONSUME(Limit); this.CONSUME(Colon); this.CONSUME(NumberLiteral); } },
+      { ALT: () => { this.CONSUME(Group); this.CONSUME1(Colon); this.CONSUME(Identifier); } }
+    ]);
   });
 
   private retryBlock = this.RULE('retryBlock', () => {
     this.CONSUME(Retry);
     this.CONSUME(LCurly);
-    // allow key:value pairs simple raw for now (max, backoff, factor)
-    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.MANY(() => { this.SUBRULE(this.retryEntry); this.OPTION(() => this.CONSUME(Comma)); });
     this.CONSUME(RCurly);
+  });
+
+  private retryEntry = this.RULE('retryEntry', () => {
+    this.OR([
+  { ALT: () => { this.CONSUME(MaxKw); this.CONSUME3(Colon); this.OPTION(() => this.CONSUME(HyphenTok)); this.CONSUME(NumberLiteral); } },
+  { ALT: () => { this.CONSUME(BackoffKw); this.CONSUME4(Colon); this.CONSUME4(Identifier); } },
+  { ALT: () => { this.CONSUME(FactorKw); this.CONSUME5(Colon); this.OPTION1(() => this.CONSUME1(HyphenTok)); this.CONSUME1(NumberLiteral); } },
+  { ALT: () => { this.CONSUME(Delay); this.CONSUME6(Colon); this.OR2([{ ALT: () => this.CONSUME(Duration) }, { ALT: () => { this.OPTION2(() => this.CONSUME2(HyphenTok)); this.CONSUME2(NumberLiteral); } }]); } },
+  { ALT: () => { this.CONSUME5(Identifier); this.CONSUME7(Colon); this.OR3([{ ALT: () => { this.OPTION3(() => this.CONSUME3(HyphenTok)); this.CONSUME3(NumberLiteral); } }, { ALT: () => this.CONSUME6(Identifier) }]); } }
+    ]);
   });
 
   private pageBlock = this.RULE('pageBlock', () => {
@@ -644,6 +709,11 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(BooleanT) },
       { ALT: () => this.CONSUME(DateTimeT) },
       { ALT: () => this.CONSUME(JsonT) },
+      { ALT: () => this.CONSUME(BigIntT) },
+      { ALT: () => this.CONSUME(FloatT) },
+      { ALT: () => this.CONSUME(UUIDT) },
+      { ALT: () => this.CONSUME(EmailT) },
+      { ALT: () => this.CONSUME(URLT) },
     ]);
   });
 
@@ -652,6 +722,9 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); } },
       { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); } },
     ]);
+    this.OPTION1(() => {
+  if (this.LA(1).image === 'nullable') this.CONSUME(Identifier);
+    });
   });
 
   private relationDecl = this.RULE('relationDecl', () => {
@@ -672,6 +745,7 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(Unique) },
       { ALT: () => this.SUBRULE(this.defaultAttr) },
   { ALT: () => this.SUBRULE(this.mapAttr) },
+    { ALT: () => this.SUBRULE(this.policyAttr) },
     ]);
     this.CONSUME(RParen);
   });
@@ -691,6 +765,12 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(MapTok);
     this.CONSUME(Colon);
     this.CONSUME(StringLiteral);
+  });
+
+  private policyAttr = this.RULE('policyAttr', () => {
+    this.CONSUME(Policy);
+    this.CONSUME(Colon);
+    this.CONSUME1(Identifier); // e.g., cascade
   });
 
   private callExpr = this.RULE('callExpr', () => {

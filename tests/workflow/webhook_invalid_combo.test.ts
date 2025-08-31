@@ -7,6 +7,6 @@ describe('webhook trigger invalid combo', () => {
     const src = `workflow Bad { trigger { on:webhook(secret: S) on:create(User) } steps { delay { } } }`;
     const ast: any = parseLocus(src, 'bad_webhook.locus');
     const unified = mergeAsts([ast]);
-    expect(()=>validateUnifiedAst(unified)).toThrow(/cannot combine 'on:webhook'/);
+  expect(()=>validateUnifiedAst(unified)).toThrow(/cannot mix webhook and entity triggers/);
   });
 });

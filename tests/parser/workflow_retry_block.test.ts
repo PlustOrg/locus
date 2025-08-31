@@ -8,6 +8,6 @@ describe('workflow retry block parsing', () => {
     const unified = mergeAsts([ast]);
     const wf = unified.workflows[0];
   expect(wf.retry).toBeTruthy();
-  expect(wf.retry?.raw).toContain('max: 5');
+  expect(((wf.retry as any)?.raw)).toContain('max: 5');
   });
 });

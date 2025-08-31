@@ -83,6 +83,46 @@ program
   });
 
 program
+  .command('check')
+  .description('Parse and validate source without generating outputs')
+  .option('--src <dir>', 'source dir', '.')
+  .option('--errors <format>', 'error output format: pretty|json', 'pretty')
+  .action(async (opts: any) => {
+    const srcDir = path.resolve(opts.src);
+    const config = (await import('./config/config')).loadConfig(srcDir);
+    const pluginMgr = await initPluginManager(srcDir, config);
+    const files = findLocusFiles(srcDir);
+    const asts: any[] = [];
+    let hadError = false;
+    for (const f of files) {
+      try {
+        const content = readFileSync(f, 'utf8');
+        const ast = parseLocus(content, f);
+        asts.push(ast);
+      } catch (e: any) {
+        hadError = true;
+        process.stderr.write('Parse error: ' + (e.message || e) + '\n');
+      }
+    }
+    if (hadError) { process.exit(1); }
+    await pluginMgr.onParseComplete(asts);
+    const merged = mergeAsts(asts.concat(pluginMgr.virtualAsts));
+    try {
+      pluginMgr.collectWorkflowStepKinds();
+      await pluginMgr.onValidate(merged);
+      await validateUnifiedAstWithPlugins(merged, pluginMgr);
+    } catch (e: any) {
+      process.stderr.write('Validation error: ' + (e.message || e) + '\n');
+      process.exit(1);
+    }
+    const warnings = [...pluginMgr.warnings, ...((merged as any).namingWarnings || [])];
+    if (warnings.length) {
+      for (const w of warnings) process.stdout.write('[locus][warn] ' + w + '\n');
+    }
+    process.stdout.write('Check succeeded. Files: ' + files.length + '\n');
+  });
+
+program
   .command('new')
   .description('Scaffold a new Locus project')
   .argument('<name>', 'project name')

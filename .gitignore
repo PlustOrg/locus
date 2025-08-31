@@ -6,3 +6,5 @@ prisma/*.db
 prisma/migrations/
 # Prisma client (can be regenerated)
 node_modules/.prisma
+tmp-wf-run-*/
+tmp-check-*/

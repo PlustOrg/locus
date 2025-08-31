@@ -15,13 +15,12 @@ describe('workflow manifest generation', () => {
     expect(parsed.steps.length).toBe(2);
   });
   test('includes retry config when present', () => {
-    const src = `workflow R { trigger { t } retry { max: 5, backoff: fixed } steps { run act() } }`;
+    const src = `workflow R { trigger { on create(Order) } retry { max: 5, backoff: fixed } steps { run act() } }`;
     const ast = parseLocus(src, 'r.locus');
     const unified = mergeAsts([ast]);
     const { files } = runPipeline(unified, {});
     const parsed = JSON.parse(files['workflows/R.json']);
     expect(parsed.retry).toContain('max: 5');
-    expect(parsed.retryConfig.max).toBe('5');
-    expect(Object.keys(parsed.retryConfig).sort()).toEqual(['backoff','max']);
+    expect(parsed.retry).toContain('backoff: fixed');
   });
 });

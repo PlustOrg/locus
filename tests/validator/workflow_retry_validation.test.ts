@@ -10,15 +10,15 @@ describe('workflow retry validation', () => {
     return unified.workflows[0];
   }
   test('accepts minimal retry config', () => {
-    const wf = validate(`workflow R { trigger { x } retry { max: 3, backoff: fixed } steps { run act() } }`);
-    expect((wf as any).retryConfig.max).toBe('3');
+    const wf = validate(`workflow R { trigger { on create(Order) } retry { max: 3, backoff: fixed } steps { run act() } }`);
+    expect((wf as any).retry.max).toBe(3);
   });
   test('rejects invalid max', () => {
-    const src = `workflow R { trigger { x } retry { max: -1, backoff: exponential } steps { run act() } }`;
+    const src = `workflow R { trigger { on create(Order) } retry { max: -1, backoff: exponential } steps { run act() } }`;
     expect(() => validate(src)).toThrow(/retry.max/);
   });
   test('rejects unknown key', () => {
-    const src = `workflow R { trigger { x } retry { foo: 2 } steps { run act() } }`;
+    const src = `workflow R { trigger { on create(Order) } retry { foo: 2 } steps { run act() } }`;
     expect(() => validate(src)).toThrow(/retry.foo/);
   });
 });

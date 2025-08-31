@@ -3,14 +3,13 @@ import path from 'path';
 import fs from 'fs';
 
 describe('workflow:run CLI', () => {
-  const proj = path.resolve(__dirname, '../..');
+  const proj = path.resolve(__dirname, '../..'); // still used for invalid name case
   test('dry-run success', () => {
-    const wfPath = path.join(proj, 'temp_workflow_cli.locus');
-    fs.writeFileSync(wfPath, `workflow Demo { trigger { t } steps { run doThing(x) } }`);
-    try {
-      const out = execSync(`node dist/index.js workflow:run Demo --src ${proj} --dry-run`, { cwd: proj, env: { ...process.env, LOCUS_TEST_DISABLE_SPAWN: '1' } }).toString();
-      expect(out).toMatch(/validated successfully/);
-    } finally { try { fs.unlinkSync(wfPath); } catch {} }
+    const tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-wf-run-'));
+    const wfPath = path.join(tempDir, 'demo.locus');
+    fs.writeFileSync(wfPath, `workflow Demo { trigger { t } steps { run doThing() } }`);
+    const out = execSync(`node ${path.join(__dirname,'../../dist/index.js')} workflow:run Demo --src ${tempDir} --dry-run`, { env: { ...process.env, LOCUS_TEST_DISABLE_SPAWN: '1' } }).toString();
+    expect(out).toMatch(/validated successfully/);
   });
   test('invalid name exits', () => {
   let code = 0;

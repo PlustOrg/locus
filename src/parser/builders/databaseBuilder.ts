@@ -27,16 +27,22 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
   const scalarNodes = (typeCh['scalarType'] as CstNode[] || []).concat(typeCh['scalarType1'] as any || []);
   let primitiveTokenName: string | undefined;
         const isList = !!typeCh['List'];
-  const typeTokenName = Object.keys(typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT' ].includes(k));
+  const typeTokenName = Object.keys(typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
         const optional = !!typeCh['Question'];
+  let nullable = false;
+        if (!nullable && typeCh['Identifier']) {
+          const ids = (typeCh['Identifier'] as any[]);
+          if (ids.some(t => t.image === 'nullable')) nullable = true;
+        }
         let fieldType: any;
         if (isList) {
-          primitiveTokenName = Object.keys(scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT' ].includes(k));
-          fieldType = { kind: 'list', of: mapPrimitiveToken(primitiveTokenName!), optional };
+          primitiveTokenName = Object.keys(scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
+          fieldType = { kind: 'list', of: mapPrimitiveToken(primitiveTokenName!), optional, nullable };
         } else {
-          primitiveTokenName = scalarNodes.length ? Object.keys(scalarNodes[0].children as CstChildrenDictionary).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT' ].includes(k)) : typeTokenName;
+          primitiveTokenName = scalarNodes.length ? Object.keys(scalarNodes[0].children as CstChildrenDictionary).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k)) : typeTokenName;
           fieldType = { kind: 'primitive', name: mapPrimitiveToken(primitiveTokenName!) } as FieldType;
           if (optional) fieldType.optional = true;
+          if (nullable) (fieldType as any).nullable = true;
         }
   const attrGroups = (fdCh['fieldAttributeGroup'] as CstNode[]) || [];
   const attributes: FieldAttribute[] = collectFieldAttributes(attrGroups);

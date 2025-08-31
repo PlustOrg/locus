@@ -12,6 +12,8 @@ import { generateExpressApi, AuthConfig } from '../generator/express';
 import { initPluginManager } from '../plugins/manager';
 import chalk from 'chalk';
 import { reportError, ErrorOutputFormat } from './reporter';
+import { recordTiming, exportMetrics } from '../metrics';
+import { collectDeprecationWarnings } from '../deprecations';
 
 /**
  * Main build function for Locus CLI.
@@ -79,6 +81,7 @@ export async function buildProject(opts: {
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Parsed ${files.length} files in ${tParse1-tParse0}ms\n`);
   }
+  recordTiming('parseMs', tParse1 - tParse0);
   // Plugin hook: after each file parsed
   for (let i = 0; i < asts.length; i++) {
     const filePath = files[i];
@@ -106,6 +109,10 @@ export async function buildProject(opts: {
   pluginMgr.collectWorkflowStepKinds();
   await pluginMgr.onValidate(merged);
   await validateUnifiedAstWithPlugins(merged, pluginMgr);
+  // Collect naming warnings produced during validation
+  if ((merged as any).namingWarnings?.length) {
+    pluginMgr.warnings.push(...(merged as any).namingWarnings.map((w: string) => `[naming] ${w}`));
+  }
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
       const diag = errorToDiagnostic(e as any);
@@ -119,6 +126,7 @@ export async function buildProject(opts: {
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Merged ASTs in ${tMerge1-tParse1}ms\n`);
   }
+  recordTiming('mergeMs', tMerge1 - tParse1);
 
   // Generate all build artifacts
   let genMeta: any = {};
@@ -151,6 +159,9 @@ export async function buildProject(opts: {
     await pluginMgr.onAfterGenerate({ artifacts, meta });
     pluginMgr.runCustomGenerators(merged);
     Object.assign(artifacts, pluginMgr.extraArtifacts);
+  // Append deprecation warnings
+  const dep = collectDeprecationWarnings();
+  if (dep.length) meta.warnings = [...(meta.warnings || []), ...dep];
     // Optionally suppress warnings
     if (opts.suppressWarnings && meta.warnings?.length) {
       delete (artifacts as any)['GENERATED_WARNINGS.txt'];
@@ -162,6 +173,7 @@ export async function buildProject(opts: {
     if (opts.debug) {
       process.stdout.write(`[locus][debug] Generated artifacts in ${Date.now() - tMerge1}ms\n`);
     }
+  recordTiming('generateMs', Date.now() - tMerge1);
     // Dry run: just list files
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
@@ -220,6 +232,7 @@ export async function buildProject(opts: {
       totalMs: t1 - t0,
     };
     process.stdout.write('[locus][build][timings] ' + JSON.stringify(timings) + '\n');
+  try { const m = exportMetrics(); safeWrite(join(outDir, 'BUILD_METRICS.json'), JSON.stringify({ ...m, ...timings }, null, 2)); } catch {/* ignore */}
   }
 
   // Optionally run prisma generate

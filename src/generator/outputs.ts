@@ -89,8 +89,11 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
   const webhookRoutes: { name: string; secret?: string }[] = [];
   for (const wf of (unified.workflows || [])) {
     let tm: any = (wf as any).triggerMeta;
-    if (!tm && wf.trigger?.raw && /on:webhook/.test(wf.trigger.raw)) {
-      const m = /secret\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/.exec(wf.trigger.raw);
+    if (!tm && (wf as any).trigger?.events) {
+      const ev = (wf as any).trigger.events.find((e: any) => e.kind === 'webhook');
+      if (ev) tm = { type: 'webhook', secretRef: ev.secret };
+    } else if (!tm && (wf as any).trigger?.raw && /on:webhook/.test((wf as any).trigger.raw)) {
+      const m = /secret\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/.exec((wf as any).trigger.raw);
       tm = { type: 'webhook', secretRef: m?.[1] };
     }
     if (tm?.type === 'webhook') webhookRoutes.push({ name: wf.name, secret: tm.secretRef });
@@ -99,20 +102,41 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
     const sorted = [...unified.workflows].sort((a, b) => a.name.localeCompare(b.name));
     for (const w of sorted) {
       const stepsArr = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+      const triggerStr = (() => {
+        if ((w as any).trigger?.raw) return (w as any).trigger.raw.trim();
+        if ((w as any).trigger?.events) {
+          return (w as any).trigger.events.map((e: any) => e.kind === 'webhook' ? 'on webhook' : `on ${e.kind}(${e.entity})`).join(' ');
+        }
+        return null;
+      })();
+      const concurrencyStr = (() => {
+        if ((w as any).concurrency?.raw) return (w as any).concurrency.raw.trim();
+        if ((w as any).concurrency && !(w as any).concurrency.raw) {
+          const c = (w as any).concurrency; return c.limit != null ? `limit: ${c.limit}${c.group?` group: ${c.group}`:''}` : null;
+        }
+        return null;
+      })();
+      const retryStr = (() => {
+        if ((w as any).retry?.raw) return (w as any).retry.raw.trim();
+        if ((w as any).retry && !(w as any).retry.raw) {
+          const r = (w as any).retry; const parts:string[]=[]; if (r.max!=null) parts.push(`max: ${r.max}`); if (r.backoff) parts.push(`backoff: ${r.backoff}`); if (r.factor!=null) parts.push(`factor: ${r.factor}`); if (r.delayMs!=null) parts.push(`delayMs: ${r.delayMs}`); return parts.join(', ');
+        }
+        return null;
+      })();
       const manifest = {
         name: w.name,
-        trigger: w.trigger?.raw?.trim() || null,
+        trigger: triggerStr,
         triggerMeta: (w as any).triggerMeta || null,
         steps: stepsArr.map((s, idx) => {
-          const base: any = { index: idx, kind: s.kind, raw: (s.raw || '').trim() };
+            const base: any = { index: idx, id: s.id || idx + 1, kind: s.kind, raw: (s.raw || '').trim() };
           if (s.kind === 'run') { base.action = (s as any).action; base.args = (s as any).args || []; }
           if (s.kind === 'for_each') { base.loopVar = (s as any).loopVar; base.iterRaw = (s as any).iterRaw; }
           if (s.kind === 'branch') { base.condition = (s as any).conditionRaw; base.thenCount = ((s as any).steps||[]).length; base.elseCount = ((s as any).elseSteps||[]).length; }
           if (s.kind === 'send_email') { base.email = { to: (s as any).to || null, subject: (s as any).subject || null, template: (s as any).template || null }; }
           return base;
         }),
-        concurrency: w.concurrency?.raw?.trim() || null,
-        retry: w.retry?.raw?.trim() || null,
+        concurrency: concurrencyStr,
+        retry: retryStr,
         retryConfig: (() => { const rc = (w as any).retryConfig; if (!rc) return null; const ordered: any = {}; Object.keys(rc).sort().forEach(k=>ordered[k]=rc[k]); return ordered; })(),
         onError: w.onError?.raw?.trim() || null,
         onFailure: w.onFailure?.raw?.trim() || null,

@@ -31,6 +31,14 @@ export const DecimalT = createToken({ name: 'DecimalT', pattern: /Decimal\b/ });
 export const BooleanT = createToken({ name: 'BooleanT', pattern: /Boolean\b/ });
 export const DateTimeT = createToken({ name: 'DateTimeT', pattern: /DateTime\b/ });
 export const JsonT = createToken({ name: 'JsonT', pattern: /Json\b/ });
+// Phase 2 new primitive types
+export const BigIntT = createToken({ name: 'BigIntT', pattern: /BigInt\b/ });
+export const FloatT = createToken({ name: 'FloatT', pattern: /Float\b/ });
+export const UUIDT = createToken({ name: 'UUIDT', pattern: /UUID\b/ });
+export const EmailT = createToken({ name: 'EmailT', pattern: /Email\b/ });
+export const URLT = createToken({ name: 'URLT', pattern: /URL\b/ });
+// Duration literal (e.g., 5s, 250ms, 3m, 1h)
+export const Duration = createToken({ name: 'Duration', pattern: /[0-9]+(?:ms|s|m|h)\b/ });
 
 // Punctuation and operators
 export const LCurly = createToken({ name: 'LCurly', pattern: /\{/ });
@@ -102,6 +110,14 @@ export const Delay = createToken({ name: 'Delay', pattern: /delay\b/ });
 export const Branch = createToken({ name: 'Branch', pattern: /branch\b/ });
 export const ForEach = createToken({ name: 'ForEach', pattern: /forEach\b/ });
 export const SendEmail = createToken({ name: 'SendEmail', pattern: /send_email\b/ });
+// Workflow events & config keys (Phase 2)
+export const CreateKw = createToken({ name: 'CreateKw', pattern: /create\b/ });
+export const UpdateKw = createToken({ name: 'UpdateKw', pattern: /update\b/ });
+export const DeleteKw = createToken({ name: 'DeleteKw', pattern: /delete\b/ });
+export const WebhookKw = createToken({ name: 'WebhookKw', pattern: /webhook\b/ });
+export const MaxKw = createToken({ name: 'MaxKw', pattern: /max\b/ });
+export const BackoffKw = createToken({ name: 'BackoffKw', pattern: /backoff\b/ });
+export const FactorKw = createToken({ name: 'FactorKw', pattern: /factor\b/ });
 export const HttpRequest = createToken({ name: 'HttpRequest', pattern: /http_request\b/ });
 export const ConstKw = createToken({ name: 'ConstKw', pattern: /const\b/ });
 export const RunKw = createToken({ name: 'RunKw', pattern: /run\b/ });
@@ -166,6 +182,13 @@ export const AllTokens = [
   Branch,
   ForEach,
   SendEmail,
+  CreateKw,
+  UpdateKw,
+  DeleteKw,
+  WebhookKw,
+  MaxKw,
+  BackoffKw,
+  FactorKw,
   HttpRequest,
   ConstKw,
   RunKw,
@@ -177,6 +200,11 @@ export const AllTokens = [
   BooleanT,
   DateTimeT,
   JsonT,
+  BigIntT,
+  FloatT,
+  UUIDT,
+  EmailT,
+  URLT,
   // punctuation
   LCurly,
   RCurly,
@@ -203,6 +231,7 @@ export const AllTokens = [
   // literals and identifiers
   StringLiteral,
   HexColor,
+  Duration,
   NumberLiteral,
   Identifier,
   // catch-all raw char token (must be last in list to avoid conflicts)

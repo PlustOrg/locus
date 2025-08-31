@@ -36,12 +36,22 @@ export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {})
   const steps = Array.isArray(block.steps) ? block.steps as WorkflowStep[] : [];
   // simple concurrency group parse: concurrency { group: X, limit: N }
   let group: string | undefined; let limit: number | undefined;
-  const concRaw = (block as any).concurrency?.raw as string | undefined;
-  if (concRaw) {
-    const gm = /group(?:\s*:\s*|\s+)([A-Za-z_][A-Za-z0-9_]*)/.exec(concRaw) || /group([A-Za-z_][A-Za-z0-9_]*)/.exec(concRaw);
-    if (gm) group = gm[1];
-    const lm = /limit(?:\s*:\s*|\s+)(\d+)/.exec(concRaw) || /limit(\d+)/.exec(concRaw);
-    if (lm) limit = Number(lm[1]);
+  const concObj: any = (block as any).concurrency;
+  if (concObj) {
+    if (concObj.limit != null) limit = concObj.limit;
+    if (concObj.group) group = concObj.group;
+    if (!group && concObj.raw) {
+      const gm = /group(?:\s*:\s*|\s+)([A-Za-z_][A-Za-z0-9_]*)/.exec(concObj.raw);
+      if (gm) group = gm[1];
+    }
+  } else {
+    const concRaw = (block as any).concurrency?.raw as string | undefined;
+    if (concRaw) {
+      const gm = /group(?:\s*:\s*|\s+)([A-Za-z_][A-Za-z0-9_]*)/.exec(concRaw) || /group([A-Za-z_][A-Za-z0-9_]*)/.exec(concRaw);
+      if (gm) group = gm[1];
+      const lm = /limit(?:\s*:\s*|\s+)(\d+)/.exec(concRaw) || /limit(\d+)/.exec(concRaw);
+      if (lm) limit = Number(lm[1]);
+    }
   }
   if (group && limit != null) {
     const slot = globalConcurrency[group] || (globalConcurrency[group] = { limit, active: 0 });
@@ -118,6 +128,9 @@ function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: Work
 }
 
 function runStepWithRetry(step: WorkflowStep, ctx: WorkflowContext, retryCfg: any, pm?: PluginManager) {
+  // Support structured retry object on block.retry
+  // structured retry available on block.retryConfig already mapped during AST build
+  if (!retryCfg) retryCfg = (step as any).retry || (ctx as any).retry || ( (ctx as any).block?.retryConfig );
   if (!retryCfg) return runStep(step, ctx, pm);
   const max = retryCfg.max != null ? Number(retryCfg.max) : 0;
   const backoff = retryCfg.backoff === 'exponential' ? 'exponential' : 'fixed';

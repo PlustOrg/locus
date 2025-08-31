@@ -30,17 +30,24 @@ export type FieldTypeName =
   | 'Decimal'
   | 'Boolean'
   | 'DateTime'
-  | 'Json';
+  | 'Json'
+  | 'BigInt'
+  | 'Float'
+  | 'UUID'
+  | 'Email'
+  | 'URL';
 
 export interface FieldType {
   kind: 'primitive';
   name: FieldTypeName;
   optional?: boolean; // if `?`
+  nullable?: boolean; // Phase 2 distinction (DB allows NULL even if required)
 }
 export interface ListFieldType {
   kind: 'list';
   of: FieldTypeName;
   optional?: boolean; // optional list? (currently unused)
+  nullable?: boolean;
 }
 
 export interface FieldAttributeDefault {
@@ -50,8 +57,9 @@ export interface FieldAttributeDefault {
 
 export interface FieldAttributeUnique { kind: 'unique' }
 export interface FieldAttributeMap { kind: 'map'; to: string }
+export interface FieldAttributePolicy { kind: 'policy'; value: string }
 
-export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | FieldAttributeMap;
+export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | FieldAttributeMap | FieldAttributePolicy;
 
 export interface Field {
   name: string;
@@ -97,16 +105,14 @@ export interface WorkflowBlock {
   type: 'workflow';
   name: string;
   nameLoc?: { line: number; column: number };
-  trigger?: RawWorkflowSection; // raw until step grammar implemented
+  trigger?: RawWorkflowSection | { events: Array<{ kind: string; entity?: string; secret?: string; loc?: any }> };
   input?: RawWorkflowSection;
   state?: RawWorkflowSection; // placeholder
   steps?: RawWorkflowSection | WorkflowStep[]; // structured vs raw
   onError?: RawWorkflowSection;
   onFailure?: RawWorkflowSection;
-  concurrency?: RawWorkflowSection;
-  retry?: RawWorkflowSection;
-  retryConfig?: Record<string,string>; // parsed key values
-  triggerMeta?: { type?: 'webhook'; secretRef?: string };
+  concurrency?: RawWorkflowSection | { limit?: number; group?: string };
+  retry?: RawWorkflowSection | { max?: number; backoff?: string; factor?: number; delayMs?: number };
 }
 
 // Structured workflow step (Phase 4+ incremental)

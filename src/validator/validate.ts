@@ -17,6 +17,17 @@ export async function validateUnifiedAstWithPlugins(ast: UnifiedAST, pluginMgr: 
 }
 
 function _coreValidate(ast: UnifiedAST) {
+  const namingWarnings: string[] = [];
+  // Phase 1: Naming & Consistency warnings
+  const pascal = (s: string) => /^[A-Z][A-Za-z0-9]*$/.test(s);
+  if (ast.database) {
+    for (const e of (ast.database.entities || []) as any[]) {
+      if (!pascal(e.name)) namingWarnings.push(`Entity '${e.name}' should use PascalCase.`);
+    }
+  }
+  for (const p of (ast.pages || []) as any[]) if (!pascal(p.name)) namingWarnings.push(`Page '${p.name}' should use PascalCase.`);
+  for (const c of (ast.components || []) as any[]) if (!pascal(c.name)) namingWarnings.push(`Component '${c.name}' should use PascalCase.`);
+  for (const w of (ast.workflows || []) as any[]) if (!pascal(w.name)) namingWarnings.push(`Workflow '${w.name}' should use PascalCase.`);
   // Basic workflow validations (Phase 3)
   for (const w of ast.workflows || []) {
     if (!w.trigger) {
@@ -24,7 +35,7 @@ function _coreValidate(ast: UnifiedAST) {
       throw new VError(`Workflow '${w.name}' is missing required 'trigger' block.`, (w as any).sourceFile, loc?.line, loc?.column);
     }
     // retry strategy validation (basic)
-    if ((w as any).retryConfig) {
+    if ((w as any).retryConfig && !(w as any).retry) {
       const cfg = (w as any).retryConfig as Record<string,string>;
       const allowed = new Set(['max','backoff','factor','delay']);
       for (const k of Object.keys(cfg)) {
@@ -50,17 +61,72 @@ function _coreValidate(ast: UnifiedAST) {
       throw new VError(`Workflow '${w.name}' is missing required 'steps' block.`, (w as any).sourceFile, loc?.line, loc?.column);
     }
     // Incompatible trigger combos placeholder: detect both 'on:webhook' and entity event markers simultaneously (simple textual scan for now)
-    const trig = w.trigger.raw;
-    const hasWebhook = /on:webhook/.test(trig);
-    const hasEntity = /on:(create|update|delete)\(/.test(trig);
-    if (hasWebhook && hasEntity) {
-      const loc = w.nameLoc;
-      throw new VError(`Workflow '${w.name}' cannot combine 'on:webhook' with entity triggers in MVP.`, (w as any).sourceFile, loc?.line, loc?.column);
+    if ((w.trigger as any)?.events) {
+      const events = (w.trigger as any).events as any[];
+      const hasWebhook = events.some(e => e.kind === 'webhook');
+      const hasEntity = events.some(e => e.kind === 'create' || e.kind === 'update' || e.kind === 'delete');
+      if (hasWebhook && hasEntity) {
+        throw new VError(`Workflow '${w.name}' cannot mix webhook and entity triggers.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (hasWebhook) {
+        const wEv = events.find(e => e.kind === 'webhook');
+        (w as any).triggerMeta = { type: 'webhook', secretRef: wEv.secret };
+        // secret validation placeholder
+        if (!wEv.secret) {
+          throw new VError(`Workflow '${w.name}' webhook trigger missing secret reference.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        }
+      }
+    } else if ((w.trigger as any).raw) {
+      const trig = (w.trigger as any).raw;
+      const hasWebhook = /on:webhook/.test(trig);
+      const hasEntity = /on:(create|update|delete)\(/.test(trig);
+      if (hasWebhook && hasEntity) {
+        const loc = w.nameLoc;
+        throw new VError(`Workflow '${w.name}' cannot combine 'on:webhook' with entity triggers in MVP.`, (w as any).sourceFile, loc?.line, loc?.column);
+      }
+      if (hasWebhook) {
+        const m = /secret\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/.exec(trig);
+        (w as any).triggerMeta = { type: 'webhook', secretRef: m?.[1] };
+      }
     }
-    if (hasWebhook) {
-      // simple secret detection pattern: secret:<IDENT>
-      const m = /secret\s*:\s*([A-Za-z_][A-Za-z0-9_]*)/.exec(trig);
-      (w as any).triggerMeta = { type: 'webhook', secretRef: m?.[1] };
+    // structured concurrency
+    if (w.concurrency && !(w.concurrency as any).raw) {
+      const conc = w.concurrency as any;
+      if (conc.limit != null && (conc.limit <= 0 || conc.limit > 10000)) {
+        throw new VError(`Workflow '${w.name}' concurrency.limit must be 1..10000.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+    }
+    // structured retry
+    if (w.retry && !(w.retry as any).raw) {
+      const r = w.retry as any;
+      if (r.max != null && (r.max < 0 || r.max > 100)) {
+        throw new VError(`Workflow '${w.name}' retry.max must be 0..100.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (r.backoff && !['fixed','exponential'].includes(r.backoff)) {
+        throw new VError(`Workflow '${w.name}' retry.backoff must be fixed|exponential.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (r.backoff === 'exponential' && r.factor != null && r.factor <= 1) {
+        throw new VError(`Workflow '${w.name}' retry.factor must be >1 for exponential.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (Array.isArray(r._unknown) && r._unknown.length) {
+        throw new VError(`Workflow '${w.name}' retry.${r._unknown[0]} is not supported.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+    }
+    // Even when raw retained for backward compatibility, enforce core numeric bounds
+    else if (w.retry) {
+      const r = w.retry as any;
+      if (r.max != null && (r.max < 0 || r.max > 100)) {
+        throw new VError(`Workflow '${w.name}' retry.max must be 0..100.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (r.backoff && !['fixed','exponential'].includes(r.backoff)) {
+        throw new VError(`Workflow '${w.name}' retry.backoff must be fixed|exponential.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (r.backoff === 'exponential' && r.factor != null && r.factor <= 1) {
+        throw new VError(`Workflow '${w.name}' retry.factor must be >1 for exponential.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
+      if (Array.isArray(r._unknown) && r._unknown.length) {
+        throw new VError(`Workflow '${w.name}' retry.${r._unknown[0]} is not supported.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      }
     }
     // Naive binding extraction: scan step raw strings for 'const <ident>' and ensure uniqueness
     const seen = new Set<string>();
@@ -233,8 +299,20 @@ function _coreValidate(ast: UnifiedAST) {
           }
         }
       }
+      // default function call whitelist validation
+      for (const attr of f.attributes || []) {
+        if (attr.kind === 'default' && typeof (attr as any).value === 'object' && (attr as any).value.call) {
+          const fn = (attr as any).value.call;
+          const whitelist = new Set(['now','uuid','cuid','autoincrement']);
+          if (!whitelist.has(fn)) {
+            const loc = (f as any).nameLoc;
+            throw new VError(`Unsupported default function '${fn}' on field '${f.name}'. Allowed: now, uuid, cuid, autoincrement.`, ent.loc?.filePath, loc?.line, loc?.column);
+          }
+        }
+      }
     }
   }
+  (ast as any).namingWarnings = namingWarnings;
 }
 
 // Additional validations over unified database
@@ -254,6 +332,20 @@ export function validateDatabase(ast: UnifiedAST) {
         );
       }
       seen.set(f.name, f);
+    }
+    // relation policy validation
+    for (const r of ent.relations as any[]) {
+      for (const a of r.attributes || []) {
+        if (a.kind === 'policy') {
+          if (r.kind !== 'belongs_to') {
+            throw new VError(`Policy attribute only supported on belongs_to relation '${r.name}'`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
+          }
+          const allowed = new Set(['cascade','restrict','delete']);
+          if (!allowed.has(a.value)) {
+            throw new VError(`Unsupported relation policy '${a.value}' on '${r.name}'. Allowed: cascade, restrict, delete.`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
+          }
+        }
+      }
     }
   }
 }

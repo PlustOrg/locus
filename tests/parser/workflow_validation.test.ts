@@ -27,6 +27,6 @@ describe('workflow validation (Phase 3)', () => {
   test('incompatible webhook + entity', () => {
     const src = `workflow W { trigger { on:webhook on:create(Order) } steps { run act() } }`;
     const unified = unify(src);
-    expect(() => validateUnifiedAst(unified)).toThrow(/cannot combine 'on:webhook'/);
+  expect(() => validateUnifiedAst(unified)).toThrow(/cannot mix webhook and entity triggers/);
   });
 });

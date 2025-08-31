@@ -54,6 +54,11 @@ function mapType(name: string): string {
     case 'Boolean': return 'Boolean';
     case 'DateTime': return 'DateTime';
     case 'Json': return 'Json';
+  case 'BigInt': return 'BigInt';
+  case 'Float': return 'Float';
+  case 'UUID': return 'String'; // could add @db.Uuid with native types later
+  case 'Email': return 'String';
+  case 'URL': return 'String';
     default: return 'String';
   }
 }
