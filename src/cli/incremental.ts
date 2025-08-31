@@ -1,10 +1,11 @@
 import { readFileSync, existsSync } from 'fs';
-import { ensureDir, writeFileSafe } from './utils';
-import { join, dirname } from 'path';
+import { writeFileSafe } from './utils';
+import { join } from 'path';
 import { parseLocus } from '../parser';
 import { mergeAsts } from '../parser/merger';
 import { buildOutputArtifacts, buildPackageJson, buildGeneratedReadme, getAppName, buildTsConfig } from '../generator/outputs';
 import { BuildError } from '../errors';
+import crypto from 'crypto';
 
 export function createIncrementalBuilder(opts: {
   srcDir: string;
@@ -12,6 +13,7 @@ export function createIncrementalBuilder(opts: {
   fileMap: Map<string, string>;
 }) {
   const cache = new Map<string, ReturnType<typeof parseLocus>>();
+  const contentHash = new Map<string,string>();
 
   // File writing utilities are now imported from utils
 
@@ -95,6 +97,9 @@ export function createIncrementalBuilder(opts: {
       if (!filePath.endsWith('.locus')) return; // ignore non-locus changes
       try {
         const content = readFileSync(filePath, 'utf8');
+  const hash = crypto.createHash('sha256').update(content).digest('hex');
+  if (contentHash.get(filePath) === hash) return; // no block-level changes
+  contentHash.set(filePath, hash);
         opts.fileMap.set(filePath, content);
         cache.set(filePath, parseLocus(content, filePath));
       } catch (e) {

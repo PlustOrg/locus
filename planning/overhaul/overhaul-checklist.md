@@ -23,10 +23,10 @@ Legend:
   - [x] Remove validator branch handling old case
 - [x] (P1) Formalize `else` branch keyword (drop Identifier fallback)
   - [x] Update builder logic removing heuristic
-- [ ] (P2) Unify workflow raw sections into structured grammar (trigger, retry, concurrency)
-  - [ ] Add tokens for retry keys if needed or parse key:value pairs generically
-  - [ ] Produce structured AST nodes (typed)
-  - [ ] Update validator to use structured fields vs regex
+- [x] (P2) Unify workflow raw sections into structured grammar (trigger, retry, concurrency)
+  - [x] Add tokens for retry keys if needed or parse key:value pairs generically
+  - [x] Produce structured AST nodes (typed)
+  - [x] Update validator to use structured fields vs regex
 - [ ] (P3) Unify UI / state / action parsing under Chevrotain (or pluggable parser layer)
   - [ ] Define UI lexical mode or separate sub-lexer
   - [ ] Provide CST → UI AST builder with location metadata
@@ -68,11 +68,11 @@ Legend:
   - [x] Syntax: `(policy: cascade)` parsed
   - [x] Validator ensures supported combos (belongs_to only)
   - [ ] Prisma generator mapping (future enhancement)
-- [ ] (P2) Cross-block reference validation (workflow run step action existence)
-  - [ ] Build index of actions before validation
-- [ ] (P2) Structured retry config typed parsing
-  - [ ] Duration parsing for `delay` values
-  - [ ] Numeric range validation
+- [x] (P2) Cross-block reference validation (workflow run step action existence)
+  - [x] Build index of actions before validation
+- [x] (P2) Structured retry config typed parsing
+  - [x] Duration parsing for `delay` values
+  - [x] Numeric range validation
 - [ ] (P3) Parse all UI `{expr}` via expression grammar
   - [ ] Provide expression AST nodes with loc
   - [ ] Validator pass for unknown identifiers / safe subset
@@ -87,11 +87,11 @@ Legend:
 - [ ] (P5) `--explain <code>` CLI command
 
 ## 5. Workflow System Maturation
-- [ ] (P2) Trigger DSL: parse `on: create(Entity)` etc. into structured trigger AST
-- [ ] (P2) Webhook trigger: validate secret ref exists
-- [ ] (P2) Step IDs assignment (stable incremental in builder)
-- [ ] (P2) Formal step schema objects (Run, HttpRequest, ForEach, Delay, Branch, SendEmail)
-- [ ] (P2) Retry config structured & validated (see Type System)
+- [x] (P2) Trigger DSL: parse `on: create(Entity)` etc. into structured trigger AST
+- [x] (P2) Webhook trigger: validate secret ref exists
+- [x] (P2) Step IDs assignment (stable incremental in builder)
+- [x] (P2) Formal step schema objects (Run, HttpRequest, ForEach, Delay, Branch, SendEmail)
+- [x] (P2) Retry config structured & validated (see Type System)
 - [ ] (P3) New step types: `parallel`, `queue_publish`, `db_tx` (behind feature flags)
 - [ ] (P4) Plugin-defined step kinds (registry)
 - [ ] (P5) Execution tracing hooks (emit events with step IDs)
@@ -113,21 +113,21 @@ Legend:
 - [ ] (P5) Dynamic plugin loading performance cache
 
 ## 8. Determinism & Formatting
-- [ ] (P2) Canonical field ordering strategy (decide: preserve input vs sorted) — decision doc
-- [ ] (P2) Deterministic design token ordering (sort keys)
+- [x] (P2) Canonical field ordering strategy (decide: preserve input vs sorted) — decision doc (decision: preserve input order; generators explicitly sort where stability needed)
+- [x] (P2) Deterministic design token ordering (sort keys)
 - [ ] (P3) Implement `.locusfmt` formatter (pretty-printer) + `locus format`
 - [ ] (P3) Output hash baseline test in CI
 
 ## 9. Security & Hardening
 - [x] (P2) Whitelist default functions (see Type System)
-- [ ] (P2) Validate `http_request` uses HTTPS unless `allow_insecure: true`
-- [ ] (P2) Secret reference validation in webhook triggers
+- [x] (P2) Validate `http_request` uses HTTPS unless `allow_insecure: true`
+- [x] (P2) Secret reference validation in webhook triggers
 - [ ] (P3) Sanitize email step fields (basic injection guards)
 - [ ] (P3) Restrict template path resolution to allowed roots
 - [ ] (P4) Optional static taint analysis for workflow expressions (MVP warnings)
 
 ## 10. Performance & Scalability
-- [ ] (P2) Block-level content hashing for incremental parser
+- [x] (P2) Block-level content hashing for incremental parser
 - [ ] (P3) Worker-thread parallel parsing (configurable concurrency)
 - [ ] (P3) Expression AST caching (hash → reuse)
 - [ ] (P4) Memory profiling harness + budget assertions in CI
@@ -142,7 +142,7 @@ Legend:
 
 ## 12. Migration & Versioning
 - [x] (P1) Introduce feature flag infrastructure (config parsing)
-- [ ] (P2) Add `workflows.v2` flag gating structured workflow grammar
+- [x] (P2) Add `workflows.v2` flag gating structured workflow grammar (env var LOCUS_DISABLE_WORKFLOWS_V2 to disable)
 - [ ] (P3) Deprecation system (record usage, aggregate summary)
 - [ ] (P4) Emit removal schedule in warnings
 

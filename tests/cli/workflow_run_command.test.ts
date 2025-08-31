@@ -7,7 +7,7 @@ describe('workflow:run CLI', () => {
   test('dry-run success', () => {
     const tempDir = fs.mkdtempSync(path.join(process.cwd(), 'tmp-wf-run-'));
     const wfPath = path.join(tempDir, 'demo.locus');
-    fs.writeFileSync(wfPath, `workflow Demo { trigger { t } steps { run doThing() } }`);
+  fs.writeFileSync(wfPath, `page P { action doThing() {} }\nworkflow Demo { trigger { t } steps { run doThing() } }`);
     const out = execSync(`node ${path.join(__dirname,'../../dist/index.js')} workflow:run Demo --src ${tempDir} --dry-run`, { env: { ...process.env, LOCUS_TEST_DISABLE_SPAWN: '1' } }).toString();
     expect(out).toMatch(/validated successfully/);
   });

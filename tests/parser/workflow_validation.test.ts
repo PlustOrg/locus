@@ -20,12 +20,12 @@ describe('workflow validation (Phase 3)', () => {
     expect(() => validateUnifiedAst(unified)).toThrow(VError);
   });
   test('valid minimal workflow', () => {
-    const src = `workflow W { trigger { on:create(Order) } steps { run act() } }`;
+  const src = `page P { action act() {} }\nworkflow W { trigger { on:create(Order) } steps { run act() } }`;
     const unified = unify(src);
     expect(() => validateUnifiedAst(unified)).not.toThrow();
   });
   test('incompatible webhook + entity', () => {
-    const src = `workflow W { trigger { on:webhook on:create(Order) } steps { run act() } }`;
+  const src = `page P { action act() {} }\nworkflow W { trigger { on:webhook on:create(Order) } steps { run act() } }`;
     const unified = unify(src);
   expect(() => validateUnifiedAst(unified)).toThrow(/cannot mix webhook and entity triggers/);
   });

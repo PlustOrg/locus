@@ -139,6 +139,11 @@ function _coreValidate(ast: UnifiedAST) {
       const sm = /([A-Za-z_][A-Za-z0-9_]*)/g; let r:RegExpExecArray|null; while((r=sm.exec(w.state.raw))) reserved.add(r[1]);
     }
     const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+  // Build action name index once (outside loop ideally); quick inline cache
+  const actionNames = new Set<string>();
+  for (const p of (ast.pages || []) as any[]) for (const a of (p.actions||[])) actionNames.add(a.name);
+  for (const c of (ast.components || []) as any[]) for (const a of (c.actions||[])) actionNames.add(a.name);
+  for (const sblk of (ast.stores || []) as any[]) for (const a of (sblk.actions||[])) actionNames.add(a.name);
     for (const s of steps) {
       const raw = s.raw as string;
       const m = /const\s+([A-Za-z_][A-Za-z0-9_]*)/g;
@@ -160,6 +165,10 @@ function _coreValidate(ast: UnifiedAST) {
         const loc = w.nameLoc;
         throw new VError(`Workflow '${w.name}' has run step missing action name.`, (w as any).sourceFile, loc?.line, loc?.column);
       }
+      if (s.kind === 'run' && s.action && !actionNames.has(s.action)) {
+        const loc = s.loc || w.nameLoc;
+        throw new VError(`Workflow '${w.name}' references unknown action '${s.action}'.`, (w as any).sourceFile, loc?.line, loc?.column);
+      }
       // for_each iterable validation
       if (s.kind === 'for_each') {
         if (!s.iterRaw) {
@@ -180,6 +189,13 @@ function _coreValidate(ast: UnifiedAST) {
         }
         if (!se.subject && !se.template) {
           const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email requires 'subject' or 'template'.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+      }
+      if (s.kind === 'http_request') {
+        const rawReq = s.raw || '';
+        if (/url\s*:?\s*"?http:\/\//.test(rawReq) && !/allow_insecure\s*:?\s*true/.test(rawReq)) {
+          const loc = s.loc || w.nameLoc;
+          throw new VError(`Workflow '${w.name}' http_request must use HTTPS (add allow_insecure: true to override).`, (w as any).sourceFile, loc?.line, loc?.column);
         }
       }
   }

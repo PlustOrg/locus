@@ -11,6 +11,7 @@ import { defineHidden } from './builderUtils';
  * Keeps logic very close to legacy buildDatabaseAst but delegates to small focused modules.
  */
 export function buildAstModular(cst: CstNode, originalSource?: string, filePath?: string): LocusFileAST {
+  const workflowsV2Enabled = process.env.LOCUS_DISABLE_WORKFLOWS_V2 === '1' ? false : true;
   function findFirstChildByName(node: any, name: string): CstNode | undefined {
     if (!node || !node.children) return undefined;
     const arr = node.children[name];
@@ -166,6 +167,10 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         const stepsArr = chW.stepsWorkflowBlock?.[0];
         if (stepsArr) {
           const stepChildren = (stepsArr.children.workflowStepStmt as any[]) || [];
+          if (!workflowsV2Enabled) {
+            // Fallback: capture raw steps block only
+            capture(chW.stepsWorkflowBlock, 'steps');
+          } else {
           const splitArgsPreserve = (inner: string): string[] => {
             if (!inner.trim()) return [];
             const parts: string[] = [];
@@ -188,6 +193,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             let forEachNode = findFirstChildByName(st, 'forEachStep');
             let delayNode = findFirstChildByName(st, 'delayStep');
             let sendEmailNode = findFirstChildByName(st, 'sendEmailStep');
+            let httpNode = findFirstChildByName(st, 'httpRequestStep');
             if (!runNode || !branchNode || !forEachNode || !delayNode || !sendEmailNode) {
               const kids = (st as any).children || {};
               for (const arr of Object.values(kids)) {
@@ -198,6 +204,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
                     if (!forEachNode) forEachNode = findFirstChildByName(sub, 'forEachStep');
                     if (!delayNode) delayNode = findFirstChildByName(sub, 'delayStep');
                     if (!sendEmailNode) sendEmailNode = findFirstChildByName(sub, 'sendEmailStep');
+                    if (!httpNode) (httpNode as any) = findFirstChildByName(sub, 'httpRequestStep');
                   }
                 }
               }
@@ -274,6 +281,20 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               const loc = dTok ? { line: dTok.startLine, column: dTok.startColumn } : undefined;
               return { kind: 'delay', raw, loc } as any;
             }
+            // HTTP REQUEST
+            if (httpNode) {
+              const hTok: any = (httpNode as any).children?.HttpRequest?.[0];
+              const loc = hTok ? { line: hTok.startLine, column: hTok.startColumn } : undefined;
+              // Extract inner raw between braces for validation (url, allow_insecure keys)
+              let inner = raw;
+              try {
+                const sc: any = httpNode.children?.LCurly?.[0];
+                const ecArr: any[] = httpNode.children?.RCurly || [];
+                const ec: any = ecArr[ecArr.length - 1];
+                if (sc && ec && originalSource) inner = originalSource.slice(sc.endOffset + 1, ec.startOffset).trim();
+              } catch {}
+              return { kind: 'http_request', raw: inner, loc } as any;
+            }
             // SEND EMAIL (structured block) - capture raw section between braces (already in raw)
             if (sendEmailNode) {
               // attempt field extraction from inner content between braces using offsets
@@ -313,6 +334,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             if (Array.isArray((block as any).steps)) {
               (block as any).steps.forEach((s: any, idx: number) => { if (!s.id) s.id = idx + 1; });
             }
+          }
         }
         else capture(chW.stepsWorkflowBlock, 'steps');
         capture(chW.onErrorWorkflowBlock, 'onError');
