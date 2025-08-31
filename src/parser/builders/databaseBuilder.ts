@@ -16,7 +16,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
       const fields: Field[] = [];
       const relations: Relation[] = [];
 
-      const fieldDecls = (entChildren['fieldDecl'] as CstNode[]) || [];
+  const fieldDecls = (entChildren['fieldDecl'] as CstNode[]) || [];
       for (const fd of fieldDecls) {
         const fdCh = fd.children as CstChildrenDictionary;
         const fieldNameTok = (fdCh['Identifier'] as IToken[])[0];
@@ -44,14 +44,14 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
           if (optional) fieldType.optional = true;
           if (nullable) (fieldType as any).nullable = true;
         }
-  const attrGroups = (fdCh['fieldAttributeGroup'] as CstNode[]) || [];
+  const attrGroups = ((fdCh['fieldAttributeGroup'] as CstNode[]) || []).concat((fdCh['fieldAnnotation'] as CstNode[]) || []);
   const attributes: FieldAttribute[] = collectFieldAttributes(attrGroups);
         const fieldNode: any = { name: fieldName, type: fieldType, attributes };
         defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
         fields.push(fieldNode);
       }
 
-      const relationDecls = (entChildren['relationDecl'] as CstNode[]) || [];
+  const relationDecls = (entChildren['relationDecl'] as CstNode[]) || [];
       for (const rd of relationDecls) {
         const rch = rd.children as CstChildrenDictionary;
         const idToks = (rch['Identifier'] as IToken[]);
@@ -64,7 +64,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         const targetTokens = rch['Identifier'] as IToken[];
         const targetTok = targetTokens[targetTokens.length - 1];
         const target = targetTok.image;
-  const attrGroups2 = (rch['fieldAttributeGroup'] as CstNode[]) || [];
+  const attrGroups2 = ((rch['fieldAttributeGroup'] as CstNode[]) || []).concat((rch['fieldAnnotation'] as CstNode[]) || []);
   const attributes: FieldAttribute[] = collectRelationAttributes(attrGroups2);
         const relNode: any = { name: relName, kind, target, attributes };
         defineHidden(relNode, 'nameLoc', posOf(relNameTok));

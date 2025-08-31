@@ -93,23 +93,28 @@ function _coreValidate(ast: UnifiedAST) {
     if (w.concurrency && !(w.concurrency as any).raw) {
       const conc = w.concurrency as any;
       if (conc.limit != null && (conc.limit <= 0 || conc.limit > 10000)) {
-        throw new VError(`Workflow '${w.name}' concurrency.limit must be 1..10000.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        const loc = conc._locs?.limit || w.nameLoc;
+        throw new VError(`Workflow '${w.name}' concurrency.limit must be 1..10000.`, (w as any).sourceFile, loc?.line, loc?.column);
       }
     }
     // structured retry
     if (w.retry && !(w.retry as any).raw) {
       const r = w.retry as any;
       if (r.max != null && (r.max < 0 || r.max > 100)) {
-        throw new VError(`Workflow '${w.name}' retry.max must be 0..100.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        const loc = r._locs?.max || w.nameLoc;
+        throw new VError(`Workflow '${w.name}' retry.max must be 0..100.`, (w as any).sourceFile, loc?.line, loc?.column);
       }
       if (r.backoff && !['fixed','exponential'].includes(r.backoff)) {
-        throw new VError(`Workflow '${w.name}' retry.backoff must be fixed|exponential.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        const loc = r._locs?.backoff || w.nameLoc;
+        throw new VError(`Workflow '${w.name}' retry.backoff must be fixed|exponential.`, (w as any).sourceFile, loc?.line, loc?.column);
       }
       if (r.backoff === 'exponential' && r.factor != null && r.factor <= 1) {
-        throw new VError(`Workflow '${w.name}' retry.factor must be >1 for exponential.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+        const loc = r._locs?.factor || w.nameLoc;
+        throw new VError(`Workflow '${w.name}' retry.factor must be >1 for exponential.`, (w as any).sourceFile, loc?.line, loc?.column);
       }
-      if (Array.isArray(r._unknown) && r._unknown.length) {
-        throw new VError(`Workflow '${w.name}' retry.${r._unknown[0]} is not supported.`, (w as any).sourceFile, w.nameLoc?.line, w.nameLoc?.column);
+      if (Array.isArray(r._unknownEntries) && r._unknownEntries.length) {
+        const first = r._unknownEntries[0];
+        throw new VError(`Workflow '${w.name}' retry.${first.key} is not supported.`, (w as any).sourceFile, first.loc?.line, first.loc?.column);
       }
     }
     // Even when raw retained for backward compatibility, enforce core numeric bounds
@@ -287,6 +292,23 @@ function _coreValidate(ast: UnifiedAST) {
 
   // database-wide validations
   validateDatabase(ast);
+  // Deprecation: paren attribute form (Phase 2 soft warning)
+  if (ast.database) {
+    for (const e of (ast.database.entities || []) as any[]) {
+      for (const f of e.fields) {
+        if ((f.attributes||[]).some((a: any) => a.__origin === 'paren')) {
+          if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
+          (ast as any).namingWarnings.push(`Deprecated (legacy) attribute syntax '(...)' on field '${f.name}'. Use '@' form.`);
+        }
+      }
+      for (const r of e.relations) {
+        if ((r.attributes||[]).some((a: any) => a.__origin === 'paren')) {
+          if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
+          (ast as any).namingWarnings.push(`Deprecated (legacy) attribute syntax '(...)' on relation '${r.name}'. Use '@' form.`);
+        }
+      }
+    }
+  }
 
   // Integer default value range validation (-2^31 .. 2^31-1)
   const INT_MIN = -2147483648;
@@ -327,6 +349,9 @@ function _coreValidate(ast: UnifiedAST) {
         }
       }
     }
+  }
+  if ((ast as any).namingWarnings && Array.isArray((ast as any).namingWarnings)) {
+    for (const w of (ast as any).namingWarnings) if (!namingWarnings.includes(w)) namingWarnings.push(w);
   }
   (ast as any).namingWarnings = namingWarnings;
 }

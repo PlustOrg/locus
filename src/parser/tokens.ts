@@ -62,6 +62,7 @@ export const OverrideKw = createToken({ name: 'OverrideKw', pattern: /override\b
 export const LBracketTok = createToken({ name: 'LBracketTok', pattern: /\[/ });
 export const RBracketTok = createToken({ name: 'RBracketTok', pattern: /\]/ });
 export const SingleQuoteTok = createToken({ name: 'SingleQuoteTok', pattern: /'/ });
+export const AtSign = createToken({ name: 'AtSign', pattern: /@/ });
 
 // Attributes
 export const Unique = createToken({ name: 'Unique', pattern: /unique\b/ });
@@ -224,6 +225,7 @@ export const AllTokens = [
   LBracketTok,
   RBracketTok,
   SingleQuoteTok,
+  AtSign,
   // attributes keywords
   Unique,
   Default,

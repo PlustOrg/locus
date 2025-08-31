@@ -88,7 +88,8 @@ describe('Parser: database blocks', () => {
     expect(attrKinds['price']).toContain('default');
     expect(attrKinds['createdAt']).toContain('default');
     expect(attrKinds['isActive']).toContain('default');
-    expect(entity.fields.find(f => f.name === 'legacy')?.attributes).toEqual([{ kind: 'map', to: 'legacy_col' }]);
+  const legacyAttrs = entity.fields.find(f => f.name === 'legacy')?.attributes.map(a=>({ kind: (a as any).kind, to: (a as any).to }));
+  expect(legacyAttrs).toEqual([{ kind: 'map', to: 'legacy_col' }]);
   });
 
   test('entity with relationships', () => {
@@ -113,7 +114,8 @@ describe('Parser: database blocks', () => {
   expect(byName['Customer'].relations[0]).toEqual({ name: 'orders', kind: 'has_many', target: 'Order', attributes: [] });
   expect(byName['Order'].relations[0]).toEqual({ name: 'customer', kind: 'belongs_to', target: 'Customer', attributes: [] });
   expect(byName['User'].relations[0]).toEqual({ name: 'profile', kind: 'has_one', target: 'UserProfile', attributes: [] });
-  expect(byName['UserProfile'].relations[0]).toEqual({ name: 'user', kind: 'belongs_to', target: 'User', attributes: [{ kind: 'unique' }] });
+  const userProfileRel = byName['UserProfile'].relations[0];
+  expect({ name: userProfileRel.name, kind: userProfileRel.kind, target: userProfileRel.target, attributes: userProfileRel.attributes.map((a:any)=>({ kind: a.kind })) }).toEqual({ name: 'user', kind: 'belongs_to', target: 'User', attributes: [{ kind: 'unique' }] });
   });
 
   test('multiple database blocks', () => {

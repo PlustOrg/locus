@@ -97,6 +97,7 @@ import {
   BackoffKw,
   FactorKw,
   Duration,
+  AtSign,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -697,7 +698,10 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier); // field name
     this.CONSUME(Colon);
     this.SUBRULE(this.fieldType);
-    this.MANY(() => this.SUBRULE(this.fieldAttributeGroup));
+    this.MANY(() => this.OR([
+      { ALT: () => this.SUBRULE(this.fieldAttributeGroup) },
+      { ALT: () => this.SUBRULE(this.fieldAnnotation) },
+    ]));
   });
 
   private scalarType = this.RULE('scalarType', () => {
@@ -736,7 +740,10 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.CONSUME(HasOne) },
     ]);
   this.CONSUME2(Identifier); // target entity name
-    this.MANY(() => this.SUBRULE(this.fieldAttributeGroup));
+  this.MANY(() => this.OR1([
+      { ALT: () => this.SUBRULE(this.fieldAttributeGroup) },
+      { ALT: () => this.SUBRULE(this.fieldAnnotation) },
+    ]));
   });
 
   private fieldAttributeGroup = this.RULE('fieldAttributeGroup', () => {
@@ -748,6 +755,32 @@ export class DatabaseCstParser extends CstParser {
     { ALT: () => this.SUBRULE(this.policyAttr) },
     ]);
     this.CONSUME(RParen);
+  });
+
+  private fieldAnnotation = this.RULE('fieldAnnotation', () => {
+    this.CONSUME(AtSign as any);
+    this.OR([
+      { ALT: () => this.CONSUME(Unique) },
+      { ALT: () => this.SUBRULE(this.defaultAnn) },
+      { ALT: () => this.SUBRULE(this.mapAnn) },
+      { ALT: () => this.SUBRULE(this.policyAnn) },
+    ]);
+  });
+
+  private defaultAnn = this.RULE('defaultAnn', () => {
+    this.CONSUME(Default); this.CONSUME(LParen); this.SUBRULE(this.annotationValueList); this.CONSUME(RParen);
+  });
+  private mapAnn = this.RULE('mapAnn', () => { this.CONSUME(MapTok); this.CONSUME(LParen); this.CONSUME(StringLiteral); this.CONSUME(RParen); });
+  private policyAnn = this.RULE('policyAnn', () => { this.CONSUME(Policy); this.CONSUME(LParen); this.CONSUME1(Identifier); this.CONSUME(RParen); });
+
+  private annotationValueList = this.RULE('annotationValueList', () => {
+    // same as defaultAttr body but inside parentheses
+    this.OR([
+      { ALT: () => this.CONSUME(NumberLiteral) },
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.SUBRULE(this.callExpr) },
+      { ALT: () => this.CONSUME(Identifier) },
+    ]);
   });
 
   private defaultAttr = this.RULE('defaultAttr', () => {

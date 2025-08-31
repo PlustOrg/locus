@@ -102,19 +102,23 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
           const cstNode = chW.concurrencyBlock[0];
           let limitVal: number | undefined;
           let groupVal: string | undefined;
+      let limitLoc: any;
+      let groupLoc: any;
           const entries: any[] = cstNode.children.concurrencyEntry || [];
           for (const ce of entries) {
             const ch = ce.children;
             if (ch.Limit && ch.NumberLiteral) {
               const numTok = ch.NumberLiteral[0];
               limitVal = Number(numTok.image);
+        limitLoc = { line: numTok.startLine, column: numTok.startColumn };
             }
             if (ch.Group && ch.Identifier) {
               const idTok = ch.Identifier[ch.Identifier.length-1];
               groupVal = idTok.image;
+        groupLoc = { line: idTok.startLine, column: idTok.startColumn };
             }
           }
-          (block as any).concurrency = { limit: limitVal, group: groupVal };
+      (block as any).concurrency = { limit: limitVal, group: groupVal, _locs: { limit: limitLoc, group: groupLoc } };
         }
         // Structured retry
         if (chW.retryBlock && chW.retryBlock[0]) {
@@ -132,7 +136,10 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             const ech = e.children;
             const neg = !!ech.HyphenTok;
             if (ech.MaxKw) retry.max = (neg?-1:1)*Number(ech.NumberLiteral[0].image);
-            else if (ech.BackoffKw) retry.backoff = ech.Identifier[0].image;
+            else if (ech.BackoffKw) {
+              retry.backoff = ech.Identifier[0].image;
+              retry._locs = retry._locs || {}; retry._locs.backoff = { line: ech.Identifier[0].startLine, column: ech.Identifier[0].startColumn };
+            }
             else if (ech.FactorKw) retry.factor = (neg?-1:1)*Number(ech.NumberLiteral.slice(-1)[0].image);
             else if (ech.Delay) {
               if (ech.Duration) retry.delayMs = parseDuration(ech.Duration[0].image);
@@ -140,7 +147,9 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             } else if (ech.Identifier) {
               const keyTok = ech.Identifier[0];
               if (!retry._unknown) retry._unknown = [];
+              if (!retry._unknownEntries) retry._unknownEntries = [];
               retry._unknown.push(keyTok.image);
+              retry._unknownEntries.push({ key: keyTok.image, loc: { line: keyTok.startLine, column: keyTok.startColumn } });
             }
           }
           (block as any).retry = retry;

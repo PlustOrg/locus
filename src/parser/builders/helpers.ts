@@ -23,32 +23,35 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
   const attributes: FieldAttribute[] = [];
   for (const ag of attrGroups) {
     const agCh = ag.children as CstChildrenDictionary;
-    if (agCh['Unique']) {
-      attributes.push({ kind: 'unique' } as FieldAttributeUnique);
-    } else if (agCh['mapAttr']) {
+    const origin = (ag as any).name === 'fieldAnnotation' ? 'annotation' : 'paren';
+  // Annotation nodes reuse inner tokens without parentheses; treat similarly
+  if (agCh['Unique']) {
+  attributes.push(Object.assign({ kind: 'unique' } as FieldAttributeUnique, { __origin: origin } as any));
+    } else if (agCh['mapAttr'] || agCh['mapAnn']) {
       const mapNode = (agCh['mapAttr'] as CstNode[])[0];
       const mch = mapNode.children as CstChildrenDictionary;
       const to = (mch['StringLiteral'] as IToken[])[0].image.slice(1, -1);
-      attributes.push({ kind: 'map', to } as FieldAttributeMap);
-    } else if (agCh['defaultAttr']) {
-      const defNode = (agCh['defaultAttr'] as CstNode[])[0];
-      const dch = defNode.children as CstChildrenDictionary;
-      const num = dch['NumberLiteral'] as IToken[] | undefined;
-      const str = dch['StringLiteral'] as IToken[] | undefined;
-      const ident = dch['Identifier'] as IToken[] | undefined;
-      if (num) {
-        attributes.push({ kind: 'default', value: Number(num[0].image) } as FieldAttributeDefault);
-      } else if (str) {
-        attributes.push({ kind: 'default', value: str[0].image.slice(1, -1) } as FieldAttributeDefault);
-      } else if (ident) {
-        const id = ident[0].image;
+  attributes.push(Object.assign({ kind: 'map', to } as FieldAttributeMap, { __origin: origin } as any));
+    } else if (agCh['defaultAttr'] || agCh['defaultAnn']) {
+      const defNode = (agCh['defaultAttr'] || agCh['defaultAnn'] as any)[0];
+      const dch = (defNode as any).children as CstChildrenDictionary;
+      let work = dch;
+      if (dch['annotationValueList']) {
+        work = ((dch['annotationValueList'] as any)[0] as any).children as CstChildrenDictionary;
+      }
+      if (work['NumberLiteral']) {
+  attributes.push(Object.assign({ kind: 'default', value: Number((work['NumberLiteral'] as IToken[])[0].image) } as FieldAttributeDefault, { __origin: origin } as any));
+      } else if (work['StringLiteral']) {
+  attributes.push(Object.assign({ kind: 'default', value: (work['StringLiteral'] as IToken[])[0].image.slice(1, -1) } as FieldAttributeDefault, { __origin: origin } as any));
+      } else if (work['Identifier']) {
+        const id = (work['Identifier'] as IToken[])[0].image;
         if (id === 'true' || id === 'false') {
-          attributes.push({ kind: 'default', value: id === 'true' } as FieldAttributeDefault);
+          attributes.push(Object.assign({ kind: 'default', value: id === 'true' } as FieldAttributeDefault, { __origin: origin } as any));
         } else {
-          attributes.push({ kind: 'default', value: id } as FieldAttributeDefault);
+          attributes.push(Object.assign({ kind: 'default', value: id } as FieldAttributeDefault, { __origin: origin } as any));
         }
-      } else if ((dch as any)['callExpr']) {
-        const call = (dch['callExpr'] as CstNode[])[0];
+      } else if ((work as any)['callExpr']) {
+        const call = (work['callExpr'] as CstNode[])[0];
         const cch = call.children as CstChildrenDictionary;
         const fn = (cch['Identifier'] as IToken[])[0].image;
         const args: Array<string | number | boolean> = [];
@@ -63,13 +66,13 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
             }
           }
         }
-        attributes.push({ kind: 'default', value: { call: fn, args } } as FieldAttributeDefault);
+  attributes.push(Object.assign({ kind: 'default', value: { call: fn, args } } as FieldAttributeDefault, { __origin: origin } as any));
   }
-    } else if (agCh['policyAttr']) {
+  } else if (agCh['policyAttr'] || agCh['policyAnn']) {
       const polNode = (agCh['policyAttr'] as CstNode[])[0];
       const pch = polNode.children as CstChildrenDictionary;
       const valTok = (pch['Identifier'] as IToken[])[0];
-      attributes.push({ kind: 'policy', value: valTok.image } as any);
+  attributes.push(Object.assign({ kind: 'policy', value: valTok.image } as any, { __origin: origin }));
     }
   }
   return attributes;
@@ -79,12 +82,12 @@ export function collectRelationAttributes(attrGroups: CstNode[]): FieldAttribute
   const attrs: FieldAttribute[] = [];
   for (const ag of attrGroups) {
     const agCh = (ag.children as CstChildrenDictionary);
-    if (agCh['Unique']) attrs.push({ kind: 'unique' } as FieldAttributeUnique);
+  if (agCh['Unique']) attrs.push(Object.assign({ kind: 'unique' } as FieldAttributeUnique, { __origin: (ag as any).name === 'fieldAnnotation' ? 'annotation':'paren' } as any));
     else if (agCh['policyAttr']) {
       const polNode = (agCh['policyAttr'] as CstNode[])[0];
       const pch = polNode.children as CstChildrenDictionary;
       const valTok = (pch['Identifier'] as IToken[])[0];
-      attrs.push({ kind: 'policy', value: valTok.image } as any);
+  attrs.push(Object.assign({ kind: 'policy', value: valTok.image } as any, { __origin: (ag as any).name === 'fieldAnnotation' ? 'annotation':'paren' }));
     }
   }
   return attrs;
