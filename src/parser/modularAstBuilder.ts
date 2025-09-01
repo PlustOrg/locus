@@ -348,6 +348,16 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               const loc = seTok ? { line: seTok.startLine, column: seTok.startColumn } : undefined;
               return { kind: 'send_email', raw, to, subject, template, loc } as any;
             }
+            // PARALLEL placeholder raw capture
+            if (/^\s*parallel\b/.test(raw)) {
+              return { kind: 'parallel', raw } as any;
+            }
+            if (/^\s*queue_publish\b/.test(raw)) {
+              return { kind: 'queue_publish', raw } as any;
+            }
+            if (/^\s*db_tx\b/.test(raw)) {
+              return { kind: 'db_tx', raw } as any;
+            }
             // fallback heuristic
             const trimmed = raw.trim();
             if (/^(?:const\s+\w+\s*=\s*)?delay\b/.test(trimmed)) return { kind: 'delay', raw } as any;

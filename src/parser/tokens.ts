@@ -113,6 +113,9 @@ export const Delay = createToken({ name: 'Delay', pattern: /delay\b/ });
 export const Branch = createToken({ name: 'Branch', pattern: /branch\b/ });
 export const ForEach = createToken({ name: 'ForEach', pattern: /forEach\b/ });
 export const SendEmail = createToken({ name: 'SendEmail', pattern: /send_email\b/ });
+export const Parallel = createToken({ name: 'Parallel', pattern: /parallel\b/ });
+export const QueuePublish = createToken({ name: 'QueuePublish', pattern: /queue_publish\b/ });
+export const DbTx = createToken({ name: 'DbTx', pattern: /db_tx\b/ });
 // Workflow events & config keys (Phase 2)
 export const CreateKw = createToken({ name: 'CreateKw', pattern: /create\b/ });
 export const UpdateKw = createToken({ name: 'UpdateKw', pattern: /update\b/ });
@@ -186,6 +189,9 @@ export const AllTokens = [
   Branch,
   ForEach,
   SendEmail,
+  Parallel,
+  QueuePublish,
+  DbTx,
   CreateKw,
   UpdateKw,
   DeleteKw,

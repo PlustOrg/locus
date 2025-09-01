@@ -200,6 +200,18 @@ function runStep(step: WorkflowStep, ctx: WorkflowContext, pm?: PluginManager) {
       ctx.log.push({ kind: 'send_email', detail: { to: se.to, subject: se.subject, template: se.template }, v: 1 });
       break;
     }
+    case 'parallel': {
+      ctx.log.push({ kind: 'parallel', v: 1 });
+      break;
+    }
+    case 'queue_publish': {
+      ctx.log.push({ kind: 'queue_publish', v: 1 });
+      break;
+    }
+    case 'db_tx': {
+      ctx.log.push({ kind: 'db_tx', v: 1 });
+      break;
+    }
     default: ctx.log.push({ kind: step.kind, v: 1 });
   }
 }

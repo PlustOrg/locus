@@ -89,6 +89,9 @@ import {
   Branch,
   ForEach,
   SendEmail,
+  Parallel,
+  QueuePublish,
+  DbTx,
   CreateKw,
   UpdateKw,
   DeleteKw,
@@ -232,6 +235,9 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.delayStep) },
       { ALT: () => this.SUBRULE(this.httpRequestStep) },
       { ALT: () => this.SUBRULE(this.sendEmailStep) },
+  { ALT: () => this.SUBRULE(this.parallelStep) },
+  { ALT: () => this.SUBRULE(this.queuePublishStep) },
+  { ALT: () => this.SUBRULE(this.dbTxStep) },
     ]);
   });
 
@@ -279,6 +285,26 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(SendEmail);
     this.CONSUME(LCurly);
     this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+
+  private parallelStep = this.RULE('parallelStep', () => {
+    // placeholder semantics
+  this.CONSUME(Parallel);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
+    this.CONSUME(RCurly);
+  });
+  private queuePublishStep = this.RULE('queuePublishStep', () => {
+  this.CONSUME(QueuePublish);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
+    this.CONSUME(RCurly);
+  });
+  private dbTxStep = this.RULE('dbTxStep', () => {
+  this.CONSUME(DbTx);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
     this.CONSUME(RCurly);
   });
 
