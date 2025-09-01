@@ -334,8 +334,12 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
                 }
               } catch {}
               const grab = (key: string) => {
-                const m = new RegExp(key + "\\s*(?::)?\\s*([^,}\\n]+)").exec(inner);
-                return m?.[1]?.trim();
+                // Match quoted or unquoted until line break or closing brace/comma
+                const m = new RegExp(key + "\\s*(?::)?\\s*(\"[^\"]*\"|[^,}\\n]+)").exec(inner);
+                let v = m?.[1];
+                if (!v) return undefined;
+                if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1,-1);
+                return v.trim();
               };
               const to = grab('to');
               const subject = grab('subject');

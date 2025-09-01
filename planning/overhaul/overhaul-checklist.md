@@ -125,8 +125,8 @@ Legend:
 - [x] (P2) Whitelist default functions (see Type System)
 - [x] (P2) Validate `http_request` uses HTTPS unless `allow_insecure: true`
 - [x] (P2) Secret reference validation in webhook triggers
-- [ ] (P3) Sanitize email step fields (basic injection guards)
-- [ ] (P3) Restrict template path resolution to allowed roots
+- [x] (P3) Sanitize email step fields (basic injection guards)
+- [x] (P3) Restrict template path resolution to allowed roots
 - [ ] (P4) Optional static taint analysis for workflow expressions (MVP warnings)
 
 ## 10. Performance & Scalability

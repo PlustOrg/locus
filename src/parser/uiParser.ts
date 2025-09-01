@@ -146,9 +146,9 @@ function transformUiTreeToStructured(node: any): UINode {
   const newChildren: any[] = [];
   for (let i = 0; i < children.length; i++) {
     const cur = children[i];
-    if (cur.type === 'element' && cur.tag === 'if') {
-      const cond = (cur.attrs?.condition?.value) || 'false';
-      const consequent = (cur.children || []).map((x: any) => transformUiTreeToStructured(x));
+    if ((cur.type === 'element' && cur.tag === 'if') || cur.type === 'if') {
+      const cond = cur.type === 'if' ? cur.condition : (cur.attrs?.condition?.value) || 'false';
+      const consequent = cur.type === 'if' ? cur.consequent : (cur.children || []).map((x: any) => transformUiTreeToStructured(x));
       const ifNode: any = { type: 'if', condition: cond, consequent };
       i++;
       while (i < children.length) {
@@ -172,10 +172,31 @@ function transformUiTreeToStructured(node: any): UINode {
   node.children = newChildren;
   if (node.tag === '_root' && node.children.length === 1 && node.children[0].type === 'if') return node.children[0];
   if (node.tag === 'if') {
-    // Convert this element itself into if-node (no preceding siblings scenario)
-    const cond = (node.attrs?.condition?.value) || 'false';
-    const consequent = node.children.map((x: any)=> transformUiTreeToStructured(x));
-    return { type: 'if', condition: cond, consequent } as any;
+    // Convert this element itself into if-node scanning its own children for nested elseif/else tags
+    const children = node.children || [];
+    const consequent: any[] = [];
+    const ifNode: any = { type: 'if', condition: (node.attrs?.condition?.value) || 'false', consequent };
+    let i = 0;
+    for (; i < children.length; i++) {
+      const c = children[i];
+      if (c.type === 'element' && (c.tag === 'elseif' || c.tag === 'else')) break;
+      consequent.push(transformUiTreeToStructured(c));
+    }
+    while (i < children.length) {
+      const c = children[i];
+      if (c.type === 'element' && c.tag === 'elseif') {
+        const ec = (c.attrs?.condition?.value) || 'false';
+        const eb = (c.children || []).map((x: any) => transformUiTreeToStructured(x));
+        ifNode.elif = ifNode.elif || [];
+        ifNode.elif.push({ condition: ec, children: eb });
+        i++;
+      } else if (c.type === 'element' && c.tag === 'else') {
+        ifNode.else = (c.children || []).map((x: any) => transformUiTreeToStructured(x));
+        i++;
+        break;
+      } else break;
+    }
+    return ifNode;
   }
   return node as UINode;
 }

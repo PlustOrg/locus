@@ -205,6 +205,19 @@ function walkUi(node: any, fn: (n:any)=>void) {
         if (!se.subject && !se.template) {
           const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email requires 'subject' or 'template'.`, (w as any).sourceFile, loc?.line, loc?.column);
         }
+        // Basic sanitization (Phase 3 security hardening)
+        const unsafe = /[\n\r]/;
+        if (se.subject && unsafe.test(se.subject)) {
+          const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email subject contains newline characters.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+        if (se.to && /[,\s]/.test(se.to.trim()) && !se.to.includes('@')) {
+          const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email 'to' appears invalid: '${se.to}'.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+        if (se.template) {
+          if (/^\//.test(se.template) || se.template.includes('..')) {
+            const loc = se.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' send_email template path '${se.template}' must be relative and not contain '..'.`, (w as any).sourceFile, loc?.line, loc?.column);
+          }
+        }
       }
       if (s.kind === 'http_request') {
         const rawReq = s.raw || '';
