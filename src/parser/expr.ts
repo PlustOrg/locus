@@ -9,12 +9,21 @@ function consume(ts: TokenStream): IToken { const t = ts.tokens[ts.idx]; if (!t)
 const PRECEDENCE: Record<string, number> = { '||':1, '&&':2, '==':3, '!=':3, '+':4, '-':4, '*':5, '/':5 };
 
 export function parseExpression(text: string): ExprNode | undefined {
+  if (!text) return undefined;
+  const cached = exprCache.get(text);
+  if (cached) return cached;
   const lex = LocusLexer.tokenize(text);
   const tokens = lex.tokens.filter(t => t.tokenType.name !== 'WhiteSpace');
   const ts: TokenStream = { idx:0, tokens };
   if (!tokens.length) return undefined;
-  return parseExpr(ts, 0);
+  const ast = parseExpr(ts, 0);
+  exprCache.set(text, ast);
+  return ast;
 }
+
+// Simple in-memory cache (expression text -> AST). Assumes AST immutable downstream.
+const exprCache = new Map<string, ExprNode>();
+export function _clearExprCache(){ exprCache.clear(); }
 
 function parseExpr(ts: TokenStream, minPrec: number): ExprNode {
   let left = parsePrimary(ts);

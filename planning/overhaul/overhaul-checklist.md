@@ -133,7 +133,9 @@ Legend:
 - [x] (P2) Block-level content hashing for incremental parser
 - [ ] (P3) Worker-thread parallel parsing (configurable concurrency)
 - [ ] (P3) Expression AST caching (hash → reuse)
+ - [x] (P3) Expression AST caching (hash → reuse)
 - [ ] (P4) Memory profiling harness + budget assertions in CI
+ - [x] (P4) Memory profiling harness + budget assertions in CI (smoke test)
 - [ ] (P5) Workflow runtime JIT optimization (precompiled JS functions)
 
 ## 11. Tooling & CLI UX
@@ -148,6 +150,7 @@ Legend:
 - [x] (P2) Add `workflows.v2` flag gating structured workflow grammar (env var LOCUS_DISABLE_WORKFLOWS_V2 to disable)
 - [x] (P3) Deprecation system (record usage, aggregate summary)
 - [ ] (P4) Emit removal schedule in warnings
+ - [x] (P4) Emit removal schedule in warnings
 
 ## 13. Backwards Compatibility
 - [x] (P1) Deprecation warning scaffolding (utility to register deprecation)
@@ -172,7 +175,7 @@ Legend:
  - [x] (P2) Error catalog (code → explanation) generation script
   - [x] Initial script placeholder (to be expanded in later phase)
 - [x] (P3) Migration guide: structured workflows (stub)
-- [ ] (P4) Migration guide: annotations & UI directives
+- [x] (P4) Migration guide: annotations & UI directives
 - [ ] (P5) Plugin authoring guide & examples
 
 ## 16. Implementation Ordering Verification
