@@ -2,6 +2,7 @@ import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation } from '../../ast';
 import { posOf, defineHidden } from '../builderUtils';
 import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } from './helpers';
+import { registerDeprecation } from '../../deprecations';
 
 export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
   const databases: DatabaseBlock[] = [];
@@ -26,7 +27,8 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
   // scalarType nested rule may appear as 'scalarType' or 'scalarType1'
   const scalarNodes = (typeCh['scalarType'] as CstNode[] || []).concat(typeCh['scalarType1'] as any || []);
   let primitiveTokenName: string | undefined;
-  const isList = !!typeCh['List'] || (!!typeCh['LBracketTok'] && !!typeCh['RBracketTok']);
+  const usedLegacyList = !!typeCh['List'];
+  const isList = usedLegacyList || (!!typeCh['LBracketTok'] && !!typeCh['RBracketTok']);
   const typeTokenName = Object.keys(typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
         const optional = !!typeCh['Question'];
   let nullable = false;
@@ -38,6 +40,9 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         if (isList) {
           primitiveTokenName = Object.keys(scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
           fieldType = { kind: 'list', of: mapPrimitiveToken(primitiveTokenName!), optional, nullable };
+          if (usedLegacyList) {
+            registerDeprecation('list_of_syntax', "'list of Type' syntax is deprecated; use 'Type[]'", '0.5.0', "Replace 'list of String' with 'String[]'");
+          }
         } else {
           primitiveTokenName = scalarNodes.length ? Object.keys(scalarNodes[0].children as CstChildrenDictionary).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k)) : typeTokenName;
           fieldType = { kind: 'primitive', name: mapPrimitiveToken(primitiveTokenName!) } as FieldType;

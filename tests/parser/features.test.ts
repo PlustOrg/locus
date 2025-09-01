@@ -5,7 +5,9 @@ describe('Parser: page, component, store, and ui', () => {
   test('page with state, on load, actions, and ui', () => {
     const src = `
       page CustomerList {
-        state { customers: list of Customer = [] isLoading: true searchText: "" }
+  state { customers: list of Customer = []
+    isLoading: Boolean = true
+    searchText: String = "" }
         on load { customers = find(Customer) isLoading = false }
         action search() { isLoading = true isLoading = false }
         ui {

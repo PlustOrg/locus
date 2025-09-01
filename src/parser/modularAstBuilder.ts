@@ -52,6 +52,23 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
   const workflowNodes = (ch['workflowBlock'] as CstNode[]) || [];
     if (pageNodes.length || compNodes.length || storeNodes.length) {
       const f = buildFeatureBlocksLegacy(pageNodes, compNodes, storeNodes, originalSource || '');
+      // Post-process style_override CST blocks to populate styleOverride
+      for (let i=0;i<compNodes.length;i++) {
+        const compCst = compNodes[i];
+        const compAst = f.components[i];
+        const styleBlocks = (compCst.children as CstChildrenDictionary)['styleOverrideBlock'] as CstNode[] | undefined;
+        if (styleBlocks && styleBlocks.length && originalSource) {
+          const sb = styleBlocks[0];
+          const lcurly = (sb.children as any).LCurly?.[0];
+          const rcurlyArr = (sb.children as any).RCurly;
+          const rcurly = rcurlyArr?.[rcurlyArr.length-1];
+          if (lcurly && rcurly) {
+            const start = lcurly.endOffset + 1;
+            const end = rcurly.startOffset - 1;
+            compAst.styleOverride = originalSource.slice(start, end + 1).trim();
+          }
+        }
+      }
       pages.push(...f.pages); components.push(...f.components); stores.push(...f.stores);
     }
     if (workflowNodes.length) {

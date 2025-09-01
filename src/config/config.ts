@@ -12,6 +12,7 @@ export interface LocusConfig {
   deploy?: Record<string, any>;
   performance?: PerformanceThresholds;
   flags?: Record<string, any>;
+  suppressDeprecated?: boolean;
   raw: any; // original parsed toml
 }
 
@@ -36,6 +37,9 @@ export function loadConfig(srcDir: string): LocusConfig {
   if ((raw as any).auth) deprecated.push('top-level auth (use [auth] section)');
   if (deprecated.length) {
     (cfg as any).warnings = deprecated.map(d => `Deprecated config: ${d}`);
+  }
+  if (raw._sections?.deprecations) {
+    if (raw._sections.deprecations.suppressDeprecated === true) cfg.suppressDeprecated = true;
   }
   return cfg;
 }

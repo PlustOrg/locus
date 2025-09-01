@@ -161,7 +161,7 @@ export async function buildProject(opts: {
     Object.assign(artifacts, pluginMgr.extraArtifacts);
   // Append deprecation warnings
   const dep = collectDeprecationWarnings();
-  if (dep.length) meta.warnings = [...(meta.warnings || []), ...dep];
+  if (dep.length && !config.suppressDeprecated) meta.warnings = [...(meta.warnings || []), ...dep];
     // Optionally suppress warnings
     if (opts.suppressWarnings && meta.warnings?.length) {
       delete (artifacts as any)['GENERATED_WARNINGS.txt'];

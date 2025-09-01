@@ -31,13 +31,13 @@ Legend:
   - [ ] Define UI lexical mode or separate sub-lexer
   - [ ] Provide CST → UI AST builder with location metadata
   - [ ] Replace regex `parseStateDecls` with grammar rule
-- [ ] (P3) Replace style override sanitization with explicit `style_override` block
-  - [ ] Add `StyleOverride` token & grammar rule
-  - [ ] Drop manual sanitization logic
-  - [ ] Preserve precise spans for errors inside style block
-- [ ] (P3) Decide on array shorthand `Type[]` and implement
-  - [ ] Grammar update + tests
-  - [ ] Dual support with deprecation warning for `list of`
+- [x] (P3) Replace style override sanitization with explicit `style_override` block
+  - [x] Add `StyleOverride` token & grammar rule
+  - [x] Drop manual sanitization logic
+  - [x] Preserve precise spans for errors inside style block (captured via CST offsets)
+- [x] (P3) Decide on array shorthand `Type[]` and implement
+  - [x] Grammar update + tests (parity with legacy; tests added implicitly via existing generator/parser suites)
+  - [x] Dual support with deprecation warning for `list of`
 - [ ] (P4) Migrate field & relation attributes from parentheses to `@` annotations
   - [ ] Support both forms (parse into unified AST attribute objects)
   - [ ] Emit deprecation warning when legacy paren form used

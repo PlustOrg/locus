@@ -32,7 +32,7 @@ describe('build --no-warn suppresses warnings artifact and output', () => {
   (parser.parseLocus as any).mockReturnValue({ databases: [], designSystems: [], pages: [], components: [{ name: 'Card', params: [], ui: 'ui { <div>{children}</div> }', styleOverride: '.x { }' }], stores: [] });
   (merger.mergeAsts as any).mockReturnValue({ database: { entities: [] }, pages: [], components: [{ name: 'Card', styleOverride: '.x { }', params: [], ui: 'ui { <div>{children}</div> }' }], stores: [] });
     (fs.readdirSync as any).mockReturnValue(['a.locus']);
-  (fs.readFileSync as any).mockReturnValue('component Card { ui { <div>{children}</div> } style:override { .x { } } }');
+  (fs.readFileSync as any).mockReturnValue('component Card { ui { <div>{children}</div> } style_override { .x { } } }');
     (fs.writeFileSync as any).mockImplementation((p: string, c: string) => { mockFs[p]=c; });
     (fs.existsSync as any).mockReturnValue(false);
     (fs.mkdirSync as any).mockImplementation(()=>{});

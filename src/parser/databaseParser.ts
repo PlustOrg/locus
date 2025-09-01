@@ -98,6 +98,7 @@ import {
   FactorKw,
   Duration,
   AtSign,
+  StyleOverride,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -394,6 +395,7 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.paramDecl) },
       { ALT: () => this.SUBRULE(this.uiBlock) },
       { ALT: () => this.SUBRULE(this.styleBlock) },
+      { ALT: () => this.SUBRULE(this.styleOverrideBlock) },
       {
         GATE: () => {
           const t = this.LA(1).tokenType;
@@ -402,6 +404,12 @@ export class DatabaseCstParser extends CstParser {
         ALT: () => this.SUBRULE(this.rawContent)
       },
     ]));
+    this.CONSUME(RCurly);
+  });
+  private styleOverrideBlock = this.RULE('styleOverrideBlock', () => {
+    this.CONSUME(StyleOverride);
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);
   });
   private styleBlock = this.RULE('styleBlock', () => {
@@ -455,8 +463,28 @@ export class DatabaseCstParser extends CstParser {
   private stateBlock = this.RULE('stateBlock', () => {
     this.CONSUME(State);
     this.CONSUME(LCurly);
-  this.OPTION(() => this.SUBRULE(this.rawContent));
+	this.MANY(() => this.SUBRULE(this.stateDecl));
     this.CONSUME(RCurly);
+  });
+
+  private stateDecl = this.RULE('stateDecl', () => {
+    this.CONSUME(Identifier); // name
+    this.CONSUME(Colon);
+    this.OR([
+      { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.typeNameFeature); } },
+      { ALT: () => this.SUBRULE1(this.typeNameFeature) },
+    ]);
+    this.OPTION(() => this.CONSUME(Question));
+    this.CONSUME(Equals);
+    // Default value expression (reuse rawContent for now but limit to one segment)
+    this.OR1([
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(NumberLiteral) },
+  { ALT: () => this.CONSUME1(Identifier) },
+  { ALT: () => { this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); } },
+      { ALT: () => { this.CONSUME(LParen); this.SUBRULE(this.rawContent); this.CONSUME(RParen); } },
+    ]);
+    this.OPTION1(() => this.CONSUME(SemicolonTok));
   });
 
   private onLoadBlock = this.RULE('onLoadBlock', () => {

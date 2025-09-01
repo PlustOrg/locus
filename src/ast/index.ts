@@ -96,9 +96,9 @@ export interface DesignSystemBlock {
 }
 
 // Features (Phase 1.3) - keep minimal placeholders for now
-export interface PageBlock { type: 'page'; name: string; nameLoc?: { line: number; column: number } }
+export interface PageBlock { type: 'page'; name: string; nameLoc?: { line: number; column: number }; state?: any[] }
 export interface ComponentBlock { type: 'component'; name: string; nameLoc?: { line: number; column: number }; styleOverride?: string }
-export interface StoreBlock { type: 'store'; name: string; nameLoc?: { line: number; column: number } }
+export interface StoreBlock { type: 'store'; name: string; nameLoc?: { line: number; column: number }; state?: any[] }
 
 // --- Workflow (Phase 2 minimal AST) ---
 export interface WorkflowBlock {

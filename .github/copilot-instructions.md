@@ -8,6 +8,8 @@ This document provides the essential context, architecture, workflows, and best 
 
 Locus is a compiler and all-in-one CLI for a domain-specific language that unifies the definition of a full-stack web application. It parses `.locus` files describing an application's data, design, and features, and generates a production-ready project.
 
+Important: The project is currently under heavy development, and unused by any users, so you can make small or large changes without worrying about breaking existing functionality. You can make breaking changes without any deprecation, and without any fear of impacting users, since there are none.
+
 **Core Tenets:**
 
 1.  **Clarity is Paramount:** The language syntax and the compiler's output must be simple, predictable, and easy to reason about.
