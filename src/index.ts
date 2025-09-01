@@ -15,6 +15,7 @@ import { parseLocus } from './parser';
 import { mergeAsts } from './parser/merger';
 import { validateUnifiedAstWithPlugins } from './validator/validate';
 import { executeWorkflow } from './workflow/runtime';
+import { formatProject } from './cli/format';
 
 const program = new Command();
 program.name('locus').description('Locus compiler CLI');
@@ -207,6 +208,16 @@ program
       const log = executeWorkflow(wf as any, { inputs, pluginManager: pluginMgr });
       process.stdout.write(JSON.stringify(log, null, 2) + '\n');
     });
+
+program
+  .command('format')
+  .description('Format all .locus source files')
+  .option('--src <dir>', 'source dir', '.')
+  .action((opts: any) => {
+    const srcDir = path.resolve(opts.src || '.');
+    const changed = formatProject(srcDir);
+    process.stdout.write(changed.length ? `Formatted ${changed.length} file(s)\n` : 'No formatting changes.\n');
+  });
 
   program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });
 

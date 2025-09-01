@@ -377,6 +377,23 @@ function walkUi(node: any, fn: (n:any)=>void) {
             throw new VError(`Invalid expression '${n.value}': ${e.message}`);
           }
         }
+        // Event validation on element nodes
+        if (n.type === 'element' && n.attrs) {
+          const allowedEvents = new Set(['onClick','onSubmit','onChange','onInput','onFocus','onBlur']);
+          for (const key of Object.keys(n.attrs)) {
+            if (/^on[A-Z]/.test(key)) {
+              if (!allowedEvents.has(key)) {
+                namingWarnings.push(`Warning: Unrecognized event '${key}' on <${n.tag}> (will pass through).`);
+              }
+            }
+            if (key.startsWith('bind$')) {
+              const prop = key.slice(5);
+              if (!/^[a-z][A-Za-z0-9]*$/.test(prop)) {
+                throw new VError(`Invalid bind target '${prop}' on <${n.tag}>.`);
+              }
+            }
+          }
+        }
       });
     }
   }

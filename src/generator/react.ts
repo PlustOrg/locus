@@ -223,6 +223,8 @@ function renderUiAst(node: any): string {
     return expr;
   }
   const el = node as any as { tag: string; attrs: Record<string, UIAttr>; children: UINode[] };
+  // Skip raw <if>/<elseif>/<else> tags left by directive preprocessor (should have been collapsed to if-node).
+  if (['if','elseif','else'].includes(el.tag)) return renderChildren(el.children||[]);
   return renderElement(el.tag, el.attrs || {}, el.children || [], false);
 }
 
@@ -230,11 +232,22 @@ function renderElement(tag: string, attrs: Record<string, UIAttr>, children: UIN
   const attrStrs: string[] = [];
   for (const [k, v] of Object.entries(attrs)) {
     if (k === 'forEach') continue;
-    if (k === 'bindValue' && (v as any).kind === 'expr') {
+    if (k.startsWith('bind$') && (v as any).kind === 'expr') {
+      const prop = k.slice(5);
       const stateVar = (v as any).value;
       const setter = `set${capitalize(stateVar)}`;
-      attrStrs.push(`value={${stateVar}}`);
-      attrStrs.push(`onChange={(e) => ${setter}(e.target.value)}`);
+      if (prop === 'value') {
+        attrStrs.push(`value={${stateVar}}`);
+        attrStrs.push(`onChange={(e) => ${setter}(e.target.value)}`);
+      } else if (prop === 'checked') {
+        attrStrs.push(`checked={${stateVar}}`);
+        attrStrs.push(`onChange={(e) => ${setter}(e.target.checked)}`);
+      } else if (prop === 'disabled') {
+        attrStrs.push(`disabled={${stateVar}}`);
+      } else {
+        attrStrs.push(`${prop}={${stateVar}}`);
+        attrStrs.push(`onChange={(e) => ${setter}(e.target?.value ?? e.target?.checked)}`);
+      }
       continue;
     }
     const key = k === 'class' ? 'className' : k;

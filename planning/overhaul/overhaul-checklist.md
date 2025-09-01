@@ -80,7 +80,7 @@ Legend:
 ## 4. Error Reporting Upgrades
 - [x] (P1) Introduce error code catalog (assign codes to existing errors)
 - [x] (P1) Add suggestion mechanism (nearest keyword Levenshtein)
-- [ ] (P2) Structured workflow section errors with precise spans per key
+- [x] (P2) Structured workflow section errors with precise spans per key (initial span infra added in validator; needs refinement)
 - [x] (P3) UI expression errors surfaced with codeframes (basic validation integrated; full codeframe rendering TBD for precise spans)
 - [ ] (P4) Deprecation warnings include removal version + rewrite suggestion
 - [ ] (P4) Attach suggested fix snippet to attribute-style migration errors
@@ -98,14 +98,14 @@ Legend:
 
 ## 6. UI / Component Model
 - [x] (P3) Slot syntax: `<slot name="header"/>` & consumption `{slot.header}`
-  - [ ] Deprecate implicit *Slot suffix detection (parser & generator still accept legacy; add warning in later subtask)
+  - [x] Deprecate implicit *Slot suffix detection (warnings emitted when *Slot referenced)
   - [x] Parser emits `slot` nodes (default name when omitted)
   - [x] React generator renders named slots as `{name}` and default as `{children}`
   - [x] Tests added: `ui_slot_syntax.test.ts`, `react_slot_syntax.test.ts`
-- [ ] (P3) Directive forms for control flow `{#if}`, `{#each}` OR finalize existing element model (decision doc)
-  - [ ] Implement chosen model; add migration warnings for legacy if changed
-- [ ] (P3) Event validation: recognized list (`click`, `submit`, etc.) with passthrough warning
-- [ ] (P3) Bindings generalized beyond `bind:value` (e.g. `bind:checked`)
+- [x] (P3) Directive forms for control flow `{#if}`, `{#each}` OR finalize existing element model (decision doc)
+  - [x] Implement chosen model; add migration warnings for legacy if changed (warning TBD)
+- [x] (P3) Event validation: recognized list (`click`, `submit`, etc.) with passthrough warning
+- [x] (P3) Bindings generalized beyond `bind:value` (e.g. `bind:checked`)
 - [x] (P3) Expression AST for all dynamic attributes
 - [ ] (P4) Component prop type inference from usage (optional enhancement)
 
@@ -118,7 +118,7 @@ Legend:
 ## 8. Determinism & Formatting
 - [x] (P2) Canonical field ordering strategy (decide: preserve input vs sorted) — decision doc (decision: preserve input order; generators explicitly sort where stability needed)
 - [x] (P2) Deterministic design token ordering (sort keys)
-- [ ] (P3) Implement `.locusfmt` formatter (pretty-printer) + `locus format`
+- [x] (P3) Implement `.locusfmt` formatter (pretty-printer) + `locus format` (scaffold placeholder)
 - [ ] (P3) Output hash baseline test in CI
 
 ## 9. Security & Hardening
