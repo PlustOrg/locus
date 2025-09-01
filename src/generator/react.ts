@@ -195,10 +195,16 @@ type UIAttr = { kind: 'string'; value: string } | { kind: 'expr'; value: string 
 type IfNode = { type: 'if'; condition: string; consequent: UINode[]; elif?: Array<{ condition: string; children: UINode[] }>; else?: UINode[] };
 type ForEachNode = { type: 'forEach'; item: string; iterable: string; template: any };
 type UINode = { type: 'text'; value: string } | { type: 'element'; tag: string; attrs: Record<string, UIAttr>; children: UINode[] } | IfNode | ForEachNode;
+// Extended: slot placeholder node { type: 'slot', name: string }
 
-function renderUiAst(node: UINode): string {
+function renderUiAst(node: any): string {
   if ((node as any).type === 'text') {
     return (node as any).value;
+  }
+  if (node.type === 'slot') {
+    // At render time, prefer named slot prop or children for default
+    if (node.name === 'default') return '{children}';
+    return `{${node.name}}`;
   }
   if ((node as any).type === 'forEach') {
     const fe = node as any as ForEachNode;

@@ -97,8 +97,11 @@ Legend:
 - [ ] (P5) Execution tracing hooks (emit events with step IDs)
 
 ## 6. UI / Component Model
-- [ ] (P3) Slot syntax: `<slot name="header"/>` & consumption `{slot.header}`
-  - [ ] Deprecate implicit *Slot suffix detection
+- [x] (P3) Slot syntax: `<slot name="header"/>` & consumption `{slot.header}`
+  - [ ] Deprecate implicit *Slot suffix detection (parser & generator still accept legacy; add warning in later subtask)
+  - [x] Parser emits `slot` nodes (default name when omitted)
+  - [x] React generator renders named slots as `{name}` and default as `{children}`
+  - [x] Tests added: `ui_slot_syntax.test.ts`, `react_slot_syntax.test.ts`
 - [ ] (P3) Directive forms for control flow `{#if}`, `{#each}` OR finalize existing element model (decision doc)
   - [ ] Implement chosen model; add migration warnings for legacy if changed
 - [ ] (P3) Event validation: recognized list (`click`, `submit`, etc.) with passthrough warning

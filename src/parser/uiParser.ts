@@ -1,5 +1,7 @@
 import { UINode, ElementNode, TextNode, UIAttr } from './uiAst';
 
+// Phase 3: Slot syntax support <slot name="header"/> consumed via {slot.header}
+
 export function parseUi(src: string): UINode {
   const stack: ElementNode[] = [];
   let i = 0;
@@ -18,6 +20,16 @@ export function parseUi(src: string): UINode {
         const raw = src.slice(i + 1, end);
         const selfClose = raw.endsWith('/');
         const tag = raw.replace(/\/.*/, '').trim().split(/\s+/)[0];
+        if (tag === 'slot') {
+          // minimal attribute parse for name
+          const nm = /name\s*=\s*"([A-Za-z_][A-Za-z0-9_]*)"/.exec(raw);
+          const name = nm ? nm[1] : 'default';
+          const slotEl: any = { type: 'slot', name };
+          if (stack.length) stack[stack.length - 1].children.push(slotEl);
+          i = end + 1;
+          if (!stack.length && !root) root = slotEl;
+          continue;
+        }
         const attrSrc = raw.slice(tag.length);
         const attrs = parseAttrs(attrSrc);
         const el: ElementNode = { type: 'element', tag, attrs, children: [] };
