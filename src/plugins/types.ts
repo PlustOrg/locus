@@ -1,3 +1,26 @@
+export interface PluginModule {
+  name: string;
+  version?: string;
+  init?(ctx: PluginContext): Promise<void> | void;
+  capabilities?: PluginCapabilities;
+}
+
+export interface PluginContext {
+  registerStep(kind: string, schema?: Record<string, any>): void;
+  registerValidation(id: string, run: (ast: any)=>void|Promise<void>): void;
+}
+
+export interface PluginCapabilities {
+  tokens?: string[]; // reserved keywords introduced
+  workflowSteps?: Array<{ kind: string; schema?: Record<string, any> }>; // custom step kinds
+  validations?: Array<{ id: string; run(ast: any): void | Promise<void> }>;
+}
+
+export interface PluginCapabilityRegistry {
+  tokens: Set<string>;
+  workflowSteps: Map<string, { schema?: Record<string, any> }>;
+  validations: Array<{ id: string; run(ast: any): void | Promise<void> }>;
+}
 export interface LocusPluginContext {
   addWarning(msg: string): void;
   addVirtualAst(ast: any): void;

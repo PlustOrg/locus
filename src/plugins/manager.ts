@@ -11,6 +11,7 @@ export class PluginManager {
   registeredGenerators: Array<{ plugin: string; name: string; fn: (u:any)=>Record<string,string> }> = [];
   workflowStepKinds: Record<string, { run?(step:any, execCtx:any): any; plugin: string }> = {};
   timings: Record<string, Record<string, number>> = {};
+  capabilityRegistry = { tokens: new Set<string>(), workflowSteps: new Map<string, { schema?: Record<string, any> }>(), validations: [] as Array<{ id: string; run(ast:any): void|Promise<void> }> };
   constructor(public srcDir: string, private config?: LocusConfig) {}
 
   private static moduleCache: Record<string, any> = {};
@@ -105,6 +106,11 @@ export class PluginManager {
   async onValidate(unified: any) { await this.run('onValidate', unified); }
   async onBeforeGenerate(unified: any) { await this.run('onBeforeGenerate', unified); }
   async onAfterGenerate(result: { artifacts: Record<string,string>; meta: any }) { await this.run('onAfterGenerate', result); }
+  async runCapabilityValidations(ast: any) {
+    for (const v of this.capabilityRegistry.validations) {
+      try { await v.run(ast); } catch (e:any) { this.warnings.push(`[capability validation ${v.id}] ${e.message}`); }
+    }
+  }
 
   runCustomGenerators(unified: any) {
     for (const g of this.registeredGenerators) {
@@ -142,6 +148,14 @@ export class PluginManager {
         if (this.workflowStepKinds[ent.kind]) { this.warnings.push(`[plugin ${plugin}] step kind '${ent.kind}' already registered; keeping first`); continue; }
         this.workflowStepKinds[ent.kind] = { run: ent.run, plugin };
       }
+    }
+    // collect capabilities declared directly
+    for (const p of this.plugins) {
+      const caps: any = (p as any).capabilities;
+      if (!caps) continue;
+      for (const t of caps.tokens || []) this.capabilityRegistry.tokens.add(t);
+      for (const s of caps.workflowSteps || []) if (!this.capabilityRegistry.workflowSteps.has(s.kind)) this.capabilityRegistry.workflowSteps.set(s.kind, { schema: s.schema });
+      for (const v of caps.validations || []) this.capabilityRegistry.validations.push(v);
     }
   }
 }

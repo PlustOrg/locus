@@ -2,6 +2,7 @@ import { VError } from '../errors';
 import { UnifiedAST } from '../parser/merger';
 import { PluginManager } from '../plugins/manager';
 import { parseExpression } from '../parser/expr';
+import { registerDeprecation } from '../deprecations';
 
 // Backward-compatible synchronous validator (tests rely on sync throws)
 export function validateUnifiedAst(ast: UnifiedAST) {
@@ -321,13 +322,17 @@ function walkUi(node: any, fn: (n:any)=>void) {
       for (const f of e.fields) {
         if ((f.attributes||[]).some((a: any) => a.__origin === 'paren')) {
           if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
-          (ast as any).namingWarnings.push(`Deprecated (legacy) attribute syntax '(...)' on field '${f.name}'. Use '@' form.`);
+          const msg = `Deprecated (legacy) attribute syntax '(...)' on field '${f.name}'. Use '@' form.`;
+          (ast as any).namingWarnings.push(msg + ' (removal: 0.4.0)');
+          registerDeprecation('paren_attr_field', msg, '0.4.0', `Replace '(unique)' with '@unique'`);
         }
       }
       for (const r of e.relations) {
         if ((r.attributes||[]).some((a: any) => a.__origin === 'paren')) {
           if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
-          (ast as any).namingWarnings.push(`Deprecated (legacy) attribute syntax '(...)' on relation '${r.name}'. Use '@' form.`);
+          const msg = `Deprecated (legacy) attribute syntax '(...)' on relation '${r.name}'. Use '@' form.`;
+          (ast as any).namingWarnings.push(msg + ' (removal: 0.4.0)');
+          registerDeprecation('paren_attr_relation', msg, '0.4.0', `Replace '(policy: cascade)' with '@policy(cascade)'`);
         }
       }
     }

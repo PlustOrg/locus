@@ -36,7 +36,14 @@ function renderModel(entity: Entity, _all: Entity[]): string {
     } else if (r.kind === 'belongs_to') {
       // Convention: scalar foreign key first, then relation field
       fields.push(`${r.name}Id Int`);
-      fields.push(`${r.name} ${r.target} @relation(fields: [${r.name}Id], references: [id])`);
+      let rel = `${r.name} ${r.target} @relation(fields: [${r.name}Id], references: [id]`;
+      const policyAttr: any = (r.attributes || []).find((a: any) => a.kind === 'policy');
+      if (policyAttr) {
+        const action = mapPolicy(policyAttr.value as string);
+        if (action) rel += `, onDelete: ${action}`;
+      }
+      rel += ')';
+      fields.push(rel);
     } else if (r.kind === 'has_one') {
       fields.push(`${r.name} ${r.target}?`);
     }
@@ -72,4 +79,13 @@ function renderDefault(v: any): string {
     return `${v.call}(${args})`;
   }
   return 'null';
+}
+
+function mapPolicy(val: string): string | undefined {
+  switch (val) {
+    case 'cascade': return 'Cascade';
+    case 'restrict': return 'Restrict';
+    case 'delete': return 'SetNull'; // choose SetNull for 'delete' semantic (could adjust later)
+    default: return undefined;
+  }
 }

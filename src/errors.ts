@@ -71,7 +71,7 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 function extractOffendingIdentifier(msg: string): string | undefined {
-  const m = /found --> '([^']+)' <--/.exec(msg) || /Unexpected token:?\s+([^\s]+)/i.exec(msg);
+  const m = /found --> '([^']+)' <--/.exec(msg) || /Unexpected token:?\s+([^\s]+)/i.exec(msg) || /found:\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(msg);
   return m?.[1];
 }
 function computeSuggestions(msg: string): string[] | undefined {

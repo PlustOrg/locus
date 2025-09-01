@@ -109,6 +109,7 @@ export async function buildProject(opts: {
   pluginMgr.collectWorkflowStepKinds();
   await pluginMgr.onValidate(merged);
   await validateUnifiedAstWithPlugins(merged, pluginMgr);
+  await pluginMgr.runCapabilityValidations(merged);
   // Collect naming warnings produced during validation
   if ((merged as any).namingWarnings?.length) {
     pluginMgr.warnings.push(...(merged as any).namingWarnings.map((w: string) => `[naming] ${w}`));
@@ -182,8 +183,27 @@ export async function buildProject(opts: {
     }
     // Write all generated files
     const entries = Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b));
+    // incremental diff (basic) comparing to existing BUILD_MANIFEST.json if present
+    let diffReport: { added: string[]; removed: string[]; changed: string[] } | undefined;
+    const manifestPath = join(outDir, 'BUILD_MANIFEST.json');
+    if (existsSync(manifestPath)) {
+      try {
+        const prev = JSON.parse(readFileSync(manifestPath, 'utf8'));
+        const prevSet = new Set<string>((prev.files as any[]) || []);
+        const nextList = entries.map(([rel]) => rel);
+        const nextSet = new Set(nextList);
+        const added = nextList.filter(f => !prevSet.has(f));
+        const removed = [...prevSet].filter(f => !nextSet.has(f));
+        const changed: string[] = []; // placeholder (content hash comparison would need individual hashes)
+        diffReport = { added, removed, changed };
+        if (debug && (added.length || removed.length)) {
+          process.stdout.write('[locus][build][diff] added:' + added.length + ' removed:' + removed.length + '\n');
+        }
+        (genMeta as any).diff = diffReport;
+      } catch {/* ignore */}
+    }
     const limit = pLimit(6);
-    await Promise.all(entries.map(([rel, content]) => limit(async () => {
+  await Promise.all(entries.map(([rel, content]) => limit(async () => {
       const full = join(outDir, rel);
       const dir = dirname(full);
       await safeMkdir(dir);

@@ -16,6 +16,7 @@ import { mergeAsts } from './parser/merger';
 import { validateUnifiedAstWithPlugins } from './validator/validate';
 import { executeWorkflow } from './workflow/runtime';
 import { formatProject } from './cli/format';
+import { ErrorCatalog } from './errors';
 
 const program = new Command();
 program.name('locus').description('Locus compiler CLI');
@@ -112,6 +113,7 @@ program
       pluginMgr.collectWorkflowStepKinds();
       await pluginMgr.onValidate(merged);
       await validateUnifiedAstWithPlugins(merged, pluginMgr);
+  await (pluginMgr as any).runCapabilityValidations?.(merged);
     } catch (e: any) {
       process.stderr.write('Validation error: ' + (e.message || e) + '\n');
       process.exit(1);
@@ -208,6 +210,16 @@ program
       const log = executeWorkflow(wf as any, { inputs, pluginManager: pluginMgr });
       process.stdout.write(JSON.stringify(log, null, 2) + '\n');
     });
+
+program
+  .command('explain')
+  .description('Explain an error code')
+  .argument('<code>', 'error code, e.g. parse_error')
+  .action((code: string) => {
+  const entry = (ErrorCatalog as any)[code.toUpperCase()] || (ErrorCatalog as any)[code];
+  if (!entry) { process.stderr.write(`Unknown error code: ${code}\n`); process.exit(1); }
+  process.stdout.write(`${code}: ${entry}\n`);
+  });
 
 program
   .command('format')
