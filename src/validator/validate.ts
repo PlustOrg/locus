@@ -1,6 +1,7 @@
 import { VError } from '../errors';
 import { UnifiedAST } from '../parser/merger';
 import { PluginManager } from '../plugins/manager';
+import { parseExpression } from '../parser/expr';
 
 // Backward-compatible synchronous validator (tests rely on sync throws)
 export function validateUnifiedAst(ast: UnifiedAST) {
@@ -18,7 +19,16 @@ export async function validateUnifiedAstWithPlugins(ast: UnifiedAST, pluginMgr: 
 
 function _coreValidate(ast: UnifiedAST) {
   const namingWarnings: string[] = [];
-  // Phase 1: Naming & Consistency warnings
+  // existing validation logic continues
+
+function walkUi(node: any, fn: (n:any)=>void) {
+  fn(node);
+  if (node.children) for (const c of node.children) walkUi(c, fn);
+  if (node.consequent) for (const c of node.consequent) walkUi(c, fn);
+  if (node.else) for (const c of node.else) walkUi(c, fn);
+  if (node.elif) for (const e of node.elif) for (const c of e.children) walkUi(c, fn);
+  if (node.template) walkUi(node.template, fn);
+}
   const pascal = (s: string) => /^[A-Z][A-Za-z0-9]*$/.test(s);
   if (ast.database) {
     for (const e of (ast.database.entities || []) as any[]) {
@@ -143,7 +153,7 @@ function _coreValidate(ast: UnifiedAST) {
     if (w.state?.raw) {
       const sm = /([A-Za-z_][A-Za-z0-9_]*)/g; let r:RegExpExecArray|null; while((r=sm.exec(w.state.raw))) reserved.add(r[1]);
     }
-    const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+  const steps = Array.isArray(w.steps) ? (w.steps as any[]) : [];
   // Build action name index once (outside loop ideally); quick inline cache
   const actionNames = new Set<string>();
   for (const p of (ast.pages || []) as any[]) for (const a of (p.actions||[])) actionNames.add(a.name);
@@ -354,6 +364,23 @@ function _coreValidate(ast: UnifiedAST) {
     for (const w of (ast as any).namingWarnings) if (!namingWarnings.includes(w)) namingWarnings.push(w);
   }
   (ast as any).namingWarnings = namingWarnings;
+  // Phase 3: UI expression validation (basic pass)
+  for (const comp of (ast.components || []) as any[]) {
+    if (comp.uiAst) {
+      walkUi(comp.uiAst, (n: any) => {
+        if (n.type === 'expr' && typeof n.value === 'string') {
+          const first = /^[A-Za-z_][A-Za-z0-9_]*/.exec(n.value)?.[0];
+          if (first && !((comp.params||[]).some((p:any)=>p.name===first) || (comp.state||[]).some((s:any)=>s.name===first) || first === 'children')) {
+            throw new VError(`Unknown identifier in UI expression: '${first}'`);
+          }
+          try { parseExpression(n.value); } catch (e:any) {
+            throw new VError(`Invalid expression '${n.value}': ${e.message}`);
+          }
+        }
+      });
+    }
+  }
+  return { warnings: namingWarnings };
 }
 
 // Additional validations over unified database

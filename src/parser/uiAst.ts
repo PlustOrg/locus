@@ -1,6 +1,10 @@
+import type { ExprNode } from '../ast';
+
+export interface AttrLocation { offset: number; line: number; column: number; length: number }
+
 export type UIAttr =
   | { kind: 'string'; value: string }
-  | { kind: 'expr'; value: string }
+  | { kind: 'expr'; value: string; ast?: ExprNode; loc?: AttrLocation }
   | { kind: 'forEach'; item: string; iterable: string };
 
 export interface ElementNode {
@@ -10,10 +14,8 @@ export interface ElementNode {
   children: UINode[];
 }
 
-export interface TextNode {
-  type: 'text';
-  value: string;
-}
+export interface TextNode { type: 'text'; value: string; }
+export interface ExprNodeUI { type: 'expr'; value: string; ast?: ExprNode; loc?: AttrLocation }
 
 export interface IfNode {
   type: 'if';
@@ -30,4 +32,4 @@ export interface ForEachNode {
   template: ElementNode; // element to render per item
 }
 
-export type UINode = ElementNode | TextNode | IfNode | ForEachNode;
+export type UINode = ElementNode | TextNode | ExprNodeUI | IfNode | ForEachNode;

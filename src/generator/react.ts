@@ -198,9 +198,8 @@ type UINode = { type: 'text'; value: string } | { type: 'element'; tag: string; 
 // Extended: slot placeholder node { type: 'slot', name: string }
 
 function renderUiAst(node: any): string {
-  if ((node as any).type === 'text') {
-    return (node as any).value;
-  }
+  if ((node as any).type === 'text') return (node as any).value;
+  if ((node as any).type === 'expr') return `{${(node as any).value}}`;
   if (node.type === 'slot') {
     // At render time, prefer named slot prop or children for default
     if (node.name === 'default') return '{children}';

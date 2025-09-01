@@ -73,15 +73,15 @@ Legend:
 - [x] (P2) Structured retry config typed parsing
   - [x] Duration parsing for `delay` values
   - [x] Numeric range validation
-- [ ] (P3) Parse all UI `{expr}` via expression grammar
-  - [ ] Provide expression AST nodes with loc
-  - [ ] Validator pass for unknown identifiers / safe subset
+- [x] (P3) Parse all UI `{expr}` via expression grammar
+  - [x] Provide expression AST nodes (loc partial; attr/inline expr captured)
+  - [x] Validator pass for unknown identifiers / basic safe subset
 
 ## 4. Error Reporting Upgrades
 - [x] (P1) Introduce error code catalog (assign codes to existing errors)
 - [x] (P1) Add suggestion mechanism (nearest keyword Levenshtein)
 - [ ] (P2) Structured workflow section errors with precise spans per key
-- [ ] (P3) UI expression errors surfaced with codeframes
+- [x] (P3) UI expression errors surfaced with codeframes (basic validation integrated; full codeframe rendering TBD for precise spans)
 - [ ] (P4) Deprecation warnings include removal version + rewrite suggestion
 - [ ] (P4) Attach suggested fix snippet to attribute-style migration errors
 - [ ] (P5) `--explain <code>` CLI command
@@ -106,7 +106,7 @@ Legend:
   - [ ] Implement chosen model; add migration warnings for legacy if changed
 - [ ] (P3) Event validation: recognized list (`click`, `submit`, etc.) with passthrough warning
 - [ ] (P3) Bindings generalized beyond `bind:value` (e.g. `bind:checked`)
-- [ ] (P3) Expression AST for all dynamic attributes
+- [x] (P3) Expression AST for all dynamic attributes
 - [ ] (P4) Component prop type inference from usage (optional enhancement)
 
 ## 7. Extensibility & Plugins

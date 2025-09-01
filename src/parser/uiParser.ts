@@ -1,4 +1,5 @@
-import { UINode, ElementNode, TextNode, UIAttr } from './uiAst';
+import { UINode, ElementNode, TextNode, UIAttr, ExprNodeUI } from './uiAst';
+import { parseExpression } from './expr';
 
 // Phase 3: Slot syntax support <slot name="header"/> consumed via {slot.header}
 
@@ -45,8 +46,29 @@ export function parseUi(src: string): UINode {
       const next = src.indexOf('<', i);
       const text = src.slice(i, next === -1 ? src.length : next);
       if (text.trim()) {
-        const tn: TextNode = { type: 'text', value: text.trim() };
-        if (stack.length) stack[stack.length - 1].children.push(tn);
+        // Split into literal and {expr} segments
+        const parts: UINode[] = [];
+        let last = 0;
+        const reExpr = /\{([^{}]+)\}/g;
+        let m: RegExpExecArray | null;
+        while ((m = reExpr.exec(text)) !== null) {
+          if (m.index > last) {
+            const lit = text.slice(last, m.index).trim();
+            if (lit) parts.push({ type: 'text', value: lit } as TextNode);
+          }
+          const exprContent = m[1].trim();
+            if (exprContent) {
+              const exprNode: ExprNodeUI = { type: 'expr', value: exprContent };
+              try { exprNode.ast = parseExpression(exprContent); } catch { /* will be validated later */ }
+              parts.push(exprNode);
+            }
+          last = m.index + m[0].length;
+        }
+        if (last < text.length) {
+          const tail = text.slice(last).trim();
+          if (tail) parts.push({ type: 'text', value: tail } as TextNode);
+        }
+        if (parts.length && stack.length) stack[stack.length - 1].children.push(...parts);
       }
       i = next === -1 ? src.length : next;
     }
@@ -68,7 +90,10 @@ function parseAttrs(src: string): Record<string, UIAttr> {
     } else if (val.startsWith('"')) {
       attrs[normalizeAttrKey(key)] = { kind: 'string', value: val.slice(1, -1) };
     } else if (val.startsWith('{') && val.endsWith('}')) {
-      attrs[normalizeAttrKey(key)] = { kind: 'expr', value: val.slice(1, -1).trim() };
+      const inner = val.slice(1, -1).trim();
+      const attr: UIAttr = { kind: 'expr', value: inner } as any;
+      try { (attr as any).ast = parseExpression(inner); } catch { /* ignore parse error here */ }
+      attrs[normalizeAttrKey(key)] = attr;
     } else {
       attrs[normalizeAttrKey(key)] = { kind: 'string', value: val };
     }
