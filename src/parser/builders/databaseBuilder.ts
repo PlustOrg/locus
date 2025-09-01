@@ -26,7 +26,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
   // scalarType nested rule may appear as 'scalarType' or 'scalarType1'
   const scalarNodes = (typeCh['scalarType'] as CstNode[] || []).concat(typeCh['scalarType1'] as any || []);
   let primitiveTokenName: string | undefined;
-        const isList = !!typeCh['List'];
+  const isList = !!typeCh['List'] || (!!typeCh['LBracketTok'] && !!typeCh['RBracketTok']);
   const typeTokenName = Object.keys(typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
         const optional = !!typeCh['Question'];
   let nullable = false;

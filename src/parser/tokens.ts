@@ -59,6 +59,8 @@ export const StarTok = createToken({ name: 'StarTok', pattern: /\*/ });
 // Style keywords (reintroduced for component style override detection)
 export const StyleKw = createToken({ name: 'StyleKw', pattern: /style\b/ });
 export const OverrideKw = createToken({ name: 'OverrideKw', pattern: /override\b/ });
+// New explicit style override block token (Phase 3)
+export const StyleOverride = createToken({ name: 'StyleOverride', pattern: /style_override\b/ });
 export const LBracketTok = createToken({ name: 'LBracketTok', pattern: /\[/ });
 export const RBracketTok = createToken({ name: 'RBracketTok', pattern: /\]/ });
 export const SingleQuoteTok = createToken({ name: 'SingleQuoteTok', pattern: /'/ });
@@ -149,6 +151,7 @@ export const AllTokens = [
   // style keywords
   StyleKw,
   OverrideKw,
+  StyleOverride,
   // feature keywords
   Page,
   Component,

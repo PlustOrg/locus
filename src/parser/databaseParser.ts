@@ -194,7 +194,8 @@ export class DatabaseCstParser extends CstParser {
     this.OPTION(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);
   });
-
+  
+  // Steps block within workflow
   private stepsWorkflowBlock = this.RULE('stepsWorkflowBlock', () => {
     this.CONSUME(Steps);
     this.CONSUME(LCurly);
@@ -202,36 +203,35 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(RCurly);
   });
 
+  // run step: run actionName(arg,...)
+  private runStep = this.RULE('runStep', () => {
+    this.CONSUME(RunKw);
+    this.CONSUME(Identifier);
+    this.OPTION(() => {
+      this.CONSUME(LParen);
+      this.OPTION1(() => {
+        this.SUBRULE(this.runArg);
+        this.MANY(() => { this.CONSUME(Comma); this.SUBRULE1(this.runArg); });
+      });
+      this.CONSUME(RParen);
+    });
+  });
+
   private workflowStepStmt = this.RULE('workflowStepStmt', () => {
     // const binding optional
     this.OPTION(() => {
       this.CONSUME(ConstKw);
-      this.CONSUME1(Identifier);
+      this.CONSUME(Identifier);
       this.CONSUME(Equals);
     });
-    this.SUBRULE(this.workflowSimpleStep);
-  });
-
-  private workflowSimpleStep = this.RULE('workflowSimpleStep', () => {
     this.OR([
       { ALT: () => this.SUBRULE(this.runStep) },
-      { ALT: () => this.SUBRULE(this.delayStep) },
       { ALT: () => this.SUBRULE(this.branchStep) },
       { ALT: () => this.SUBRULE(this.forEachStep) },
+      { ALT: () => this.SUBRULE(this.delayStep) },
       { ALT: () => this.SUBRULE(this.httpRequestStep) },
-  { ALT: () => this.SUBRULE(this.sendEmailStep) },
+      { ALT: () => this.SUBRULE(this.sendEmailStep) },
     ]);
-  });
-
-  private runStep = this.RULE('runStep', () => {
-    this.CONSUME(RunKw);
-    this.CONSUME(Identifier); // action name
-    this.CONSUME(LParen);
-    this.OPTION(() => {
-      this.SUBRULE(this.runArg);
-      this.MANY(() => { this.CONSUME(Comma); this.SUBRULE1(this.runArg); });
-    });
-    this.CONSUME(RParen);
   });
 
   private runArg = this.RULE('runArg', () => {
@@ -724,9 +724,9 @@ export class DatabaseCstParser extends CstParser {
   private fieldType = this.RULE('fieldType', () => {
     this.OR([
       { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); } },
-      { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); } },
+	{ ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); this.OPTION1(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
     ]);
-    this.OPTION1(() => {
+  this.OPTION2(() => {
   if (this.LA(1).image === 'nullable') this.CONSUME(Identifier);
     });
   });
