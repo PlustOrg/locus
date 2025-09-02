@@ -27,6 +27,10 @@ export function evaluateExpr(expr: ExprNode | undefined, ctx: WorkflowContext): 
 }
 
 export interface ExecuteOptions { inputs?: Record<string,any>; actions?: Record<string, (...args:any[])=>any>; pluginManager?: PluginManager }
+type TraceListener = (ev: { type: string; data?: any }) => void;
+const globalTraceListeners: TraceListener[] = [];
+export function registerWorkflowTraceListener(fn: TraceListener) { globalTraceListeners.push(fn); }
+function emitTrace(ev: { type: string; data?: any }) { for (const l of globalTraceListeners) { try { l(ev); } catch {} } }
 
 export const globalConcurrency: Record<string,{ limit:number; active:number }> = {};
 
@@ -113,17 +117,20 @@ export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {})
 function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: WorkflowContext, pm?: PluginManager) {
   for (const step of steps) {
     // plugin custom kind
+    emitTrace({ type: 'step_start', data: { kind: (step as any).kind, id: (step as any).id } });
     if (pm) {
       if (step.kind && !(['run','branch','for_each','delay'].includes(step.kind))) {
         const reg: any = (pm as any).workflowStepKinds?.[step.kind];
         if (reg && reg.run) {
           try { const result = reg.run(step, { ctx }); ctx.log.push({ kind: step.kind, detail: { plugin: reg.plugin, result }, v: 1 }); }
           catch (e:any) { ctx.log.push({ kind: 'error', detail: { message: e.message, plugin: reg.plugin } }); throw e; }
+      emitTrace({ type: 'step_end', data: { kind: (step as any).kind, id: (step as any).id } });
           continue;
         }
       }
     }
   runStepWithRetry(step, ctx, (block as any).retryConfig, pm);
+    emitTrace({ type: 'step_end', data: { kind: (step as any).kind, id: (step as any).id } });
   }
 }
 

@@ -228,6 +228,23 @@ function walkUi(node: any, fn: (n:any)=>void) {
         }
       }
   }
+  // Simple taint analysis placeholder: flag http_request bodies referencing `${input}` style patterns directly.
+  for (const w of ast.workflows || []) {
+    const steps: any[] = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+    for (const s of steps) {
+      if (s.kind === 'http_request' && typeof s.raw === 'string') {
+        if (/\$\{\s*input\./.test(s.raw)) {
+          namingWarnings.push(`Potential unsafe interpolation in http_request step of workflow '${w.name}'. Consider sanitizing inputs.`);
+        }
+      }
+    }
+    // step name normalization warnings
+    if (Array.isArray(w.steps)) {
+      for (const s of w.steps as any[]) {
+        if (s.kind && /[A-Z]/.test(s.kind)) namingWarnings.push(`Workflow '${w.name}' step kind '${s.kind}' should be snake_case.`);
+      }
+    }
+  }
   }
   const ds = ast.designSystem;
   if (ds) {

@@ -5,7 +5,7 @@ import { buildProject } from './cli/build';
 import { dev as devCmd } from './cli/dev';
 import type { ErrorOutputFormat } from './cli/reporter';
 import path from 'path';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { newProject } from './cli/new';
 import { deploy as deployCmd } from './cli/deploy';
 import { listPlugins, doctorPlugins } from './cli/plugins';
@@ -229,6 +229,36 @@ program
     const srcDir = path.resolve(opts.src || '.');
     const changed = formatProject(srcDir);
     process.stdout.write(changed.length ? `Formatted ${changed.length} file(s)\n` : 'No formatting changes.\n');
+  });
+
+program
+  .command('doctor')
+  .description('Diagnose environment & configuration')
+  .option('--src <dir>', 'source dir', '.')
+  .action(async (opts:any) => {
+    const srcDir = path.resolve(opts.src || '.');
+    const config = (await import('./config/config')).loadConfig(srcDir);
+    const report: any = {
+      node: process.version,
+      platform: process.platform,
+      cwd: process.cwd(),
+      flags: config.flags || {},
+      suppressDeprecated: !!config.suppressDeprecated,
+      performance: config.performance || {},
+      env: Object.keys(process.env).filter(k => k.startsWith('LOCUS_')),
+  pluginPerfCache: (()=>{ try { const p = path.join(process.cwd(), '.locus_plugin_perf.json'); return existsSync(p) ? 'present' : 'absent'; } catch { return 'unknown'; }})()
+    };
+    process.stdout.write(JSON.stringify(report,null,2)+'\n');
+  });
+
+program
+  .command('explain <code>')
+  .description('Explain an error/diagnostic code')
+  .action(async (code: string) => {
+    const { ErrorCatalog } = await import('./errors');
+    const norm = code.trim().toUpperCase();
+    const msg = (ErrorCatalog as any)[norm] || 'Unknown code';
+    process.stdout.write(`${norm}: ${msg}\n`);
   });
 
   program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });

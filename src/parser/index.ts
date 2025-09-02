@@ -29,3 +29,11 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   const ast = buildAstModular(cst, source, filePath);
   return ast;
 }
+
+// Experimental parallel parsing scaffold (not yet active for real, placeholder)
+export async function parseFilesParallel(files: Array<{ path: string; content: string }>): Promise<any[]> {
+  const enabled = process.env.LOCUS_PARALLEL_PARSE === '1';
+  if (!enabled) return files.map(f => parseLocus(f.content, f.path));
+  // naive concurrency via Promise.all (worker threads could be added later)
+  return Promise.all(files.map(f => Promise.resolve().then(()=> parseLocus(f.content, f.path))));
+}

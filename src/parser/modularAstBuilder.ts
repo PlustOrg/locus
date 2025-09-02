@@ -373,6 +373,13 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             // Assign stable numeric ids
             if (Array.isArray((block as any).steps)) {
               (block as any).steps.forEach((s: any, idx: number) => { if (!s.id) s.id = idx + 1; });
+              // Experimental step gating: hide experimental kinds unless enabled via env flag
+              const expEnabled = process.env.LOCUS_ENABLE_EXPERIMENTAL_STEPS === '1';
+              if (!expEnabled) {
+                (block as any).steps.forEach((s: any) => {
+                  if (['parallel','queue_publish','db_tx'].includes(s.kind)) s.kind = 'unknown';
+                });
+              }
             }
           }
         }

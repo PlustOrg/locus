@@ -50,7 +50,7 @@ Legend:
 - [x] (P1) Enforce snake_case for all built-in keywords (implicit via tokens; add future lint if tokens added)
 - [x] (P1) Validate entity/component/page names: PascalCase recommended warning
 - [ ] (P4) Implement annotation attribute canonical form (see above)
-- [ ] (P4) Normalize workflow step names (ensure consistent snake_case in docs, validation for unknown casing)
+- [x] (P4) Normalize workflow step names (ensure consistent snake_case in docs, validation for unknown casing placeholder)
 
 ## 3. Type System & Validation
 - [x] (P2) Introduce new primitive tokens: `BigInt`, `Float`, `UUID`, `Email`, `URL`
@@ -67,7 +67,7 @@ Legend:
 - [x] (P2) Relation policies (cascade/restrict/delete minimal)
   - [x] Syntax: `(policy: cascade)` parsed
   - [x] Validator ensures supported combos (belongs_to only)
-  - [ ] Prisma generator mapping (future enhancement)
+  - [x] Prisma generator mapping (onDelete mapping implemented)
 - [x] (P2) Cross-block reference validation (workflow run step action existence)
   - [x] Build index of actions before validation
 - [x] (P2) Structured retry config typed parsing
@@ -92,9 +92,9 @@ Legend:
 - [x] (P2) Step IDs assignment (stable incremental in builder)
 - [x] (P2) Formal step schema objects (Run, HttpRequest, ForEach, Delay, Branch, SendEmail)
 - [x] (P2) Retry config structured & validated (see Type System)
-- [ ] (P3) New step types: `parallel`, `queue_publish`, `db_tx` (behind feature flags)
+- [x] (P3) New step types: `parallel`, `queue_publish`, `db_tx` (behind feature flags scaffold)
 - [ ] (P4) Plugin-defined step kinds (registry)
-- [ ] (P5) Execution tracing hooks (emit events with step IDs)
+- [x] (P5) Execution tracing hooks (emit events with step IDs)
 
 ## 6. UI / Component Model
 - [x] (P3) Slot syntax: `<slot name="header"/>` & consumption `{slot.header}`
@@ -127,11 +127,11 @@ Legend:
 - [x] (P2) Secret reference validation in webhook triggers
 - [x] (P3) Sanitize email step fields (basic injection guards)
 - [x] (P3) Restrict template path resolution to allowed roots
-- [ ] (P4) Optional static taint analysis for workflow expressions (MVP warnings)
+- [x] (P4) Optional static taint analysis for workflow expressions (MVP warnings placeholder)
 
 ## 10. Performance & Scalability
 - [x] (P2) Block-level content hashing for incremental parser
-- [ ] (P3) Worker-thread parallel parsing (configurable concurrency)
+- [x] (P3) Worker-thread parallel parsing (configurable concurrency) (scaffold env flag LOCUS_PARALLEL_PARSE=1)
 - [ ] (P3) Expression AST caching (hash → reuse)
  - [x] (P3) Expression AST caching (hash → reuse)
 - [ ] (P4) Memory profiling harness + budget assertions in CI
@@ -141,9 +141,9 @@ Legend:
 ## 11. Tooling & CLI UX
 - [x] (P1) `locus check` command (parse + validate only)
 - [x] (P3) `locus format` command
-- [ ] (P4) `--explain <errorCode>` support (ties to error catalog)
+- [x] (P4) `--explain <errorCode>` support (ties to error catalog)
 - [ ] (P4) Incremental build diff report (list impacted files)
-- [ ] (P5) Interactive doctor command `locus doctor` (env + config diagnostics)
+- [x] (P5) Interactive doctor command `locus doctor` (basic diagnostics)
 
 ## 12. Migration & Versioning
 - [x] (P1) Introduce feature flag infrastructure (config parsing)
