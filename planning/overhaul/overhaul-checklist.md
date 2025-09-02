@@ -42,8 +42,8 @@ Legend:
   - [ ] Support both forms (parse into unified AST attribute objects)
   - [ ] Emit deprecation warning when legacy paren form used
   - [ ] Update docs & tests
-- [ ] (P4) Standardize `on load` → choose canonical form (`on load`) & lint alternative
-  - [ ] Add linter/validator rule
+- [x] (P4) Standardize `on load` → choose canonical form (`on load`) & lint alternative
+  - [x] Add linter/validator rule
 - [ ] (P5) Generate `tokens.ts` from declarative spec (avoid ordering errors)
 
 ## 2. Naming & Consistency
@@ -93,7 +93,7 @@ Legend:
 - [x] (P2) Formal step schema objects (Run, HttpRequest, ForEach, Delay, Branch, SendEmail)
 - [x] (P2) Retry config structured & validated (see Type System)
 - [x] (P3) New step types: `parallel`, `queue_publish`, `db_tx` (behind feature flags scaffold)
-- [ ] (P4) Plugin-defined step kinds (registry)
+- [x] (P4) Plugin-defined step kinds (registry)
 - [x] (P5) Execution tracing hooks (emit events with step IDs)
 
 ## 6. UI / Component Model

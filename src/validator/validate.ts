@@ -246,6 +246,12 @@ function walkUi(node: any, fn: (n:any)=>void) {
     }
   }
   }
+  // Page on load canonical form warning
+  for (const pg of ast.pages || []) {
+    if ((pg as any).onLoad && /onLoad\s*\{/.test((pg as any).onLoad)) {
+      namingWarnings.push(`Use canonical 'on load' instead of 'onLoad' in page '${pg.name}'.`);
+    }
+  }
   const ds = ast.designSystem;
   if (ds) {
     const sourceFile = (ds as any).sourceFile;

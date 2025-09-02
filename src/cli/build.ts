@@ -107,6 +107,22 @@ export async function buildProject(opts: {
   // Validate unified AST
   try {
   pluginMgr.collectWorkflowStepKinds();
+  // Second-pass assign plugin-defined step kinds for unknown steps by prefix match
+  try {
+    const kinds = Object.keys(pluginMgr.workflowStepKinds || {});
+    if (kinds.length && (merged as any).workflows) {
+      for (const wf of (merged as any).workflows as any[]) {
+        if (!Array.isArray(wf.steps)) continue;
+        for (const st of wf.steps) {
+          if (st.kind === 'unknown' && typeof st.raw === 'string') {
+            const trimmed = st.raw.trim();
+            const k = kinds.find(kd => trimmed.startsWith(kd + ' ') || trimmed === kd || trimmed.startsWith('const ') && trimmed.includes('= ' + kd + ' '));
+            if (k) st.kind = k;
+          }
+        }
+      }
+    }
+  } catch {/* ignore */}
   await pluginMgr.onValidate(merged);
   await validateUnifiedAstWithPlugins(merged, pluginMgr);
   await pluginMgr.runCapabilityValidations(merged);

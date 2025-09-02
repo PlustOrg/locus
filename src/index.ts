@@ -16,9 +16,13 @@ import { mergeAsts } from './parser/merger';
 import { validateUnifiedAstWithPlugins } from './validator/validate';
 import { executeWorkflow } from './workflow/runtime';
 import { formatProject } from './cli/format';
-import { ErrorCatalog } from './errors';
 
 const program = new Command();
+// Prevent duplicate command definitions if this module is imported more than once in the same process (tests)
+const defined = new Set<string>();
+const safeCommand = (name: string) => {
+  if (defined.has(name)) return null as any; defined.add(name); return program.command(name);
+};
 program.name('locus').description('Locus compiler CLI');
 
 program
@@ -211,15 +215,6 @@ program
       process.stdout.write(JSON.stringify(log, null, 2) + '\n');
     });
 
-program
-  .command('explain')
-  .description('Explain an error code')
-  .argument('<code>', 'error code, e.g. parse_error')
-  .action((code: string) => {
-  const entry = (ErrorCatalog as any)[code.toUpperCase()] || (ErrorCatalog as any)[code];
-  if (!entry) { process.stderr.write(`Unknown error code: ${code}\n`); process.exit(1); }
-  process.stdout.write(`${code}: ${entry}\n`);
-  });
 
 program
   .command('format')
@@ -251,8 +246,7 @@ program
     process.stdout.write(JSON.stringify(report,null,2)+'\n');
   });
 
-program
-  .command('explain <code>')
+safeCommand('explain <code>')
   .description('Explain an error/diagnostic code')
   .action(async (code: string) => {
     const { ErrorCatalog } = await import('./errors');

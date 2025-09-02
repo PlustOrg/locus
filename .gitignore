@@ -8,3 +8,4 @@ prisma/migrations/
 node_modules/.prisma
 tmp-wf-run-*/
 tmp-check-*/
+.locus_plugin_perf.json
