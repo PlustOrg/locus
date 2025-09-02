@@ -56,10 +56,10 @@ Legend:
 - [x] (P2) Introduce new primitive tokens: `BigInt`, `Float`, `UUID`, `Email`, `URL`
   - [x] Map in Prisma / generators (basic mapping; UUID/Email/URL currently String)
   - [x] Add tests for default rendering (parser presence + existing prisma tests cover)
-- [ ] (P2) Nullable vs optional distinction
-  - [ ] Design syntax (e.g. `?` = optional, `| Null` or `nullable` keyword?)
-  - [ ] Implement grammar + AST flag
-  - [ ] Update generators (Prisma: optional vs `?` vs `Null` default) & validators
+- [x] (P2) Nullable vs optional distinction
+  - [x] Design syntax (`?` optional, `| Null` or `nullable` keyword for nullability)
+  - [x] Implement grammar + AST flag
+  - [x] Update generators (Prisma currently treats nullable same as optional; future differentiation TBD)
 - [ ] (P1) Remove list optional semantics (already disallowed earlier)
 - [x] (P2) Restrict default function calls to whitelist
   - [x] Central registry of allowed calls (inline set in validator)
@@ -132,11 +132,11 @@ Legend:
 ## 10. Performance & Scalability
 - [x] (P2) Block-level content hashing for incremental parser
 - [x] (P3) Worker-thread parallel parsing (configurable concurrency) (scaffold env flag LOCUS_PARALLEL_PARSE=1)
-- [ ] (P3) Expression AST caching (hash → reuse)
  - [x] (P3) Expression AST caching (hash → reuse)
 - [ ] (P4) Memory profiling harness + budget assertions in CI
  - [x] (P4) Memory profiling harness + budget assertions in CI (smoke test)
 - [ ] (P5) Workflow runtime JIT optimization (precompiled JS functions)
+  - [x] Adjusted baseline memory thresholds after added AST metadata (parse baseline now <9MB delta)
 
 ## 11. Tooling & CLI UX
 - [x] (P1) `locus check` command (parse + validate only)
@@ -176,7 +176,7 @@ Legend:
   - [x] Initial script placeholder (to be expanded in later phase)
 - [x] (P3) Migration guide: structured workflows (stub)
 - [x] (P4) Migration guide: annotations & UI directives
-- [ ] (P5) Plugin authoring guide & examples
+- [x] (P5) Plugin authoring guide & examples
 
 ## 16. Implementation Ordering Verification
 - [ ] (P1) Publish roadmap doc referencing this checklist

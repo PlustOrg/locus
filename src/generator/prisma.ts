@@ -19,7 +19,9 @@ function renderModel(entity: Entity, _all: Entity[]): string {
       // Prisma list fields cannot be suffixed with ?; ignore optional flag for list kind
       type = mapType(f.type.of) + '[]';
     } else {
-      type = mapType(f.type.name) + (f.type.optional ? '?' : '');
+      const nullable = (f.type as any).nullable;
+      // For now treat nullable same as optional in schema (Prisma uses ? for optional / NULLable)
+      type = mapType(f.type.name) + ((f.type.optional || nullable) ? '?' : '');
     }
     let line = `${f.name} ${type}`;
     for (const a of f.attributes) {

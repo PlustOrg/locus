@@ -35,6 +35,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         if (!nullable && typeCh['Identifier']) {
           const ids = (typeCh['Identifier'] as any[]);
           if (ids.some(t => t.image === 'nullable')) nullable = true;
+          if (ids.some(t => t.image === 'Null')) nullable = true;
         }
         let fieldType: any;
         if (isList) {

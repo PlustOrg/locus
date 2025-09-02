@@ -56,6 +56,7 @@ export const PlusTok = createToken({ name: 'PlusTok', pattern: /\+/ });
 export const HyphenTok = createToken({ name: 'HyphenTok', pattern: /-/ });
 export const SemicolonTok = createToken({ name: 'SemicolonTok', pattern: /;/ });
 export const StarTok = createToken({ name: 'StarTok', pattern: /\*/ });
+export const PipeTok = createToken({ name: 'PipeTok', pattern: /\|/ });
 // Style keywords (reintroduced for component style override detection)
 export const StyleKw = createToken({ name: 'StyleKw', pattern: /style\b/ });
 export const OverrideKw = createToken({ name: 'OverrideKw', pattern: /override\b/ });
@@ -231,6 +232,7 @@ export const AllTokens = [
   HyphenTok,
   SemicolonTok,
   StarTok,
+  PipeTok,
   LBracketTok,
   RBracketTok,
   SingleQuoteTok,

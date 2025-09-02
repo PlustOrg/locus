@@ -102,6 +102,7 @@ import {
   Duration,
   AtSign,
   StyleOverride,
+  PipeTok,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -782,6 +783,13 @@ export class DatabaseCstParser extends CstParser {
     ]);
   this.OPTION2(() => {
   if (this.LA(1).image === 'nullable') this.CONSUME(Identifier);
+    });
+    // Optional nullability union syntax: Type | Null
+    this.OPTION3(() => {
+      if (this.LA(1).tokenType.name === 'PipeTok') {
+    this.CONSUME(PipeTok);
+        if (this.LA(1).image === 'Null') this.CONSUME1(Identifier);
+      }
     });
   });
 
