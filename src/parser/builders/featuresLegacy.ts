@@ -168,6 +168,19 @@ export function buildFeatureBlocksLegacy(pageNodes: CstNode[], compNodes: CstNod
       const inner = raw[0] ? sliceFrom(raw[0], originalSource) : '';
       comp.ui = `ui {${inner}}`;
       comp.uiAst = parseUi(inner);
+      // Infer params from UI expressions referencing undeclared identifiers
+      if (comp.uiAst) {
+        const inferred = new Set<string>();
+        const walk = (n: any) => {
+          if (n.type === 'expr' && typeof n.value === 'string') {
+            const id = /^[A-Za-z_][A-Za-z0-9_]*/.exec(n.value)?.[0];
+            if (id && !(comp.params||[]).some((p:any)=>p.name===id) && id !== 'children') inferred.add(id);
+          }
+          if (n.children) for (const c of n.children) walk(c);
+        };
+        walk(comp.uiAst);
+        if (inferred.size) comp.inferredParams = Array.from(inferred).sort();
+      }
     }
     components.push(comp);
   }

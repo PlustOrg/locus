@@ -107,7 +107,7 @@ Legend:
 - [x] (P3) Event validation: recognized list (`click`, `submit`, etc.) with passthrough warning
 - [x] (P3) Bindings generalized beyond `bind:value` (e.g. `bind:checked`)
 - [x] (P3) Expression AST for all dynamic attributes
-- [ ] (P4) Component prop type inference from usage (optional enhancement)
+- [x] (P4) Component prop type inference from usage (optional enhancement)
 
 ## 7. Extensibility & Plugins
  [x] (P4) Plugin capability registry (declares tokens, steps, validations) (scaffold)
@@ -142,7 +142,6 @@ Legend:
 - [x] (P1) `locus check` command (parse + validate only)
 - [x] (P3) `locus format` command
 - [x] (P4) `--explain <errorCode>` support (ties to error catalog)
-- [ ] (P4) Incremental build diff report (list impacted files)
 - [x] (P5) Interactive doctor command `locus doctor` (basic diagnostics)
 
 ## 12. Migration & Versioning

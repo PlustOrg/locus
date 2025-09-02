@@ -406,6 +406,12 @@ function walkUi(node: any, fn: (n:any)=>void) {
   if ((ast as any).namingWarnings && Array.isArray((ast as any).namingWarnings)) {
     for (const w of (ast as any).namingWarnings) if (!namingWarnings.includes(w)) namingWarnings.push(w);
   }
+  // Append removal schedule suffix to deprecation warnings missing it (central normalization)
+  for (let i=0;i<namingWarnings.length;i++) {
+    if (/Deprecated/.test(namingWarnings[i]) && !/removal:/.test(namingWarnings[i])) {
+      namingWarnings[i] = namingWarnings[i] + ' (removal: TBD)';
+    }
+  }
   (ast as any).namingWarnings = namingWarnings;
   // Phase 3: UI expression validation (basic pass)
   for (const comp of (ast.components || []) as any[]) {
