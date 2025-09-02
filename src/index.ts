@@ -16,6 +16,7 @@ import { mergeAsts } from './parser/merger';
 import { validateUnifiedAstWithPlugins } from './validator/validate';
 import { executeWorkflow } from './workflow/runtime';
 import { formatProject } from './cli/format';
+import { checkForUpdate } from './cli/updateCheck';
 
 const program = new Command();
 // Prevent duplicate command definitions if this module is imported more than once in the same process (tests)
@@ -255,5 +256,6 @@ safeCommand('explain <code>')
     process.stdout.write(`${norm}: ${msg}\n`);
   });
 
+  setTimeout(()=>{ try { checkForUpdate(); } catch {/* ignore */} }, 5);
   program.parseAsync().catch((e) => { process.stderr.write(String(e) + '\n'); process.exit(1); });
 

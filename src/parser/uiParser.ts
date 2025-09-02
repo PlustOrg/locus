@@ -15,9 +15,11 @@ export function parseUi(src: string): UINode {
         const end = src.indexOf('>', i + 2);
         if (end === -1) { i++; continue; }
         const closed = stack.pop();
-        i = end + 1;
+  if (closed) closed.end = end + 1;
+  i = end + 1;
         if (!stack.length && closed && !root) root = closed;
       } else {
+  const start = i;
         const end = src.indexOf('>', i + 1);
         if (end === -1) { i++; continue; }
         const raw = src.slice(i + 1, end);
@@ -35,12 +37,12 @@ export function parseUi(src: string): UINode {
         }
         const attrSrc = raw.slice(tag.length);
         const attrs = parseAttrs(attrSrc);
-        const el: ElementNode = { type: 'element', tag, attrs, children: [] };
+        const el: ElementNode = { type: 'element', tag, attrs, children: [], start };
         if (stack.length) stack[stack.length - 1].children.push(el);
         stack.push(el);
         i = end + 1;
         if (selfClose) {
-          stack.pop();
+          const sc = stack.pop(); if (sc) sc.end = i;
             if (!stack.length) root = el;
         }
       }
@@ -56,11 +58,11 @@ export function parseUi(src: string): UINode {
         while ((m = reExpr.exec(text)) !== null) {
           if (m.index > last) {
             const lit = text.slice(last, m.index).trim();
-            if (lit) parts.push({ type: 'text', value: lit } as TextNode);
+            if (lit) parts.push({ type: 'text', value: lit, start: i + m.index - (m.index - last), end: i + m.index } as TextNode);
           }
           const exprContent = m[1].trim();
             if (exprContent) {
-              const exprNode: ExprNodeUI = { type: 'expr', value: exprContent };
+              const exprNode: ExprNodeUI = { type: 'expr', value: exprContent, start: i + m.index, end: i + m.index + m[0].length };
               try { exprNode.ast = parseExpression(exprContent); } catch { /* will be validated later */ }
               parts.push(exprNode);
             }
@@ -68,7 +70,7 @@ export function parseUi(src: string): UINode {
         }
         if (last < text.length) {
           const tail = text.slice(last).trim();
-          if (tail) parts.push({ type: 'text', value: tail } as TextNode);
+          if (tail) parts.push({ type: 'text', value: tail, start: i + last, end: i + text.length } as TextNode);
         }
         if (parts.length && stack.length) stack[stack.length - 1].children.push(...parts);
       }

@@ -1,6 +1,7 @@
 import { join } from 'path';
 // (Legacy path) Higher-level convenience wrappers now delegate to pipeline.
 import { runPipeline } from './pipeline';
+import { stabilizeContent } from './stabilize';
 import { parseToml } from '../config/toml';
 import { existsSync, readFileSync } from 'fs';
 import { UnifiedAST } from '../parser/merger';
@@ -152,6 +153,11 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
   if (webhookRoutes.length) {
     const stubLines = webhookRoutes.map(r => `app.post('/webhooks/${r.name.toLowerCase()}', (req,res)=> { const provided=req.headers['x-locus-secret']; if (${r.secret?`provided!==process.env.${r.secret}`:'false'}) return res.status(401).json({ error: 'invalid secret' }); /* TODO invoke workflow ${r.name} */ res.json({ ok:true, workflow:'${r.name}' }); })`).join('\n');
     files['webhooks.stub.ts'] = withHeader(`import app from './server';\n${stubLines}\n`,'webhooks');
+  }
+  // Apply snapshot stabilization to all artifact contents for determinism
+  for (const k of Object.keys(files)) {
+    const v = files[k];
+    if (typeof v === 'string') files[k] = stabilizeContent(v);
   }
   return { files, meta } as any;
 }

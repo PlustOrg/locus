@@ -8,8 +8,9 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node", "jest"]
+  "types": ["node", "jest"],
+  "resolveJsonModule": true
   },
-  "include": ["src"],
+  "include": ["src", "package.json"],
   "exclude": ["node_modules", "dist", "tests", "src/runtime"]
 }

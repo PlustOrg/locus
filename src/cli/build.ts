@@ -1,4 +1,4 @@
-import { writeFileSync, existsSync, readFileSync } from 'fs';
+import { writeFileSync, existsSync, readFileSync, appendFileSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { join, dirname } from 'path';
 import { findLocusFiles, pLimit, safeMkdir, safeWrite } from './utils';
@@ -45,6 +45,7 @@ export async function buildProject(opts: {
   // Map of file contents for error reporting
   const fileMap = new Map<string, string>();
   const tParse0 = Date.now();
+  const mem0 = process.memoryUsage().heapUsed;
   const config = loadConfig(srcDir);
   const pluginMgr = await initPluginManager(srcDir, config);
   const asts: any[] = [];
@@ -78,6 +79,7 @@ export async function buildProject(opts: {
     return { outDir, diagnostics, failed: true } as any;
   }
   const tParse1 = Date.now();
+    const memAfterParse = process.memoryUsage().heapUsed;
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Parsed ${files.length} files in ${tParse1-tParse0}ms\n`);
   }
@@ -140,6 +142,7 @@ export async function buildProject(opts: {
     throw e;
   }
   const tMerge1 = Date.now();
+    const memAfterMerge = process.memoryUsage().heapUsed;
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Merged ASTs in ${tMerge1-tParse1}ms\n`);
   }
@@ -147,6 +150,8 @@ export async function buildProject(opts: {
 
   // Generate all build artifacts
   let genMeta: any = {};
+  let genDur = 0;
+  let memAfterGenerate = 0;
   try {
     await pluginMgr.onBeforeGenerate(merged);
     // Detect auth configuration via unified config
@@ -186,11 +191,37 @@ export async function buildProject(opts: {
     // Add plugin warnings
     meta.warnings = [...(meta.warnings || []), ...pluginMgr.warnings];
     (meta as any).pluginTimings = pluginMgr.timings;
+    // Plugin performance budget reporting (diff vs previous run)
+    try {
+      const perfPath = join(outDir, 'PLUGIN_TIMINGS.json');
+      let prev: any = null;
+      if (existsSync(perfPath)) {
+        try { prev = JSON.parse(readFileSync(perfPath,'utf8')); } catch {/* ignore */}
+      }
+      const current = { generatedAt: new Date().toISOString(), timings: pluginMgr.timings };
+      writeFileSync(perfPath, JSON.stringify(current, null, 2));
+      if (prev && prev.timings && pluginMgr.timings) {
+        const diffs: string[] = [];
+        for (const [k,v] of Object.entries(pluginMgr.timings) as any) {
+          const before = (prev.timings as any)[k];
+            if (typeof before === 'number') {
+              const delta = (v as number) - before;
+              if (Math.abs(delta) > 5) { // >5ms change significant threshold
+                meta.warnings = [...(meta.warnings||[]), `[plugin-perf] ${k} changed by ${delta}ms (prev ${before}ms now ${v}ms)`];
+                diffs.push(k);
+              }
+            }
+        }
+        if (diffs.length) (meta as any).pluginPerfDiff = diffs;
+      }
+    } catch {/* ignore perf reporting errors */}
     genMeta = meta;
     if (opts.debug) {
       process.stdout.write(`[locus][debug] Generated artifacts in ${Date.now() - tMerge1}ms\n`);
     }
-  recordTiming('generateMs', Date.now() - tMerge1);
+  genDur = Date.now() - tMerge1;
+  recordTiming('generateMs', genDur);
+  memAfterGenerate = process.memoryUsage().heapUsed;
     // Dry run: just list files
     if (opts.dryRun) {
       const list = Object.keys(artifacts).sort();
@@ -257,6 +288,23 @@ export async function buildProject(opts: {
     process.exit(1);
   }
 
+  // Memory trend logging
+  try {
+    if (process.env.LOCUS_MEMORY_TREND && !opts.dryRun) {
+      const trendPath = process.env.LOCUS_MEMORY_TREND;
+      const line = JSON.stringify({
+        ts: new Date().toISOString(),
+        parseMs: tParse1 - tParse0,
+  mergeMs: tMerge1 - tParse1,
+  generateMs: genDur,
+        heapParseDelta: memAfterParse - mem0,
+        heapMergeDelta: memAfterMerge - memAfterParse,
+        heapGenDelta: memAfterGenerate - memAfterMerge,
+        heapTotalDelta: memAfterGenerate - mem0
+      });
+      appendFileSync(trendPath, line + '\n');
+    }
+  } catch {/* ignore */}
   // Print timing summary if debug enabled
   if (debug) {
     const t1 = Date.now();

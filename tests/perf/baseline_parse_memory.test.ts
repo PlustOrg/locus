@@ -12,6 +12,6 @@ describe('Performance baseline', () => {
     const { res, durMs, memDelta } = measure(()=> mergeAsts([parseLocus(SAMPLE,'sample.locus')]));
     expect(res).toBeTruthy();
   expect(durMs).toBeLessThan(200); // adjusted for added validation + plugin scaffolding
-  expect(memDelta).toBeLessThan(10e6); // adjusted (<10MB) after nullable + inference additions
+  expect(memDelta).toBeLessThan(12e6); // adjusted (<12MB) after UI span + perf instrumentation additions
   });
 });

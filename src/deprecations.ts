@@ -4,20 +4,30 @@ let depCount = 0;
 // Deprecation warning scaffolding (Phase 1)
 // Call registerDeprecation when encountering legacy syntax.
 
-interface DeprecationRecord { id: string; message: string; removal?: string; suggestion?: string }
+interface DeprecationRecord { id: string; message: string; removal?: string; suggestion?: string; date?: string; count: number }
 const records: DeprecationRecord[] = [];
-const seen = new Set<string>();
+const seen = new Map<string, DeprecationRecord>();
 
-export function registerDeprecation(id: string, message: string, removal?: string, suggestion?: string) {
-  if (seen.has(id)) return; // avoid duplicates
-  seen.add(id);
-  records.push({ id, message, removal, suggestion });
+export function registerDeprecation(id: string, message: string, removal?: string, suggestion?: string, date: string = new Date().toISOString().slice(0,10)) {
+  const existing = seen.get(id);
+  if (existing) { existing.count++; depCount++; incDeprecations(); return; }
+  const rec: DeprecationRecord = { id, message, removal, suggestion, date, count: 1 };
+  seen.set(id, rec);
+  records.push(rec);
   depCount++;
   incDeprecations();
 }
 
 export function collectDeprecationWarnings(): string[] {
-  return records.map(r => `[deprecation] ${r.message}${r.removal ? ' (removal: ' + r.removal + ')' : ''}${r.suggestion ? ' -> ' + r.suggestion : ''}`);
+  const lines = records.map(r => {
+    const sched = r.removal ? ` (removal: ${r.removal} | scheduled ${r.date})` : '';
+    const sug = r.suggestion ? ' -> ' + r.suggestion : '';
+    return `[deprecation] ${r.message}${sched}${sug}`;
+  });
+  if (records.length) {
+    lines.push('[deprecation-summary] ' + records.map(r => `${r.id} x${r.count}`).join(', '));
+  }
+  return lines;
 }
 export function getDeprecationUsageCount() { return depCount; }
 

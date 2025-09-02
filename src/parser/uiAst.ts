@@ -12,17 +12,20 @@ export interface ElementNode {
   tag: string;
   attrs: Record<string, UIAttr>;
   children: UINode[];
+  start?: number; // offset in original UI source
+  end?: number;   // exclusive offset
 }
 
-export interface TextNode { type: 'text'; value: string; }
-export interface ExprNodeUI { type: 'expr'; value: string; ast?: ExprNode; loc?: AttrLocation }
+export interface TextNode { type: 'text'; value: string; start?: number; end?: number }
+export interface ExprNodeUI { type: 'expr'; value: string; ast?: ExprNode; loc?: AttrLocation; start?: number; end?: number }
 
 export interface IfNode {
   type: 'if';
   condition: string;
   consequent: UINode[];
-  elif?: Array<{ condition: string; children: UINode[] }>;
+  elif?: Array<{ condition: string; children: UINode[]; start?: number; end?: number }>;
   else?: UINode[];
+  start?: number; end?: number;
 }
 
 export interface ForEachNode {
@@ -30,6 +33,7 @@ export interface ForEachNode {
   item: string;
   iterable: string;
   template: ElementNode; // element to render per item
+  start?: number; end?: number;
 }
 
 export type UINode = ElementNode | TextNode | ExprNodeUI | IfNode | ForEachNode;

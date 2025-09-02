@@ -15,15 +15,24 @@ function renderModel(entity: Entity, _all: Entity[]): string {
   // scalar fields
   for (const f of entity.fields as any[]) {
     let type: string;
-    if (f.type.kind === 'list') {
+  let nullableComment = '';
+  if (f.type.kind === 'list') {
       // Prisma list fields cannot be suffixed with ?; ignore optional flag for list kind
       type = mapType(f.type.of) + '[]';
     } else {
-      const nullable = (f.type as any).nullable;
-      // For now treat nullable same as optional in schema (Prisma uses ? for optional / NULLable)
-      type = mapType(f.type.name) + ((f.type.optional || nullable) ? '?' : '');
+    const nullable = (f.type as any).nullable;
+    // Semantics (decided):
+    // optional = field may be omitted on create/update; DB column NOT NULL unless nullable true.
+    // nullable = DB allows NULL value; input may explicitly set null.
+    // Optional+nullable => column NULL, omission leaves unchanged, explicit null writes NULL.
+    // Prisma currently represents both via '?'; we emit a comment to distinguish for future codegen.
+    const base = mapType(f.type.name);
+    const needsQ = f.type.optional || nullable; // Prisma limitation
+    type = base + (needsQ ? '?' : '');
+    // We'll append an inline comment marker for nullable-only (not optional) fields for now.
+    nullableComment = (nullable && !f.type.optional) ? ' // nullable' : '';
     }
-    let line = `${f.name} ${type}`;
+  let line = `${f.name} ${type}${nullableComment}`;
     for (const a of f.attributes) {
       if (a.kind === 'unique') line += ' @unique';
       if (a.kind === 'default') line += ' @default(' + renderDefault(a.value) + ')';

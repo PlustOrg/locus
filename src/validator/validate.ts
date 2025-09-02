@@ -1,8 +1,8 @@
 import { VError } from '../errors';
+import { registerDeprecation } from '../deprecations';
 import { UnifiedAST } from '../parser/merger';
 import { PluginManager } from '../plugins/manager';
 import { parseExpression } from '../parser/expr';
-import { registerDeprecation } from '../deprecations';
 
 // Backward-compatible synchronous validator (tests rely on sync throws)
 export function validateUnifiedAst(ast: UnifiedAST) {
@@ -370,7 +370,10 @@ function walkUi(node: any, fn: (n:any)=>void) {
     for (const f of ent.fields) {
       // list type validations
       if (f.type?.kind === 'list') {
-  // optional marker no longer syntactically allowed (Phase 1); if encountered (legacy AST), surface parse-time in future.
+        if (f.type.optional) {
+          const loc = (f as any).nameLoc;
+          throw new VError(`List field '${f.name}' uses deprecated optional marker '?'. Remove '?' (lists are always present, model emptiness with empty list).`, ent.loc?.filePath, loc?.line, loc?.column);
+        }
         // reject default attributes on list fields for now
         if ((f.attributes || []).some((a: any) => a.kind === 'default')) {
           const loc = (f as any).nameLoc;
@@ -390,6 +393,14 @@ function walkUi(node: any, fn: (n:any)=>void) {
           }
         }
       }
+      // default null with optional-only (not nullable) disallowed (future behavior diff)
+      if (Array.isArray(f.attributes)) {
+        const hasDefaultNull = f.attributes.some((a: any) => a.kind === 'default' && (a as any).value === null);
+        if (hasDefaultNull && f.type?.optional && !(f.type as any).nullable) {
+          const loc = (f as any).nameLoc;
+          throw new VError(`Field '${f.name}' default null invalid: optional fields are omitted when absent. Use nullable modifier (e.g. '| Null') to allow NULL stored.`, ent.loc?.filePath, loc?.line, loc?.column);
+        }
+      }
       // default function call whitelist validation
       for (const attr of f.attributes || []) {
         if (attr.kind === 'default' && typeof (attr as any).value === 'object' && (attr as any).value.call) {
@@ -398,6 +409,50 @@ function walkUi(node: any, fn: (n:any)=>void) {
           if (!whitelist.has(fn)) {
             const loc = (f as any).nameLoc;
             throw new VError(`Unsupported default function '${fn}' on field '${f.name}'. Allowed: now, uuid, cuid, autoincrement.`, ent.loc?.filePath, loc?.line, loc?.column);
+          }
+        }
+      }
+    }
+  }
+  // Legacy paren attribute hard removal gate
+  if (process.env.REMOVE_PAREN_ATTRS === '1' && ast.database) {
+    for (const e of (ast.database.entities || []) as any[]) {
+      for (const f of e.fields) {
+        if ((f.attributes||[]).some((a:any)=>a.__origin==='paren')) {
+          const loc = (f as any).nameLoc;
+          throw new VError(`Legacy paren attribute syntax found on field '${f.name}' but removal gate enabled. Convert to '@' form.`, e.loc?.filePath, loc?.line, loc?.column);
+        }
+      }
+      for (const r of e.relations) {
+        if ((r.attributes||[]).some((a:any)=>a.__origin==='paren')) {
+          const loc = e.loc;
+          throw new VError(`Legacy paren attribute syntax found on relation '${r.name}' but removal gate enabled. Convert to '@' form.`, e.loc?.filePath, loc?.line, loc?.column);
+        }
+      }
+    }
+  }
+  // Structured deprecation recording for legacy paren attributes
+  if (ast.database) {
+    for (const e of (ast.database.entities || []) as any[]) {
+      for (const f of e.fields) {
+        for (const a of (f.attributes||[])) if (a.__origin==='paren') registerDeprecation('paren_attr', 'Legacy paren attribute syntax is deprecated', 'v1.0.0', 'Use @attribute form');
+      }
+      for (const r of e.relations||[]) {
+        for (const a of (r.attributes||[])) if (a.__origin==='paren') registerDeprecation('paren_attr', 'Legacy paren attribute syntax is deprecated', 'v1.0.0', 'Use @attribute form');
+      }
+    }
+  }
+  // Component inferred param confirmation lint
+  for (const comp of (ast.components || []) as any[]) {
+    if (Array.isArray(comp.inferredParams) && Array.isArray(comp.params)) {
+      for (const inf of comp.inferredParams) {
+        const explicit = comp.params.find((p: any)=>p.name===inf);
+        if (explicit) {
+          // simple structural type string
+          const infType = 'unknown';
+          const expType = explicit.type?.kind === 'list' ? `${explicit.type.of}[]` : explicit.type?.name;
+          if (infType !== 'unknown' && expType && infType !== expType) {
+            namingWarnings.push(`Component '${comp.name}' param '${inf}' inferred with type ${infType} but declared as ${expType}.`);
           }
         }
       }

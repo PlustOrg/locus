@@ -11,6 +11,7 @@
     "test:watch": "jest --watchAll --colors",
     "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
     "format": "prettier --write .",
+  "docs:roadmap": "ts-node scripts/generate_roadmap.ts",
     "next:dev": "echo 'Next dev server stub'",
     "api:dev": "echo 'API dev server stub'",
     "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50",
