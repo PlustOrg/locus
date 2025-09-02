@@ -323,7 +323,8 @@ function walkUi(node: any, fn: (n:any)=>void) {
         if ((f.attributes||[]).some((a: any) => a.__origin === 'paren')) {
           if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
           const msg = `Deprecated (legacy) attribute syntax '(...)' on field '${f.name}'. Use '@' form.`;
-          (ast as any).namingWarnings.push(msg + ' (removal: 0.4.0)');
+          const fix = `e.g. change: name String (unique) -> name String @unique`;
+          (ast as any).namingWarnings.push(msg + ' (removal: 0.4.0)\n  ' + fix);
           registerDeprecation('paren_attr_field', msg, '0.4.0', `Replace '(unique)' with '@unique'`);
         }
       }
@@ -331,7 +332,8 @@ function walkUi(node: any, fn: (n:any)=>void) {
         if ((r.attributes||[]).some((a: any) => a.__origin === 'paren')) {
           if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
           const msg = `Deprecated (legacy) attribute syntax '(...)' on relation '${r.name}'. Use '@' form.`;
-          (ast as any).namingWarnings.push(msg + ' (removal: 0.4.0)');
+          const fix = `e.g. change: belongs_to user User (policy: cascade) -> belongs_to user User @policy(cascade)`;
+          (ast as any).namingWarnings.push(msg + ' (removal: 0.4.0)\n  ' + fix);
           registerDeprecation('paren_attr_relation', msg, '0.4.0', `Replace '(policy: cascade)' with '@policy(cascade)'`);
         }
       }

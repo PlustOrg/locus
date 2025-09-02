@@ -83,7 +83,7 @@ Legend:
 - [x] (P2) Structured workflow section errors with precise spans per key (initial span infra added in validator; needs refinement)
 - [x] (P3) UI expression errors surfaced with codeframes (basic validation integrated; full codeframe rendering TBD for precise spans)
 - [x] (P4) Deprecation warnings include removal version + rewrite suggestion
-- [ ] (P4) Attach suggested fix snippet to attribute-style migration errors
+- [x] (P4) Attach suggested fix snippet to attribute-style migration errors
 - [x] (P5) `--explain <code>` CLI command
 
 ## 5. Workflow System Maturation
@@ -112,8 +112,8 @@ Legend:
 ## 7. Extensibility & Plugins
  [x] (P4) Plugin capability registry (declares tokens, steps, validations) (scaffold)
  [x] (P4) Lifecycle hooks: parse, validate, generate, workflow-run (initial hook interfaces)
-- [ ] (P4) Versioned plugin API (semantic version handshake)
-- [ ] (P5) Dynamic plugin loading performance cache
+- [x] (P4) Versioned plugin API (semantic version handshake)
+- [x] (P5) Dynamic plugin loading performance cache (stub)
  [x] (P4) `--explain <errorCode>` support (ties to error catalog)
  [x] (P4) Incremental build diff report (list impacted files) (basic output)
 - [x] (P2) Canonical field ordering strategy (decide: preserve input vs sorted) — decision doc (decision: preserve input order; generators explicitly sort where stability needed)

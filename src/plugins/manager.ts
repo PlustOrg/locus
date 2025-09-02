@@ -1,4 +1,4 @@
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { LocusPlugin } from './types';
 import { LocusConfig } from '../config/config';
@@ -13,10 +13,14 @@ export class PluginManager {
   timings: Record<string, Record<string, number>> = {};
   capabilityRegistry = { tokens: new Set<string>(), workflowSteps: new Map<string, { schema?: Record<string, any> }>(), validations: [] as Array<{ id: string; run(ast:any): void|Promise<void> }> };
   constructor(public srcDir: string, private config?: LocusConfig) {}
+  private perfCachePath = join(process.cwd(), '.locus_plugin_perf.json');
+  private perfCache: Record<string, any> = {};
 
   private static moduleCache: Record<string, any> = {};
 
   async load() {
+  // load perf cache if present
+  try { if (existsSync(this.perfCachePath)) this.perfCache = JSON.parse(readFileSync(this.perfCachePath,'utf8')); } catch {}
     const configPath = join(this.srcDir, 'locus.plugins.js');
     if (!existsSync(configPath)) return;
     try {
@@ -42,13 +46,18 @@ export class PluginManager {
         }
       }
       this.plugins = resolved;
+  // write perf cache stub (currently only plugin list + timestamp)
+  try { writeFileSync(this.perfCachePath, JSON.stringify({ ts: Date.now(), plugins: this.plugins.map(p=>p.name) }, null, 2)); } catch {}
       // manifest validation
       for (const p of this.plugins) {
         const name = p.name || 'anonymous';
         (this.timings[name] ||= {});
         const apiV = (p as any).apiVersion;
-        if (apiV != null && apiV !== 1) {
-          this.warnings.push(`[plugin ${name}] unsupported apiVersion ${apiV} (expected 1)`);
+        const SUPPORTED = 1;
+        if (apiV == null) {
+          (p as any).apiVersion = SUPPORTED;
+        } else if (apiV !== SUPPORTED) {
+          this.warnings.push(`[plugin ${name}] unsupported apiVersion ${apiV} (expected ${SUPPORTED})`);
         }
       }
     } catch (e: any) {
