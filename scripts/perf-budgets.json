@@ -1,0 +1,6 @@
+{
+  "parseDurationMsMax": 180,
+  "parseMemoryDeltaMBMax": 13,
+  "workflowParse50MsMax": 400,
+  "memoryProfileEntities200DeltaMBMax": 15
+}

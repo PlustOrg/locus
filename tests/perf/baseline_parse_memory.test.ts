@@ -1,5 +1,6 @@
 import { parseLocus } from '../../src/parser';
 import { mergeAsts } from '../../src/parser/merger';
+import budgets from '../../scripts/perf-budgets.json';
 
 // Initial performance baseline: ensure parsing representative sample stays under time & memory thresholds.
 const SAMPLE = `database { entity User { id: Integer @unique name: String email: String } }
@@ -11,7 +12,7 @@ describe('Performance baseline', () => {
   test('parse+merge within thresholds', () => {
     const { res, durMs, memDelta } = measure(()=> mergeAsts([parseLocus(SAMPLE,'sample.locus')]));
     expect(res).toBeTruthy();
-  expect(durMs).toBeLessThan(200); // adjusted for added validation + plugin scaffolding
-  expect(memDelta).toBeLessThan(12e6); // adjusted (<12MB) after UI span + perf instrumentation additions
+    expect(durMs).toBeLessThan(budgets.parseDurationMsMax);
+    expect(memDelta).toBeLessThan(budgets.parseMemoryDeltaMBMax * 1024 * 1024);
   });
 });

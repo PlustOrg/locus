@@ -96,8 +96,6 @@ locus dev
 
 ## 🧑‍💻 Development & Contributing
 
-- **Tech Stack:** TypeScript, Jest, Chevrotain, Commander.js
-- **How to Contribute:**
   1. Fork and clone the repo
   2. Install dependencies: `npm install`
   3. Run tests: `npm test`
@@ -106,7 +104,9 @@ locus dev
 ## 📚 Documentation
 
 - [Introduction & Philosophy](docs/introduction/language.md)
-- [Getting Started](docs/guides/getting-started.md)
+Key checklists:
+- Security: `docs/guides/security-checklist.md`
+- Production Readiness (draft): `docs/reference/production-readiness-checklist.md`
 - [Language Reference](docs/language/data-modeling.md)
 - [Application Logic](docs/language/application-logic.md)
 - [UI Syntax](docs/language/ui-syntax.md)

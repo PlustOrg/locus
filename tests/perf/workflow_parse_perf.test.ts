@@ -1,5 +1,6 @@
 import { parseLocus } from '../../src/parser';
 import { mergeAsts } from '../../src/parser/merger';
+import budgets from '../../scripts/perf-budgets.json';
 
 // Basic performance smoke: parse 50 small workflows under a loose threshold.
 // This is not a strict benchmark; it guards against accidental O(n^2) regressions.
@@ -17,7 +18,7 @@ describe('workflow parse performance baseline', () => {
     const unified = mergeAsts([ast]);
     expect(unified.workflows.length).toBe(COUNT);
     const dt = Date.now()-t0;
-    // Threshold heuristic: < 400ms on CI for 50 trivial workflows.
-    expect(dt).toBeLessThan(400);
+  // Locked budget configured in scripts/perf-budgets.json
+  expect(dt).toBeLessThan(budgets.workflowParse50MsMax);
   });
 });

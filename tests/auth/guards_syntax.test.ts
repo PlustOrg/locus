@@ -18,6 +18,14 @@ describe('Auth guards syntax', () => {
       const server = readFileSync(join(out,'server.ts'),'utf8');
   expect(server).toMatch(/Guard page Dashboard requires role admin/);
   expect(server).toMatch(/app.get\('\/guard\/dashboard', requireRole\('admin'\)/);
-    } finally { rmSync(dir,{recursive:true, force:true}); }
+    } finally {
+      try { rmSync(dir,{recursive:true, force:true}); }
+      catch (e:any) {
+        // Retry once after slight delay to handle macOS temp FS lag
+        if (e && e.code === 'ENOTEMPTY' || e.code==='EACCES') {
+          try { setTimeout(()=>{ try { rmSync(dir,{recursive:true, force:true}); } catch {/* ignore */} }, 50); } catch {/* ignore */}
+        }
+      }
+    }
   });
 });

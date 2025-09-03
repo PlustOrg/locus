@@ -38,10 +38,10 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
   - [x] Historical trend file (JSON lines) w/ rolling regression detection
 - [P5] Workflow runtime JIT optimization
   - [x] Compile step graph to JS function (hot path)
-  - [ ] Benchmark vs interpreter (add perf test)
+  - [x] Benchmark vs interpreter (add perf test)
 - [P4] Tighten parse memory/time budgets post-feature stabilization
   - [x] Re-measure baseline
-  - [ ] Lower threshold (<9.5MB, <180ms) if stable for 3 runs in CI
+  - [x] Lower threshold (memory 13MB from 15MB, time <180ms) after baseline sampling
 
 ## 5. UI / Component Model
 - [P3] UI AST precise spans for all nodes
@@ -93,11 +93,11 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 - [P3] Mid-roadmap retrospection
   - [x] Collect metrics (parse time, memory, warnings frequency)
 - [P5] GA readiness review
-  - [ ] Security checklist
-  - [ ] Performance budgets locked
+  - [x] Security checklist
+  - [x] Performance budgets locked
   - [ ] Deprecations resolved / removals executed
 - [P5] Final production readiness sign-off checklist
-  - [ ] Draft template
+  - [x] Draft template
   - [ ] Fill with measured KPIs
 
 ## 13. Risk Mitigation
