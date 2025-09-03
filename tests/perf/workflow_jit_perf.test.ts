@@ -25,7 +25,7 @@ describe('workflow JIT benchmark', () => {
     for (let i=0;i<10;i++) executeWorkflow(wf, { actions });
   const jitTotal = Date.now()-t0;
   const ratio = jitTotal / interpTotal;
-  // Prototype JIT currently slower (~8x); enforce upper bound to detect future extreme slowdowns.
-  expect(ratio).toBeLessThanOrEqual(12);
+  // Optimized JIT currently within ~3x on CI; enforce <=4 to track regressions while allowing variance.
+  expect(ratio).toBeLessThanOrEqual(4);
   });
 });

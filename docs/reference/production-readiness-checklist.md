@@ -47,3 +47,7 @@ Verification:
 
 ---
 To auto-fill KPIs later, add a script that ingests latest `generated/METRICS_SUMMARY.json` and updates a KPIs section.
+
+
+<!-- KPIS_START -->
+<!-- KPIS_END -->

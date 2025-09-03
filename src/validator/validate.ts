@@ -424,7 +424,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
     }
   }
   // Legacy paren attribute hard removal gate
-  if (process.env.REMOVE_PAREN_ATTRS === '1' && ast.database) {
+  if ((process.env.REMOVE_PAREN_ATTRS === '1' || process.env.AUTO_PAREN_REMOVAL === '1') && ast.database) {
     for (const e of (ast.database.entities || []) as any[]) {
       for (const f of e.fields) {
         if ((f.attributes||[]).some((a:any)=>a.__origin==='paren')) {

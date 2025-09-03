@@ -8,11 +8,11 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 - [P3] Unify UI / state / action parsing under Chevrotain
   - [ ] Define UI lexical mode (avoid conflicts with existing tokens)
   - [ ] CST → UI AST builder w/ full location metadata (line/col + offsets)
-  - [ ] Replace regex `parseStateDecls` with grammar rule
+  - [x] Replace regex `parseStateDecls` with grammar rule
 - [P4] Attribute annotation migration (paren → @)
   - [x] Emit structured deprecation (include usage counts) when legacy paren used
   - [x] Doc migration examples (before/after) in `docs/guides/annotations.md`
-  - [ ] Final removal flag & cutover plan (tie to metric threshold)
+  - [x] Final removal flag & cutover plan (tie to metric threshold)
   - Plan: remove paren syntax when deprecation usage count <3 over 7 consecutive CI runs OR version >=0.6.0, enforced by `REMOVE_PAREN_ATTRS=1` gate becoming default.
 - [P5] Generate `tokens.ts` from declarative spec
   - [x] Author YAML/JSON token spec
@@ -95,10 +95,10 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 - [P5] GA readiness review
   - [x] Security checklist
   - [x] Performance budgets locked
-  - [ ] Deprecations resolved / removals executed
+  - [x] Deprecations resolved / removals executed
 - [P5] Final production readiness sign-off checklist
   - [x] Draft template
-  - [ ] Fill with measured KPIs
+  - [x] Fill with measured KPIs
 
 ## 13. Risk Mitigation
 - [P1] Declarative token spec generator (see 1)

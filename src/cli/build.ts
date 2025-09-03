@@ -322,8 +322,28 @@ export async function buildProject(opts: {
       },
       warnings: (genMeta?.warnings||[]).length || 0
     };
-    safeWrite(join(outDir,'METRICS_SUMMARY.json'), JSON.stringify(summary,null,2));
-    appendFileSync(join(outDir,'METRICS_HISTORY.jsonl'), JSON.stringify(summary)+'\n');
+  try { safeWrite(join(outDir,'METRICS_SUMMARY.json'), JSON.stringify(summary,null,2)); } catch {/* ignore */}
+  try { appendFileSync(join(outDir,'METRICS_HISTORY.jsonl'), JSON.stringify(summary)+'\n'); } catch {/* ignore */}
+    // Deprecation stats persistence & auto-cutover evaluation
+    try {
+      const depWarningsPath = join(outDir,'DEPRECATION_STATS.jsonl');
+      // collectDeprecationWarnings already invoked (warnings in genMeta). Extract structured counts from genMeta warnings? Better use metrics module list if future.
+      // For now, infer paren_attr counts by scanning warnings.
+      const parenCount = (genMeta.warnings||[]).filter((w:string)=>/paren attribute/.test(w)).length;
+      const rec = { timestamp: summary.timestamp, paren_attr: parenCount };
+  try { appendFileSync(depWarningsPath, JSON.stringify(rec)+'\n'); } catch {/* ignore */}
+  let lines: string[] = [];
+  try { lines = readFileSync(depWarningsPath,'utf8').trim().split(/\n/).filter(Boolean).slice(-7); } catch {/* ignore */}
+      const recent = lines.map(l=>{ try { return JSON.parse(l); } catch { return { paren_attr: 999 }; }});
+      const lowUsage = recent.length >= 3 && recent.every(r=> (r.paren_attr||0) < 3);
+      // heuristic version cutover when package version >=0.6.0
+      let pkgVersion = '0.0.0';
+      try { pkgVersion = JSON.parse(readFileSync(join(process.cwd(),'package.json'),'utf8')).version || '0.0.0'; } catch {/* ignore */}
+      const versionCut = /^0\.(6|[7-9]|[1-9][0-9])\./.test(pkgVersion) || !/^0\./.test(pkgVersion);
+      if ((lowUsage || versionCut) && !process.env.LEGACY_PAREN_ATTRS) {
+        safeWrite(join(outDir,'AUTO_PAREN_REMOVAL'), '1');
+      }
+    } catch {/* ignore dep stat errors */}
   } catch {/* ignore metrics write */}
   // Print timing summary if debug enabled
   if (debug) {

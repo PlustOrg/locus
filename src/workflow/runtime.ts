@@ -34,9 +34,18 @@ function emitTrace(ev: { type: string; data?: any }) { for (const l of globalTra
 
 export const globalConcurrency: Record<string,{ limit:number; active:number }> = {};
 
+// Simple JIT cache: reuse compiled function per workflow block instance.
+const _jitCache = new WeakMap<WorkflowBlock, (opts: ExecuteOptions)=>any[]>();
 export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {}) {
   if (process.env.LOCUS_WORKFLOW_JIT === '1') {
-    try { const jitFn = compileWorkflow(block); return jitFn(opts); } catch {/* ignore */}
+    try {
+      let fn = _jitCache.get(block);
+      if (!fn || process.env.LOCUS_WORKFLOW_JIT_NOCACHE === '1') {
+        fn = compileWorkflow(block);
+        if (process.env.LOCUS_WORKFLOW_JIT_NOCACHE !== '1') _jitCache.set(block, fn);
+      }
+      return fn(opts);
+    } catch {/* fall through to interpreter */}
   }
   const ctx: WorkflowContext = { inputs: opts.inputs, actions: opts.actions || {}, bindings: {}, log: [] };
   const logVersion = 1;
@@ -120,12 +129,22 @@ export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {})
 export function compileWorkflow(block: WorkflowBlock) {
   const steps = Array.isArray(block.steps) ? block.steps as WorkflowStep[] : [];
   const lines: string[] = [];
-  lines.push('const ctx={inputs:opts.inputs||{},actions:opts.actions||{},bindings:{},log:[]};');
+  lines.push('"use strict"');
+  lines.push('const act=opts.actions||{};');
+  lines.push('const ctx={inputs:opts.inputs||{},actions:act,bindings:Object.create(null),log:[]};');
+  lines.push('const _EMPTY_ARR=[];');
   const emit = (s:any) => {
     switch (s.kind) {
       case 'run': {
-        const args = (s.args||[]).map((a:string)=>`(ctx.bindings[${JSON.stringify(a)}]??ctx.inputs[${JSON.stringify(a)}]??${JSON.stringify(a)})`);
-        lines.push(`{const fn=ctx.actions[${JSON.stringify(s.action)}];let result;if(fn){try{result=fn(${args.join(',')});}catch(e){throw e;}}${s.binding?`ctx.bindings[${JSON.stringify(s.binding)}]=result;`:''}ctx.log.push({kind:'run',detail:{action:${JSON.stringify(s.action)},args:[${args.join(',')}],result},v:1});}`); break; }
+        const aStatic = JSON.stringify(s.action);
+        const rawArgs: string[] = (s.args||[]);
+        if (!rawArgs.length) {
+          lines.push(`{const fn=act[${aStatic}];const r=fn?fn():undefined;${s.binding?`ctx.bindings[${JSON.stringify(s.binding)}]=r;`:''}ctx.log.push({kind:'run',detail:{action:${aStatic},args:_EMPTY_ARR,result:r},v:1});}`);
+        } else {
+          const argsExpr = rawArgs.map((a:string)=>`(ctx.bindings[${JSON.stringify(a)}]??ctx.inputs[${JSON.stringify(a)}]??${JSON.stringify(a)})`);
+          lines.push(`{const fn=act[${aStatic}];const r=fn?fn(${argsExpr.join(',')}):undefined;${s.binding?`ctx.bindings[${JSON.stringify(s.binding)}]=r;`:''}ctx.log.push({kind:'run',detail:{action:${aStatic},args:[${argsExpr.join(',')}],result:r},v:1});}`);
+        }
+        break; }
       case 'delay': lines.push("ctx.log.push({kind:'delay',v:1});"); break;
       case 'for_each': {
         lines.push(`{let arr=ctx.bindings[${JSON.stringify(s.iter)}]||ctx.inputs[${JSON.stringify(s.iter)}];if(!Array.isArray(arr))arr=[];ctx.log.push({kind:'for_each',detail:{count:arr.length},v:1});for(const item of arr){ctx.bindings[${JSON.stringify(s.loopVar)}]=item;`);
