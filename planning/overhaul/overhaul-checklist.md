@@ -13,10 +13,11 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
   - [x] Emit structured deprecation (include usage counts) when legacy paren used
   - [x] Doc migration examples (before/after) in `docs/guides/annotations.md`
   - [ ] Final removal flag & cutover plan (tie to metric threshold)
+  - Plan: remove paren syntax when deprecation usage count <3 over 7 consecutive CI runs OR version >=0.6.0, enforced by `REMOVE_PAREN_ATTRS=1` gate becoming default.
 - [P5] Generate `tokens.ts` from declarative spec
-  - [ ] Author YAML/JSON token spec
-  - [ ] Codegen script (order: longer → shorter patterns) + lint to assert sync
-  - [ ] CI check: fail if drift
+  - [x] Author YAML/JSON token spec
+  - [x] Codegen script (order preserved) + lint to assert sync
+  - [x] CI check: fail if drift
 
 ## 2. Naming & Consistency
 - [P4] Canonical attribute form enforcement
@@ -29,16 +30,17 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
   - [x] Decide runtime semantics (nullable stored as NULL vs optional omitted)
   - [x] Prisma generator: map nullable to `?` + inline comment; optional only in input schema
   - [ ] Validation rule: cannot set default null on optional-only field
+  - [x] Validation rule: cannot set default null on optional-only field
 
 ## 4. Performance & Scalability
 - [P4] Memory profiling harness (full) & budgets
   - [x] Track per-phase memory deltas (parse, merge, validate, generate)
   - [x] Historical trend file (JSON lines) w/ rolling regression detection
 - [P5] Workflow runtime JIT optimization
-  - [ ] Compile step graph to JS function (hot path)
+  - [x] Compile step graph to JS function (hot path)
   - [ ] Benchmark vs interpreter (add perf test)
 - [P4] Tighten parse memory/time budgets post-feature stabilization
-  - [ ] Re-measure baseline
+  - [x] Re-measure baseline
   - [ ] Lower threshold (<9.5MB, <180ms) if stable for 3 runs in CI
 
 ## 5. UI / Component Model
@@ -50,8 +52,8 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 
 ## 6. Extensibility & Plugins
 - [P4] Plugin security sandbox
-  - [ ] Add optional isolated VM execution flag
-  - [ ] Timeout + memory guard per hook
+  - [x] Add optional isolated VM execution flag
+  - [x] Timeout + memory guard per hook
 - [x] (P4) Plugin performance budget reporting
   - [x] Persist hook timings diff vs previous run
 
@@ -89,7 +91,7 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 
 ## 12. Success Criteria & GA
 - [P3] Mid-roadmap retrospection
-  - [ ] Collect metrics (parse time, memory, warnings frequency)
+  - [x] Collect metrics (parse time, memory, warnings frequency)
 - [P5] GA readiness review
   - [ ] Security checklist
   - [ ] Performance budgets locked

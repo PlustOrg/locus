@@ -33,6 +33,7 @@ export async function buildProject(opts: {
   const outDir = opts.outDir || join(srcDir, 'generated');
   const debug = !!opts.debug;
   const t0 = Date.now();
+  const memStart = process.memoryUsage().heapUsed;
 
   // Find all .locus source files
   let files: string[];
@@ -79,7 +80,7 @@ export async function buildProject(opts: {
     return { outDir, diagnostics, failed: true } as any;
   }
   const tParse1 = Date.now();
-    const memAfterParse = process.memoryUsage().heapUsed;
+  const memAfterParse = process.memoryUsage().heapUsed;
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Parsed ${files.length} files in ${tParse1-tParse0}ms\n`);
   }
@@ -142,7 +143,7 @@ export async function buildProject(opts: {
     throw e;
   }
   const tMerge1 = Date.now();
-    const memAfterMerge = process.memoryUsage().heapUsed;
+  const memAfterMerge = process.memoryUsage().heapUsed;
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Merged ASTs in ${tMerge1-tParse1}ms\n`);
   }
@@ -305,6 +306,25 @@ export async function buildProject(opts: {
       appendFileSync(trendPath, line + '\n');
     }
   } catch {/* ignore */}
+  // Metrics summary emission (always write concise summary JSON + history)
+  try {
+    const memEnd = process.memoryUsage().heapUsed;
+    const summary = {
+      timestamp: new Date().toISOString(),
+      files: files.length,
+      timings: { parseMs: tParse1 - tParse0, mergeMs: tMerge1 - tParse1, generateMs: genDur, totalMs: Date.now() - t0 },
+      memory: {
+        startMB: +(memStart/1024/1024).toFixed(2),
+        afterParseMB: +(memAfterParse/1024/1024).toFixed(2),
+        afterMergeMB: +(memAfterMerge/1024/1024).toFixed(2),
+        afterGenerateMB: +(memAfterGenerate/1024/1024).toFixed(2),
+        endMB: +(memEnd/1024/1024).toFixed(2)
+      },
+      warnings: (genMeta?.warnings||[]).length || 0
+    };
+    safeWrite(join(outDir,'METRICS_SUMMARY.json'), JSON.stringify(summary,null,2));
+    appendFileSync(join(outDir,'METRICS_HISTORY.jsonl'), JSON.stringify(summary)+'\n');
+  } catch {/* ignore metrics write */}
   // Print timing summary if debug enabled
   if (debug) {
     const t1 = Date.now();

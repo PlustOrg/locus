@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+import vm from 'vm';
 import { join } from 'path';
 import { LocusPlugin } from './types';
 import { LocusConfig } from '../config/config';
@@ -30,13 +31,29 @@ export class PluginManager {
       if (Array.isArray(loaded)) entries = loaded as any[]; else if (loaded && typeof loaded === 'object') entries = [loaded];
       // resolve string module specifiers
       const resolved: LocusPlugin[] = [];
+      const isolate = !!(process.env.LOCUS_PLUGIN_ISOLATE === '1' || (this.config as any)?.security?.isolatePlugins);
+      const allowedModules = new Set((process.env.LOCUS_PLUGIN_ALLOW || '').split(',').filter(Boolean));
       for (const entry of entries) {
         if (typeof entry === 'string') {
           try {
             const key = require.resolve(entry, { paths: [this.srcDir] });
             if (PluginManager.moduleCache[key]) { resolved.push(PluginManager.moduleCache[key]); continue; }
-            const m = await import(key);
-            const plug = (m && m.default) ? m.default : m;
+            let plug: any;
+            if (isolate) {
+              const code = readFileSync(key, 'utf8');
+              const sandbox: any = { module: { exports: {} }, exports: {}, process: { env: {} } };
+              sandbox.require = (mod: string) => {
+                if (!allowedModules.has(mod)) throw new Error(`module '${mod}' blocked in isolated mode`);
+                // Use dynamic import to satisfy lint restrictions
+                return import(mod);
+              };
+              vm.createContext(sandbox);
+              try { new vm.Script(code, { filename: key }).runInContext(sandbox, { timeout: 1000 }); } catch (e:any) { this.warnings.push(`[plugin-loader][isolate] ${entry} error: ${e.message}`); continue; }
+              plug = sandbox.module.exports?.default || sandbox.module.exports || sandbox.exports;
+            } else {
+              const m = await import(key);
+              plug = (m && m.default) ? m.default : m;
+            }
             if (plug && typeof plug === 'object') { PluginManager.moduleCache[key] = plug; resolved.push(plug); }
           } catch (e: any) {
             this.warnings.push(`[plugin-loader] failed to resolve '${entry}': ${e.message || e}`);
@@ -78,11 +95,13 @@ export class PluginManager {
 
   private async run<K extends keyof LocusPlugin>(hook: K, ...args: any[]) {
     const timeoutMs = this.config?.performance?.pluginTimeoutMs || Number(process.env.LOCUS_PLUGIN_TIMEOUT_MS || '0');
-    for (const p of this.plugins) {
+  const memLimitKb = Number(process.env.LOCUS_PLUGIN_HOOK_MEM_KB || '0');
+  for (const p of this.plugins) {
       const fn = p[hook];
       if (typeof fn === 'function') {
         const name = p.name || 'anon';
         const start = Date.now();
+    const memBefore = process.memoryUsage().heapUsed;
         const exec = (async () => (fn as any)(...args, this.ctx(name)))();
         let timedOut = false;
   let _res;
@@ -100,8 +119,11 @@ export class PluginManager {
           else this.warnings.push(`[plugin ${name} ${String(hook)} error] ${e.message || e}`);
         } finally {
           const dur = Date.now() - start;
+          const memAfter = process.memoryUsage().heapUsed;
+          const memDeltaKb = (memAfter - memBefore)/1024;
           (this.timings[name] ||= {})[String(hook)] = dur;
           if (dur > 50) this.warnings.push(`[plugin ${name}] slow ${String(hook)} ${dur}ms >50ms`);
+          if (memLimitKb > 0 && memDeltaKb > memLimitKb) this.warnings.push(`[plugin ${name}] memory growth ${memDeltaKb.toFixed(1)}KB in hook ${String(hook)} > ${memLimitKb}KB`);
         }
       }
     }

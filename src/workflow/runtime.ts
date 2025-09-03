@@ -35,6 +35,9 @@ function emitTrace(ev: { type: string; data?: any }) { for (const l of globalTra
 export const globalConcurrency: Record<string,{ limit:number; active:number }> = {};
 
 export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {}) {
+  if (process.env.LOCUS_WORKFLOW_JIT === '1') {
+    try { const jitFn = compileWorkflow(block); return jitFn(opts); } catch {/* ignore */}
+  }
   const ctx: WorkflowContext = { inputs: opts.inputs, actions: opts.actions || {}, bindings: {}, log: [] };
   const logVersion = 1;
   const steps = Array.isArray(block.steps) ? block.steps as WorkflowStep[] : [];
@@ -112,6 +115,29 @@ export function executeWorkflow(block: WorkflowBlock, opts: ExecuteOptions = {})
     }
   }
   return ctx.log;
+}
+
+export function compileWorkflow(block: WorkflowBlock) {
+  const steps = Array.isArray(block.steps) ? block.steps as WorkflowStep[] : [];
+  const lines: string[] = [];
+  lines.push('const ctx={inputs:opts.inputs||{},actions:opts.actions||{},bindings:{},log:[]};');
+  const emit = (s:any) => {
+    switch (s.kind) {
+      case 'run': {
+        const args = (s.args||[]).map((a:string)=>`(ctx.bindings[${JSON.stringify(a)}]??ctx.inputs[${JSON.stringify(a)}]??${JSON.stringify(a)})`);
+        lines.push(`{const fn=ctx.actions[${JSON.stringify(s.action)}];let result;if(fn){try{result=fn(${args.join(',')});}catch(e){throw e;}}${s.binding?`ctx.bindings[${JSON.stringify(s.binding)}]=result;`:''}ctx.log.push({kind:'run',detail:{action:${JSON.stringify(s.action)},args:[${args.join(',')}],result},v:1});}`); break; }
+      case 'delay': lines.push("ctx.log.push({kind:'delay',v:1});"); break;
+      case 'for_each': {
+        lines.push(`{let arr=ctx.bindings[${JSON.stringify(s.iter)}]||ctx.inputs[${JSON.stringify(s.iter)}];if(!Array.isArray(arr))arr=[];ctx.log.push({kind:'for_each',detail:{count:arr.length},v:1});for(const item of arr){ctx.bindings[${JSON.stringify(s.loopVar)}]=item;`);
+        (s.steps||[]).forEach((st:any)=>emit(st));
+        lines.push('}}'); break; }
+      case 'send_email': lines.push(`ctx.log.push({kind:'send_email',detail:{to:${JSON.stringify(s.to)},subject:${JSON.stringify(s.subject)},template:${JSON.stringify(s.template)}},v:1});`); break;
+      default: lines.push(`ctx.log.push({kind:${JSON.stringify(s.kind)},v:1});`);
+    }
+  };
+  steps.forEach((st:any)=>emit(st));
+  lines.push('return ctx.log;');
+  return new Function('opts', lines.join('\n')) as (opts: ExecuteOptions)=>any[];
 }
 
 function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: WorkflowContext, pm?: PluginManager) {

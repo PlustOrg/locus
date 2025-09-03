@@ -34,6 +34,15 @@ function walkUi(node: any, fn: (n:any)=>void) {
   if (ast.database) {
     for (const e of (ast.database.entities || []) as any[]) {
       if (!pascal(e.name)) namingWarnings.push(`Entity '${e.name}' should use PascalCase.`);
+      // Field rules (nullable vs optional)
+      for (const f of e.fields || []) {
+        try {
+          const def = (f.attributes||[]).find((a:any)=>a.kind==='default');
+          if (def && def.value === 'null' && f.type?.optional && !(f.type as any).nullable) {
+            throw new VError(`Field '${f.name}' cannot have default null when optional-only (mark as nullable or remove default).`, e.filePath || f.filePath, f.line, f.column);
+          }
+        } catch (err) { throw err; }
+      }
     }
   }
   for (const p of (ast.pages || []) as any[]) if (!pascal(p.name)) namingWarnings.push(`Page '${p.name}' should use PascalCase.`);

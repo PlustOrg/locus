@@ -1,0 +1,134 @@
+{
+  "categories": [
+    { "name": "whitespace", "tokens": [
+      {"name":"WhiteSpace","pattern":"[ \\t\\r\\n]+","skip":true},
+      {"name":"LineComment","pattern":"\\/\\/[^\\n]*","skip":true}
+    ]},
+    { "name": "keywords", "tokens": [
+      {"name":"Database","pattern":"database\\b"},
+      {"name":"Entity","pattern":"entity\\b"},
+      {"name":"DesignSystem","pattern":"design_system\\b"},
+      {"name":"Colors","pattern":"colors\\b"},
+      {"name":"Typography","pattern":"typography\\b"},
+      {"name":"Spacing","pattern":"spacing\\b"},
+      {"name":"Radii","pattern":"radii\\b"},
+      {"name":"Shadows","pattern":"shadows\\b"},
+      {"name":"Weights","pattern":"weights\\b"},
+      {"name":"HasMany","pattern":"has_many\\b"},
+      {"name":"BelongsTo","pattern":"belongs_to\\b"},
+      {"name":"HasOne","pattern":"has_one\\b"},
+      {"name":"Guard","pattern":"guard\\b"},
+      {"name":"ElseIf","pattern":"elseif\\b"},
+      {"name":"Else","pattern":"else\\b"},
+      {"name":"In","pattern":"in\\b"}
+    ]},
+    { "name": "style_keywords", "tokens": [
+      {"name":"StyleKw","pattern":"style\\b"},
+      {"name":"OverrideKw","pattern":"override\\b"},
+      {"name":"StyleOverride","pattern":"style_override\\b"}
+    ]},
+    { "name": "feature_keywords", "tokens": [
+      {"name":"Page","pattern":"page\\b"},
+      {"name":"Component","pattern":"component\\b"},
+      {"name":"Store","pattern":"store\\b"},
+      {"name":"State","pattern":"state\\b"},
+      {"name":"Action","pattern":"action\\b"},
+      {"name":"On","pattern":"on\\b"},
+      {"name":"Load","pattern":"load\\b"},
+      {"name":"Unload","pattern":"unload\\b"},
+      {"name":"UI","pattern":"ui\\b"},
+      {"name":"Param","pattern":"param\\b"},
+      {"name":"List","pattern":"list\\b"},
+      {"name":"Of","pattern":"of\\b"}
+    ]},
+    { "name": "expr_ops", "tokens": [
+      {"name":"EqEq","pattern":"=="},
+      {"name":"NotEq","pattern":"!="},
+      {"name":"AndAnd","pattern":"&&"},
+      {"name":"OrOr","pattern":"\\|\\|"},
+      {"name":"Bang","pattern":"!"},
+      {"name":"Equals","pattern":"="}
+    ]},
+    { "name": "workflow_keywords", "tokens": [
+      {"name":"Workflow","pattern":"workflow\\b"},
+      {"name":"Trigger","pattern":"trigger\\b"},
+      {"name":"InputKw","pattern":"input\\b"},
+      {"name":"Steps","pattern":"steps\\b"},
+      {"name":"OnError","pattern":"on_error\\b"},
+      {"name":"Concurrency","pattern":"concurrency\\b"},
+      {"name":"Retry","pattern":"retry\\b"},
+      {"name":"OnFailure","pattern":"on_failure\\b"},
+      {"name":"Group","pattern":"group\\b"},
+      {"name":"Limit","pattern":"limit\\b"},
+      {"name":"Policy","pattern":"policy\\b"},
+      {"name":"Delay","pattern":"delay\\b"},
+      {"name":"Branch","pattern":"branch\\b"},
+      {"name":"ForEach","pattern":"forEach\\b"},
+      {"name":"SendEmail","pattern":"send_email\\b"},
+      {"name":"Parallel","pattern":"parallel\\b"},
+      {"name":"QueuePublish","pattern":"queue_publish\\b"},
+      {"name":"DbTx","pattern":"db_tx\\b"},
+      {"name":"CreateKw","pattern":"create\\b"},
+      {"name":"UpdateKw","pattern":"update\\b"},
+      {"name":"DeleteKw","pattern":"delete\\b"},
+      {"name":"WebhookKw","pattern":"webhook\\b"},
+      {"name":"MaxKw","pattern":"max\\b"},
+      {"name":"BackoffKw","pattern":"backoff\\b"},
+      {"name":"FactorKw","pattern":"factor\\b"},
+      {"name":"HttpRequest","pattern":"http_request\\b"},
+      {"name":"ConstKw","pattern":"const\\b"},
+      {"name":"RunKw","pattern":"run\\b"}
+    ]},
+    { "name": "types", "tokens": [
+      {"name":"StringT","pattern":"String\\b"},
+      {"name":"TextT","pattern":"Text\\b"},
+      {"name":"IntegerT","pattern":"Integer\\b"},
+      {"name":"DecimalT","pattern":"Decimal\\b"},
+      {"name":"BooleanT","pattern":"Boolean\\b"},
+      {"name":"DateTimeT","pattern":"DateTime\\b"},
+      {"name":"JsonT","pattern":"Json\\b"},
+      {"name":"BigIntT","pattern":"BigInt\\b"},
+      {"name":"FloatT","pattern":"Float\\b"},
+      {"name":"UUIDT","pattern":"UUID\\b"},
+      {"name":"EmailT","pattern":"Email\\b"},
+      {"name":"URLT","pattern":"URL\\b"}
+    ]},
+    { "name": "punctuation", "tokens": [
+      {"name":"LCurly","pattern":"\\{"},
+      {"name":"RCurly","pattern":"\\}"},
+      {"name":"Colon","pattern":":"},
+      {"name":"LParen","pattern":"\\("},
+      {"name":"RParen","pattern":"\\)"},
+      {"name":"Comma","pattern":","},
+      {"name":"Question","pattern":"\\?"},
+      {"name":"Less","pattern":"<"},
+      {"name":"Greater","pattern":">"},
+      {"name":"SlashTok","pattern":"\\/"},
+      {"name":"DotTok","pattern":"\\."},
+      {"name":"PlusTok","pattern":"\\+"},
+      {"name":"HyphenTok","pattern":"-"},
+      {"name":"SemicolonTok","pattern":";"},
+      {"name":"StarTok","pattern":"\\*"},
+      {"name":"PipeTok","pattern":"\\|"},
+      {"name":"LBracketTok","pattern":"\\["},
+      {"name":"RBracketTok","pattern":"\\]"},
+      {"name":"SingleQuoteTok","pattern":"'"},
+      {"name":"AtSign","pattern":"@"}
+    ]},
+    { "name": "attributes", "tokens": [
+      {"name":"Unique","pattern":"unique\\b"},
+      {"name":"Default","pattern":"default\\b"},
+      {"name":"MapTok","pattern":"map\\b"}
+    ]},
+    { "name": "literals", "tokens": [
+      {"name":"StringLiteral","pattern":"\"(?:[^\"\\\\]|\\\\.)*\""},
+      {"name":"HexColor","pattern":"#[0-9A-Fa-f]{3,8}\\b"},
+      {"name":"Duration","pattern":"[0-9]+(?:ms|s|m|h)\\b"},
+      {"name":"NumberLiteral","pattern":"-?\\d+(?:\\.\\d+)?"},
+      {"name":"Identifier","pattern":"[A-Za-z_][A-Za-z0-9_]*"}
+    ]},
+    { "name": "unknown", "tokens": [
+      {"name":"Unknown","pattern":"[\\s\\S]"}
+    ]}
+  ]
+}

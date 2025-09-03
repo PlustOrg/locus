@@ -11,7 +11,9 @@
     "test:watch": "jest --watchAll --colors",
     "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
     "format": "prettier --write .",
-  "docs:roadmap": "ts-node scripts/generate_roadmap.ts",
+    "tokens:gen": "ts-node scripts/generate_tokens.ts",
+    "tokens:check": "ts-node scripts/check_tokens.ts",
+    "docs:roadmap": "ts-node scripts/generate_roadmap.ts",
     "next:dev": "echo 'Next dev server stub'",
     "api:dev": "echo 'API dev server stub'",
     "bench:parser": "ts-node scripts/bench_parser.ts scripts/sample.locus 50",
@@ -19,7 +21,8 @@
     "release:bump": "ts-node scripts/release_bump.ts",
     "prepare": "npm run build",
     "docs:check": "ts-node scripts/validate-docs.ts",
-    "docs:update-hash": "TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/validate-docs.ts --update-hash"
+    "docs:update-hash": "TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/validate-docs.ts --update-hash",
+    "perf:baseline": "ts-node scripts/measure_baseline.ts"
   },
   "bin": {
     "locus": "dist/index.js"
