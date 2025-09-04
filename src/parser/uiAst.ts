@@ -14,6 +14,7 @@ export interface ElementNode {
   children: UINode[];
   start?: number; // offset in original UI source
   end?: number;   // exclusive offset
+  loc?: { line: number; column: number; endLine: number; endColumn: number };
 }
 
 export interface TextNode { type: 'text'; value: string; start?: number; end?: number }

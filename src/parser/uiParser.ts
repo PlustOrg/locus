@@ -3,9 +3,24 @@ import { parseExpression } from './expr';
 
 // Phase 3: Slot syntax support <slot name="header"/> consumed via {slot.header}
 
+// UI lexical mode definition (lightweight). In future a Chevrotain mode can reuse these patterns.
+export const UILexTokens = {
+  OpenTag: /<\/?[A-Za-z_][A-Za-z0-9_-]*/y,
+  CloseAngle: />/y,
+  AttrName: /[A-Za-z_:][A-Za-z0-9_:.-]*/y,
+  Equals: /=/y,
+  String: /"[^"\n]*"/y,
+  Expr: /\{[^{}]+\}/y,
+  WS: /[\t\r\n ]+/y,
+};
+
+function buildLineIndex(src: string): number[] { const lines=[0]; for (let i=0;i<src.length;i++) if (src[i]==='\n') lines.push(i+1); return lines; }
+function offsetToLineCol(lines: number[], offset: number) { let lo=0, hi=lines.length-1; while(lo<=hi){ const mid=(lo+hi)>>1; if (lines[mid]<=offset) lo=mid+1; else hi=mid-1;} const line=hi; const column=offset-lines[line]; return { line: line+1, column: column+1 }; }
+
 export function parseUi(src: string): UINode {
   // Preprocess directive syntax to legacy tag form for reuse of existing element parser.
   src = preprocessDirectives(src);
+  const lineIdx = buildLineIndex(src);
   const stack: ElementNode[] = [];
   let i = 0;
   let root: ElementNode | null = null;
@@ -20,11 +35,11 @@ export function parseUi(src: string): UINode {
         if (!stack.length && closed && !root) root = closed;
       } else {
   const start = i;
-        const end = src.indexOf('>', i + 1);
-        if (end === -1) { i++; continue; }
-        const raw = src.slice(i + 1, end);
-        const selfClose = raw.endsWith('/');
-        const tag = raw.replace(/\/.*/, '').trim().split(/\s+/)[0];
+  const end = src.indexOf('>', i + 1);
+  if (end === -1) { i++; continue; }
+  const raw = src.slice(i + 1, end);
+  const selfClose = raw.endsWith('/');
+  const tag = raw.replace(/\/.*/, '').trim().split(/\s+/)[0];
         if (tag === 'slot') {
           // minimal attribute parse for name
           const nm = /name\s*=\s*"([A-Za-z_][A-Za-z0-9_]*)"/.exec(raw);
@@ -35,8 +50,8 @@ export function parseUi(src: string): UINode {
           if (!stack.length && !root) root = slotEl;
           continue;
         }
-        const attrSrc = raw.slice(tag.length);
-        const attrs = parseAttrs(attrSrc);
+  const attrSrc = raw.slice(tag.length);
+  const attrs = parseAttrs(attrSrc, i + 1 + tag.length);
         const el: ElementNode = { type: 'element', tag, attrs, children: [], start };
         if (stack.length) stack[stack.length - 1].children.push(el);
         stack.push(el);
@@ -79,37 +94,57 @@ export function parseUi(src: string): UINode {
   }
   if (!root && stack.length === 1) root = stack[0];
   const built = (root as any) || ({ type: 'text', value: src } as TextNode);
-  return transformUiTreeToStructured(built);
+  const structured = transformUiTreeToStructured(built);
+  // Attach line/column metadata
+  function walk(n:any){
+    if (n && typeof n==='object') {
+      const start=n.start!=null?offsetToLineCol(lineIdx,n.start):null;
+      const end=n.end!=null?offsetToLineCol(lineIdx,Math.max(n.end-1,n.start||0)):null;
+      if (start && end && n.type==='element') n.loc={ line:start.line, column:start.column, endLine:end.line, endColumn:end.column };
+  if (n.attrs) for (const a of Object.values(n.attrs)) {
+        if ((a as any).offset!=null) {
+          const lc=offsetToLineCol(lineIdx,(a as any).offset);
+          (a as any).loc={ offset:(a as any).offset, line:lc.line, column:lc.column, length:(a as any).length||String((a as any).value||'').length };
+        }
+      }
+      if (n.children) n.children.forEach(walk);
+      if (n.consequent) n.consequent.forEach(walk);
+      if (n.elif) n.elif.forEach((e:any)=>e.children.forEach(walk));
+      if (n.else) n.else.forEach(walk);
+      if (n.template) walk(n.template);
+    }
+  }
+  walk(structured);
+  return structured;
 }
 
-function parseAttrs(src: string): Record<string, UIAttr> {
+function parseAttrs(src: string, baseOffset: number): Record<string, UIAttr> {
   const attrs: Record<string, UIAttr> = {};
   const re = /(for:each|on:[A-Za-z]+|[A-Za-z_:][A-Za-z0-9_:.-]*)\s*=\s*(\{[^}]*\}|"[^"]*"|[^\s>]+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(src)) !== null) {
-    const key = m[1];
-    const val = m[2];
+    const key = m[1]; const val = m[2]; const abs = baseOffset + m.index; const keyOffset = abs; const valueOffset = abs + m[0].indexOf(val);
     if (key === 'for:each' && /^\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([\s\S]+)\}$/.test(val)) {
       const mm = /\{\s*([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([\s\S]+)\}/.exec(val)!;
-      attrs['forEach'] = { kind: 'forEach', item: mm[1], iterable: mm[2].trim() } as any;
+      attrs['forEach'] = { kind: 'forEach', item: mm[1], iterable: mm[2].trim(), offset: keyOffset, length: m[0].length } as any;
     } else if (val.startsWith('"')) {
       const innerQ = val.slice(1, -1);
       // If inner is {expr} treat as expr attr
       if (/^\{[\s\S]+\}$/.test(innerQ)) {
         const expr = innerQ.slice(1, -1).trim();
-        const attr: UIAttr = { kind: 'expr', value: expr } as any;
+        const attr: UIAttr = { kind: 'expr', value: expr, offset: valueOffset, length: val.length } as any;
         try { (attr as any).ast = parseExpression(expr); } catch {}
         attrs[normalizeAttrKey(key)] = attr;
       } else {
-        attrs[normalizeAttrKey(key)] = { kind: 'string', value: innerQ };
+        attrs[normalizeAttrKey(key)] = { kind: 'string', value: innerQ, offset: valueOffset, length: val.length } as any;
       }
     } else if (val.startsWith('{') && val.endsWith('}')) {
       const inner = val.slice(1, -1).trim();
-      const attr: UIAttr = { kind: 'expr', value: inner } as any;
+      const attr: UIAttr = { kind: 'expr', value: inner, offset: valueOffset, length: val.length } as any;
       try { (attr as any).ast = parseExpression(inner); } catch { /* ignore parse error here */ }
       attrs[normalizeAttrKey(key)] = attr;
     } else {
-      attrs[normalizeAttrKey(key)] = { kind: 'string', value: val };
+      attrs[normalizeAttrKey(key)] = { kind: 'string', value: val, offset: valueOffset, length: val.length } as any;
     }
   }
   // Post-process forEach directive pattern "item in list"

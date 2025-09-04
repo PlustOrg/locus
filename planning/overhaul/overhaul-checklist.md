@@ -6,8 +6,8 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 
 ## 1. Syntax & Grammar Coherence
 - [P3] Unify UI / state / action parsing under Chevrotain
-  - [ ] Define UI lexical mode (avoid conflicts with existing tokens)
-  - [ ] CST → UI AST builder w/ full location metadata (line/col + offsets)
+  - [x] Define UI lexical mode (avoid conflicts with existing tokens)
+  - [x] CST → UI AST builder w/ full location metadata (line/col + offsets)
   - [x] Replace regex `parseStateDecls` with grammar rule
 - [P4] Attribute annotation migration (paren → @)
   - [x] Emit structured deprecation (include usage counts) when legacy paren used
@@ -29,7 +29,7 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 - [P4] Nullable vs optional semantic divergence
   - [x] Decide runtime semantics (nullable stored as NULL vs optional omitted)
   - [x] Prisma generator: map nullable to `?` + inline comment; optional only in input schema
-  - [ ] Validation rule: cannot set default null on optional-only field
+  - [x] Validation rule: cannot set default null on optional-only field
   - [x] Validation rule: cannot set default null on optional-only field
 
 ## 4. Performance & Scalability
