@@ -2,7 +2,7 @@ import { dirname } from 'path';
 // (removed duplicate import)
 import { exec } from 'child_process';
 // Utility functions for CLI operations
-import { readdirSync, statSync, promises as fsp, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { readdirSync, statSync, promises as fsp, existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
@@ -165,4 +165,22 @@ export function ensureDir(p: string) {
 export function writeFileSafe(p: string, content: string) {
   ensureDir(p);
   writeFileSync(p, content);
+}
+
+/**
+ * Best-effort recursive removal with retries to avoid transient EACCES/EBUSY/ENOTEMPTY errors
+ * occasionally observed on macOS tmp dirs under rapid test teardown.
+ */
+export function safeRemove(target: string, opts: { retries?: number; delayMs?: number } = {}) {
+  const { retries = 5, delayMs = 30 } = opts;
+  for (let i = 0; i <= retries; i++) {
+  try { rmSync(target, { recursive: true, force: true }); return; }
+    catch (e: any) {
+      const code = e?.code || '';
+      if (!/EACCES|EBUSY|ENOTEMPTY/.test(code)) return; // non-transient -> abort
+      if (i === retries) return; // give up silently
+      // Busy wait minimal sleep (Atomics avoids event loop scheduling jitter for tiny delays)
+      try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs); } catch { /* ignore */ }
+    }
+  }
 }

@@ -109,5 +109,12 @@ Legend: P1 Core | P2 Workflows | P3 UI | P4 Advanced | P5 Perf & GA
 - [Future] VS Code LSP (hover, completion, diagnostics)
 - [Future] Plugin isolation hardening (WASM sandbox)
 
+## 15. Enhancements (September 2025)
+- [x] UI diagnostics helper (codeframe generation for UI nodes)
+- [x] `ui:ast` CLI command for UI AST inspection
+- [x] Suspicious event attribute capitalization warnings (onclick -> onClick)
+- [x] Safe temp directory removal utility (reduces flakey EACCES in tests)
+- [x] Documentation: UI Lexical Mode & Location Metadata guide
+
 ---
 Add new tasks by editing this file; completed tasks should be removed to keep focus tight.

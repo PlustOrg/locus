@@ -1,7 +1,8 @@
-import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'fs';
+import { mkdtempSync, writeFileSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { buildProject } from '../../src/cli/build';
+import { safeRemove } from '../../src/cli/utils';
 
 function tdir(){ return mkdtempSync(join(tmpdir(),'locus-auth-jwtrt-')); }
 
@@ -17,7 +18,7 @@ describe('JWT roundtrip helpers', () => {
       const utils = readFileSync(join(out,'auth','authUtils.ts'),'utf8');
       expect(utils).toMatch(/generateToken/);
       expect(utils).toMatch(/verifyToken/);
-    } finally { rmSync(dir,{recursive:true,force:true}); }
+  } finally { safeRemove(dir); }
   });
   test('token expiration code present', async () => {
     const dir = tdir();
@@ -30,6 +31,6 @@ describe('JWT roundtrip helpers', () => {
       const utils = readFileSync(join(out,'auth','authUtils.ts'),'utf8');
       expect(utils).toMatch(/expSeconds/);
       expect(utils).toMatch(/obj.exp/);
-    } finally { rmSync(dir,{recursive:true,force:true}); }
+  } finally { safeRemove(dir); }
   });
 });

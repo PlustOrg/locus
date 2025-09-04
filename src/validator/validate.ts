@@ -498,6 +498,11 @@ function walkUi(node: any, fn: (n:any)=>void) {
               if (!allowedEvents.has(key)) {
                 namingWarnings.push(`Warning: Unrecognized event '${key}' on <${n.tag}> (will pass through).`);
               }
+            } else if (/^on[a-z]/.test(key)) {
+              const suggestion = 'on' + key.slice(2,3).toUpperCase() + key.slice(3);
+              if (allowedEvents.has(suggestion)) {
+                namingWarnings.push(`Warning: Event handler '${key}' should be capitalized as '${suggestion}' on <${n.tag}>.`);
+              }
             }
             if (key.startsWith('bind$')) {
               const prop = key.slice(5);

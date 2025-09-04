@@ -17,6 +17,7 @@ import { validateUnifiedAstWithPlugins } from './validator/validate';
 import { executeWorkflow } from './workflow/runtime';
 import { formatProject } from './cli/format';
 import { checkForUpdate } from './cli/updateCheck';
+import { parseUi } from './parser/uiParser';
 
 const program = new Command();
 // Prevent duplicate command definitions if this module is imported more than once in the same process (tests)
@@ -254,6 +255,24 @@ safeCommand('explain <code>')
     const norm = code.trim().toUpperCase();
     const msg = (ErrorCatalog as any)[norm] || 'Unknown code';
     process.stdout.write(`${norm}: ${msg}\n`);
+  });
+
+// Experimental: dump UI AST for raw snippet from stdin
+safeCommand('ui:ast')
+  ?.description('Parse a UI snippet from stdin and print the structured UI AST JSON')
+  .action(async () => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', c => data += c);
+    process.stdin.on('end', () => {
+      try {
+        const ast = parseUi(data);
+        process.stdout.write(JSON.stringify(ast, null, 2) + '\n');
+      } catch (e:any) {
+        process.stderr.write('UI parse error: ' + (e.message || e) + '\n');
+        process.exit(1);
+      }
+    });
   });
 
   setTimeout(()=>{ try { checkForUpdate(); } catch {/* ignore */} }, 5);
