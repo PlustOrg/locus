@@ -43,6 +43,7 @@ locus build [options]
 | `--emit-js`          | Compiles the generated TypeScript into JavaScript in a `dist` folder.    |
 | `--suppress-warnings`| Prevents build warnings from being printed to the console.               |
 | `--debug`            | Prints detailed timing and performance logs for the build process.       |
+| `--suppress-warnings`| Suppress non-error warnings (still emitted in JSON output if selected).  |
 
 ---
 
@@ -65,10 +66,12 @@ locus dev [options]
 | `--quiet`            | Hides the startup banner and other informational logs.                   |
 | `--log-file <path>`  | Mirrors all development server output to the specified log file.         |
 | `--debug`            | Prints detailed timing logs for incremental rebuilds.                    |
+| `--suppress-warnings`| Suppress non-error warnings.                                             |
 
 **Environment Variables:**
 - `API_PORT` / `PORT`: Sets the port for the backend API server (defaults to `3001`).
 - `ENABLE_CORS=1`: Enables CORS middleware on the API server for cross-origin requests.
+- `LOCUS_NO_UPDATE_CHECK=1`: Disables the periodic CLI update notification.
 
 ---
 
@@ -114,6 +117,45 @@ This serves as a pre-flight check before you manually run the deployment command
 ---
 
 ## `locus plugins`
+---
+## `locus ui:ast`
+Parses a UI snippet from STDIN and prints the structured UI AST (with location metadata). Useful for debugging parser output and inspecting spans used in diagnostics.
+
+**Usage:**
+```bash
+echo '<Button on:click={doThing}>Hi</Button>' | locus ui:ast
+```
+
+**Output (trimmed):**
+```json
+{
+  "type": "element",
+  "tag": "Button",
+  "attrs": { "onClick": { "kind": "expr", "value": "doThing" } },
+  "loc": { "line": 1, "column": 1, "endLine": 1, "endColumn": 37 }
+}
+```
+
+---
+## Update Notifications
+The CLI checks npm for a newer version shortly after startup and prints a one‑line notice if an update is available. To disable:
+
+```bash
+export LOCUS_NO_UPDATE_CHECK=1
+```
+
+This check is skipped automatically in some CI contexts (heuristic) and when stdout isn't a TTY.
+---
+## Deterministic Builds & Hashes
+Build output is intentionally deterministic. If you observe unexpected file diffs on unchanged input, enable `--debug` to inspect phase timings, then compare generated artifact ordering. Non-determinism sources (e.g. unsorted object keys) should be reported.
+
+---
+## Dry Run for Plugin Generators
+Use `--dry-run` with `locus build` to preview artifacts (including plugin-generated files) without writing to disk. This is helpful in CI to ensure no unintended file churn:
+```bash
+locus build --dry-run --errors json > build-plan.json
+```
+Review `build-plan.json` for any unexpected additions before running a real build.
 Tools for inspecting the Locus plugin ecosystem in your project.
 
 **Usage:**
@@ -130,3 +172,13 @@ locus plugins <subcommand>
   ```bash
   locus plugins doctor
   ```
+  Sample JSON fields (when `--errors json` or future `--json` flag is used):
+  ```jsonc
+  {
+    "plugins": [ { "name": "MyAwesomePlugin", "hooks": ["onParseComplete"], "timings": { "onParseComplete": 12 } } ],
+    "pluginPerfCache": "present", // or "absent"
+    "warnings": ["Plugin loaded! Saw 3 files."],
+    "meta": { "pluginPerfDiff": [ { "name": "MyAwesomePlugin", "deltaMs": 8 } ] }
+  }
+  ```
+  `pluginPerfCache` indicates whether `.locus_plugin_perf.json` exists (used for perf diffing).

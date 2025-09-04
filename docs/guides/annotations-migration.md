@@ -72,13 +72,33 @@ Attributes are normalized to this order:
 
 ## Removal Timeline
 
-When usage count for legacy syntax hits zero (tracked via deprecation metrics) or after the specified removal version/date (see deprecation warnings), the parser gate (`REMOVE_PAREN_ATTRS=1`) can be enabled in CI to turn remaining occurrences into hard errors.
+Legacy paren attributes follow this removal policy:
+
+| Phase | Condition | Behavior |
+|-------|-----------|----------|
+| Warn | Default (current) | Emits deprecation warning with suggested `@` form. |
+| Gate Error | `REMOVE_PAREN_ATTRS=1` OR usage count threshold met (<3 over 7 consecutive CI runs) OR version >= 0.6.0 | Validation error halts build. |
+| Removed | After 0.6.0 + announcement | Parser rejects legacy form outright. |
+
+Sample deprecation warning (pretty output):
+```
+Deprecated (legacy) attribute syntax '(...)' on field 'email'. Use '@' form. (removal: 0.6.0)
+  e.g. change: email String (unique) -> email String @unique
+```
+
+To proactively enforce removal in CI:
+```bash
+REMOVE_PAREN_ATTRS=1 locus build
+```
+If the build fails with a legacy syntax error you will see a validation error pointing at the field or relation; fix by applying the `@` form shown in the message.
 
 ## FAQ
 
 **Q: Why migrate?**  Consistency with broader ecosystem (Prisma, etc.) and richer attribute parameter syntax.
 
 **Q: Will code generation change?** No runtime change; it's a surface syntax upgrade. Generators already consume normalized attribute data.
+
+Determinism: Normalized attribute ordering ensures stable diffs; when introducing new core attributes add them to the canonical ordering list rather than appending arbitrarily.
 
 **Q: How do I bulk migrate?** Run forthcoming `locus fix` or use a regex: `\((unique|id)\)` -> `@$1` and convert `\(default: (.*?)\)` -> `@default($1)` etc.
 

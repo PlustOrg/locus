@@ -23,7 +23,9 @@ interface LinkIssue { file: string; target: string; line: number; }
 const ROOT = resolve(__dirname, '..');
 const DOCS_DIR = join(ROOT, 'docs');
 const HASH_FILE = join(DOCS_DIR, '.snippets.hash');
+const SLUGS_FILE = join(DOCS_DIR, '.heading-slugs.json');
 const UPDATE_HASH = process.argv.includes('--update-hash');
+const UPDATE_SLUGS = process.argv.includes('--update-slugs');
 const CHECKLIST = join(ROOT, 'planning', 'docs-validation-checklist.md');
 
 function walk(dir: string): string[] {
@@ -37,15 +39,54 @@ function walk(dir: string): string[] {
 
 const mdFiles = walk(DOCS_DIR).filter(f => f.endsWith('.md'));
 
+// Legacy syntax forbidden patterns (except in explicit migration guide)
+const LEGACY_PATTERNS: Array<{re:RegExp; label:string}> = [
+  { re: /\([ \t]*unique[ \t]*\)/g, label: 'legacy (unique) attribute' },
+  { re: /\([ \t]*id[ \t]*\)/g, label: 'legacy (id) attribute' },
+  { re: /\(default:\s*[^)]+\)/g, label: 'legacy (default: ...) attribute' }
+];
+const migrationGuideAllow = /annotations-migration\.md$/;
+const legacyHits: Array<{file:string; line:number; match:string; label:string}> = [];
+
 const fenceRe = /(^|\n)```([^\n`]*)\n([\s\S]*?)\n```/g; // simple fence matcher
 
 const snippets: SnippetResult[] = [];
 const linkIssues: LinkIssue[] = [];
+const crossLinkMap: Record<string, boolean> = {};
+interface HeadingInfo { slug: string; line: number; text: string; }
+const fileHeadings: Record<string, HeadingInfo[]> = {};
+const anchorIssues: Array<{ file: string; target: string; anchor: string; line: number }> = [];
+const removedSlugIssues: Array<{ file: string; slug: string }> = [];
 const semanticIssues: Array<{file:string; index:number; issue:string}> = [];
+
+function genSlug(base: string, used: Set<string>): string {
+  let s = base.toLowerCase().replace(/`+/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
+  if(!s) s='section';
+  let candidate = s; let i=1;
+  while(used.has(candidate)) candidate = s + '-' + (i++);
+  used.add(candidate); return candidate;
+}
 
 for (const file of mdFiles) {
   const rel = file.slice(ROOT.length + 1);
   const raw = readFileSync(file, 'utf8');
+  // collect headings
+  const linesAll = raw.split(/\n/);
+  const used = new Set<string>();
+  const heads: HeadingInfo[] = [];
+  linesAll.forEach((ln,i)=>{ const m=/^(#{1,6})\s+(.+)$/.exec(ln); if(m){ heads.push({ slug: genSlug(m[2], used), line: i+1, text: m[2].trim() }); }});
+  fileHeadings[rel] = heads;
+  if (!migrationGuideAllow.test(file)) {
+    const lines = raw.split(/\n/);
+    lines.forEach((ln, i) => {
+      for (const pat of LEGACY_PATTERNS) {
+        let m:RegExpExecArray|null; pat.re.lastIndex = 0;
+        while((m = pat.re.exec(ln))) {
+          legacyHits.push({ file: rel, line: i+1, match: m[0], label: pat.label });
+        }
+      }
+    });
+  }
   // link validation: [text](relative)
   const linkRe = /\[[^\]]+\]\(([^):?#]+)\)/g;
   let lm: RegExpExecArray | null;
@@ -53,11 +94,24 @@ for (const file of mdFiles) {
     const target = lm[1];
     if (target.startsWith('http') || target.startsWith('#') || target.startsWith('mailto:')) continue;
     const base = dirname(file);
-    const full = resolve(base, target.split('#')[0]);
+    const [pathPart, anchor] = target.split('#');
+    const full = resolve(base, pathPart);
     if (!existsSync(full)) {
       const prefix = raw.slice(0, lm.index);
       const line = (prefix.match(/\n/g)?.length || 0) + 1;
       linkIssues.push({ file: rel, target, line });
+    }
+    else {
+      crossLinkMap[target] = true;
+      if(anchor){
+        const relTarget = full.slice(ROOT.length + 1).replace(/\\/g,'/');
+        const headsTarget = fileHeadings[relTarget];
+        if(!headsTarget || !headsTarget.some(h=>h.slug===anchor)){
+          const prefix = raw.slice(0, lm.index);
+          const line = (prefix.match(/\n/g)?.length || 0) + 1;
+          anchorIssues.push({ file: rel, target: relTarget, anchor, line });
+        }
+      }
     }
   }
   // snippet extraction
@@ -71,7 +125,8 @@ for (const file of mdFiles) {
     const skip = /<!--\s*skip-validate\s*-->\s*$/.test(before.split(/\n/).slice(-3).join('\n'));
     const isLocus = /(^|\b)(locus|Locus)\b/.test(info) || /<!--\s*locus\s*-->/.test(code);
     if (!isLocus) continue;
-    if (skip) {
+  const partial = /(^|\n)\/\/\s*snippet:\s*partial\b/.test(code);
+  if (skip || partial) {
       snippets.push({ file: rel, index: idx, ok: true, code });
       continue;
     }
@@ -135,6 +190,14 @@ const digest = hash.digest('hex');
 if (UPDATE_HASH) {
   writeFileSync(HASH_FILE, digest + '\n');
   console.log('Updated snippet hash:', digest);
+  if(!UPDATE_SLUGS) process.exit(0);
+}
+
+if (UPDATE_SLUGS) {
+  const slugMap: Record<string,string[]> = {};
+  for (const f in fileHeadings) slugMap[f] = fileHeadings[f].map(h=>h.slug);
+  writeFileSync(SLUGS_FILE, JSON.stringify(slugMap, null, 2) + '\n');
+  console.log('Updated heading slugs baseline.');
   process.exit(0);
 }
 
@@ -152,6 +215,18 @@ const negativeResults = negativeTests.map(nt => {
 });
 const negativeFailures = negativeResults.filter(r => !r.ok);
 
+// Heading slug baseline
+let baselineSlugs: Record<string,string[]> = {};
+if (existsSync(SLUGS_FILE)) {
+  try { baselineSlugs = JSON.parse(readFileSync(SLUGS_FILE,'utf8')); } catch { baselineSlugs = {}; }
+}
+// detect removed slugs (ignore additions)
+for (const file in baselineSlugs) {
+  const prev = new Set(baselineSlugs[file]);
+  const current = new Set((fileHeadings[file]||[]).map(h=>h.slug));
+  for (const s of prev) if(!current.has(s)) removedSlugIssues.push({ file, slug: s });
+}
+
 const report: any = {
   summary: {
     totalSnippets: snippets.length,
@@ -159,10 +234,15 @@ const report: any = {
     linkIssues: linkIssues.length,
     hashMatch: baseline ? baseline === digest : true,
     semanticIssues: semanticIssues.length,
-    negativeFailures: negativeFailures.length
+    anchorIssues: anchorIssues.length,
+    removedSlugs: removedSlugIssues.length,
+  negativeFailures: negativeFailures.length,
+  legacyPatternHits: legacyHits.length
   },
   failing,
   linkIssues,
+  anchorIssues,
+  removedSlugIssues,
   semanticIssues,
   negativeResults,
   newHash: digest,
@@ -232,8 +312,9 @@ report.summary['extraDocFlags'] = extraDocFlags.length;
 report.summary['undocumentedCliFlags'] = undocumentedCliFlags.length;
 report['extraDocFlags'] = extraDocFlags;
 report['undocumentedCliFlags'] = undocumentedCliFlags;
+report['legacyPatternHits'] = legacyHits;
 
-if (failing.length || linkIssues.length || semanticIssues.length || negativeFailures.length || (baseline && baseline !== digest) || extraDocFlags.length || undocumentedCliFlags.length) {
+if (failing.length || linkIssues.length || semanticIssues.length || negativeFailures.length || (baseline && baseline !== digest) || extraDocFlags.length || undocumentedCliFlags.length || legacyHits.length || anchorIssues.length || removedSlugIssues.length) {
   console.error('DOCS VALIDATION FAILED');
   console.error(JSON.stringify(report, null, 2));
   process.exit(1);

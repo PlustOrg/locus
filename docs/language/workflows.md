@@ -30,14 +30,14 @@ workflow WelcomeEmail {
 | Capability | Implemented | Notes |
 | ---------- | ----------- | ----- |
 | `trigger` (webhook + basic entity events) | Yes | Webhook secret captured in manifest (`triggerMeta`). |
-| `steps` block & core step kinds | Yes | `run`, `delay`, `branch`, `for_each`, `send_email`, `http_request` (placeholder). |
+| `steps` block & core step kinds | Yes | `run`, `delay`, `branch`, `for_each`, `send_email`, `http_request` (placeholder runtime). |
 | `run` step arg parsing + simple expression capture | Yes | Single argument expression parsed for future analysis. |
 | `branch` condition expression (simple) | Yes (heuristic) | Advanced boolean / nested parsing is incremental. |
 | `forEach` loop | Yes | Iterates array-like value; binding injected per item. |
 | `send_email` (to + subject/template validation) | Yes | Manifest includes structured fields. Future: richer templating. |
-| `http_request` | Placeholder | Parsed & surfaced; execution logic not yet implemented. |
-| `retry` block | Yes | `max`, `backoff` (`fixed|exponential`), `factor`, `delay` captured & validated. |
-| `concurrency` block | Yes | FIFO queue simulation (no real async scheduling yet). |
+| `http_request` | Placeholder | Parsed & surfaced; execution logic not yet implemented. HTTPS enforced unless `allow_insecure:true`. |
+| `retry` block | Yes | `max 0..100`, `backoff fixed|exponential`, `factor>1` for exponential, optional `delay`. |
+| `concurrency` block | Yes | FIFO queue simulation (no real async scheduling yet). Limit 1..10000 validated. |
 | `on_error` block | Yes (basic) | Runs listed actions after failure before fallback. |
 | `on_failure` block | Yes | Fallback if no `on_error`. |
 | Workflow manifest JSON (v2) | Yes | Generated under `generated/workflows/`. |
@@ -122,6 +122,20 @@ Validation rules:
 * `max`: 0–100 integer.
 * `backoff`: `fixed` or `exponential`.
 * `factor` > 1 required for `exponential`.
+* Concurrency `limit`: 1–10000.
+* Cannot mix webhook and entity triggers.
+* `send_email`: must include `to` and at least one of `subject` OR `template`.
+
+#### Common Validation Errors (Examples)
+```text
+Workflow 'WelcomeEmail' cannot mix webhook and entity triggers.
+Workflow 'OrderRetry' retry.max must be 0..100.
+Workflow 'BulkProcess' concurrency.limit must be 1..10000.
+Workflow 'NotifyUser' has run step missing action name.
+Workflow 'Invite' send_email missing 'to'.
+Workflow 'Invite' send_email requires 'subject' or 'template'.
+Workflow 'CallWebhook' http_request must use HTTPS (add allow_insecure: true to override).
+```
 
 ### Concurrency Control
 
@@ -188,7 +202,23 @@ export default [{
 }];
 ```
 
+> Registering a step kind exposes its `kind` name to validation. An unrecognized `kind` in a workflow will raise an error until a plugin registers it.
+
 > Hooks: `onWorkflowParse`, `onWorkflowValidate` let plugins inspect or warn. Slow hooks trigger performance warnings (>50ms).
+
+### Reserved & Inferred Bindings
+Loop variables (`forEach item in ...`) and future `input/state` declarations become reserved names within the workflow scope. Redeclaring or shadowing a reserved binding will raise a validation error once those blocks are introduced.
+
+### Performance (JIT vs Interpreter)
+If `LOCUS_WORKFLOW_JIT=1` is set, the engine builds a JavaScript function that inlines simple step dispatch. Pros: lower per-run overhead for large workflows. Cons: small upfront compile cost; experimental (APIs may adjust). For benchmark methodology and variance thresholds see [Performance & Budgets](../guides/performance.md#workflow-jit-locus_workflow_jit).
+
+### Reserved & Inferred Bindings
+The validator reserves names introduced via `input` / `state` and ensures loop or `const` bindings are unique. Shadowing or redeclaration raises an error.
+
+---
+## Performance
+
+Optional JIT path (`LOCUS_WORKFLOW_JIT=1`) compiles the step graph to a JS function. For small workflows the interpreter is fine; large graphs may see reduced per-execution overhead. Benchmarks are experimental; monitor release notes for stability guarantees.
 
 ---
 ## Limitations & Roadmap

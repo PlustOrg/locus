@@ -23,9 +23,9 @@ An `entity` is a blueprint for a data model, which translates directly to a data
 database {
   entity Customer {
     name: String
-    email: String (unique)
-    subscribedAt: DateTime (default: now())
-    isActive: Boolean (default: true)
+  email: String @unique
+  subscribedAt: DateTime @default(now())
+  isActive: Boolean @default(true)
   }
 }
 ```
@@ -45,15 +45,15 @@ database {
 ### Field Attributes
 
 -   **`?` (Optional Marker)**: Marks a field as optional.
--   **`(unique)`**: Ensures that every value in this column is unique.
--   **`(default: ...)`**: Provides a default value.
+-   **`@unique`**: Ensures that every value in this column is unique.
+-   **`@default(...)`**: Provides a default value.
 -   **`(map: "db_column_name")`**: Specifies a different underlying column name in the database.
 
 ### Relationships
 
 -   **One-to-Many**: `orders: has_many Order` and `customer: belongs_to Customer`.
 -   **Many-to-Many**: `categories: has_many Category` and `products: has_many Product`.
--   **One-to-One**: Add the `(unique)` attribute to a `belongs_to` field.
+-   **One-to-One**: Add the `@unique` annotation to a `belongs_to` field.
 
 ## Application Logic: `page`, `component`, and `store`
 

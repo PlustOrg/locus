@@ -14,6 +14,31 @@ ui {
 }
 ```
 
+### Slots
+Use `<slot name="header"/>` inside a component to declare a named insertion point. In consumers, reference with `{slot.header}`.
+
+```locus
+component Panel {
+  param children: slot
+  ui {
+    <div class="panel">
+      <slot name="header"/>
+      {children}
+    </div>
+  }
+}
+
+page Home {
+  ui {
+    <Panel>
+      <h2 slot="header">Dashboard</h2>
+      <p>Welcome.</p>
+    </Panel>
+  }
+}
+```
+```
+
 ### Props
 You pass data to elements using attributes, which are called "props". Prop values can be static strings or dynamic expressions.
 
@@ -27,6 +52,46 @@ You pass data to elements using attributes, which are called "props". Prop value
 // Boolean prop
 <Button disabled={true}>Cannot click</Button>
 ```
+
+### Location Metadata & Codeframes
+Every element and expression now carries line/column metadata. You can inspect the structured UI AST (including locations) via:
+
+```bash
+echo '<Button on:click={doThing}>Hi</Button>' | locus ui:ast
+```
+
+Sample (trimmed):
+```json
+{
+  "type": "element",
+  "tag": "Button",
+  "loc": { "line": 1, "column": 1, "endLine": 1, "endColumn": 37 },
+  "attrs": { "onClick": { "kind": "expr", "value": "doThing" } }
+}
+```
+Use these spans for precise diagnostics; see [UI Lexical Mode & Location Metadata](../guides/ui-lexical-mode.md).
+
+### Events & Binding Normalization
+Event attributes use a directive form `on:click={...}` which normalizes to the React-style `onClick` internally. If you write a lower‑case form like `onclick={...}` a warning will suggest the corrected casing.
+
+```locus
+<Button on:click={save()} />  // becomes onClick
+<Input on:focus={handle()} />  // becomes onFocus
+```
+
+Bindings use `bind:` prefix. A general form `bind:value={stateVar}` normalizes internally to a synthesized representation (e.g. `bind$value`) that expands to appropriate `value` + change handler code during generation.
+
+```locus
+<TextField bind:value={name} />
+```
+If an invalid bind target is used (e.g. `bind:???`), validation will report an `Invalid bind target` error.
+
+### Large UI Trees & Performance
+The UI parser performs a single pass producing stable spans for each node. Tips:
+* Prefer smaller components over monolithic pages (>1500 elements) for faster incremental validation.
+* Avoid deeply nested conditional chains; flatten with early returns or guard components.
+* Deterministic transforms + spans enable future incremental re-parse; avoid patterns that inject randomness into element ordering.
+* Inline style overrides inside large loops may increase diff churn; extract shared styles where possible.
 
 ## Built-in UI Components
 

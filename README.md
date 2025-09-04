@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg" alt="Node.js version">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
+  <img src="https://img.shields.io/badge/docs%20overhaul-in%20progress-yellow" alt="Docs Overhaul Progress">
 </div>
 
 
@@ -116,6 +117,8 @@ Key checklists:
 - [Deployment](docs/toolchain/deployment.md)
 - [Plugins & Extensibility](docs/plugins/index.md)
 - [Architecture](docs/reference/architecture.md)
+
+Active initiative: Documentation overhaul (label: `docs-overhaul`). See planning checklist at `planning/overhaul/docs-overhaul-checklist.md`.
 
 ## 📝 License
 

@@ -84,22 +84,35 @@ component MyButton {
 ```
 This approach ensures that your components will automatically adapt to the current theme ("light" or "dark").
 
-## Other Token Types (Planned)
-The Locus parser recognizes syntax for other types of design tokens, but these **do not currently generate any CSS variables**. They are reserved for future enhancements to the design system.
+### Validation Rules (Current)
+The validator enforces:
+* Color token values must be 3, 4, 6, or 8 digit hex (`#fff`, `#1c1c1e`, `#ffffffff`).
+* Duplicate theme names are disallowed.
 
-- **`typography`**: For defining font families, sizes, and weights.
-- **`spacing`**: For defining consistent margins and padding.
-- **`radii`**: For defining border-radius values.
-- **`shadows`**: For defining box-shadow styles.
+If an invalid color value is encountered:
+```
+Error: Invalid color token 'primry' value 'blueish' (expected hex like #3366ff)
+```
 
-You can safely include these blocks in your `design_system`, but they will have no effect on the generated output at this time.
+### Partially Recognized (No Generation Yet)
+The following token categories parse but do not yet emit CSS variables or runtime artifacts (planned): `typography`, `spacing`, `radii`, `shadows`.
+Future roadmap will introduce generated `--font-*`, spacing scale variables, and shadow presets—track progress in the overhaul checklist and performance budgets doc once added.
+
+## Other Token Types (Parsed Only)
+You can include future token blocks now—they are validated for basic structure but ignored during generation:
 
 ```locus
 design_system {
-  // This block is parsed but does not generate CSS yet.
-  typography {
-    fontFamily: "Inter, sans-serif"
-    baseSize: "16px"
-  }
+  typography { fontFamily: "Inter, sans-serif" baseSize: "16px" }
+  spacing { sm: 4 md: 8 lg: 16 }
 }
 ```
+They serve as forward-compatible placeholders; no CSS output is produced yet.
+
+### Roadmap (Planned CSS Generation)
+| Category | Planned Output | Status |
+|----------|----------------|--------|
+| `typography` | `--font-size-*`, `--font-weight-*` variables | In design |
+| `spacing` | `--space-*` scale variables | In design |
+| `radii` | `--radius-*` variables | Planned |
+| `shadows` | `--shadow-*` presets | Planned |

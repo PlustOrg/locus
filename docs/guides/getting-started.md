@@ -71,6 +71,8 @@ After a moment, you'll see a startup banner in your terminal that looks somethin
 
 Your app is now running! Open your web browser and navigate to **`http://localhost:3000`**. You should see a welcome page.
 
+> Deprecation Warnings: If the compiler detects legacy syntax it will print deprecation warnings with suggested rewrites. You can suppress specific ones via config or fail the build early with `REMOVE_PAREN_ATTRS=1 locus build` once migrated.
+
 ## Step 4: Make a Change
 
 Locus is all about speed and live feedback. Let's change the database and see what happens.
@@ -82,14 +84,14 @@ Locus is all about speed and live feedback. Let's change the database and see wh
     database {
       entity User {
         name: String
-        email: String (unique)
+  email: String @unique
       }
 
       // Add this new entity to your database
       entity Product {
         name: String
         price: Decimal
-        inStock: Integer (default: 0)
+  inStock: Integer @default(0)
       }
     }
     ```
@@ -128,3 +130,4 @@ Now you're ready to dive deeper:
 -   [Learn how to build pages and components](../language/ui-syntax.md)
 -   [Customize your app's look and feel](./design-system.md)
 -   [Explore the development workflow](../toolchain/development-workflow.md)
+ -   (Optional) Inspect your environment & plugins: `locus plugins doctor`

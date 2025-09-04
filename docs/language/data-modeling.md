@@ -21,7 +21,7 @@ Fields represent the scalar data in your entity (the columns in your database ta
 ```locus
 entity Product {
   name: String
-  stockCount: Integer (default: 0)
+  stockCount: Integer @default(0)
   description: Text?
   tags: list of String
 }
@@ -51,43 +51,79 @@ entity Article {
 ```
 **Important Rules for List Types:**
 - List fields **cannot** be marked as optional with `?`.
-- List fields **cannot** have a `(default: ...)` attribute.
+- List fields **cannot** have a `@default(...)` attribute.
 
-### Field Attributes
-You can modify field behavior with attributes placed after the type.
+### Field Attributes & Modifiers
+You can modify field behavior with annotations (prefixed by `@`) or suffix markers.
 
-- **`?` (Optional Marker)**
-  Marks a field as optional (nullable in the database). If omitted, the field is required.
-  ```locus
-  description: Text? // This field can be empty
-  ```
+#### Optional vs Nullable
+Optional and nullable are distinct concepts:
 
-- **`(unique)`**
-  Ensures that every record in the table has a unique value for this field.
-  ```locus
-  email: String (unique)
-  ```
+| Form | Meaning | May be omitted in create/update input? | Can store NULL in DB? |
+|------|---------|----------------------------------------|-----------------------|
+| `description: Text?` | Optional (NOT nullable) | Yes | No (future: absence means not written) |
+| `middleName: String | Null` | Nullable (required presence) | No (must appear; value may be null) | Yes |
+| `comment: Text? | Null` | Optional + Nullable | Yes | Yes |
 
-- **`(default: ...)`**
-  Provides a default value for a field when a new record is created.
-  ```locus
-  // Static values
-  isActive: Boolean (default: true)
-  role: String (default: "user")
-  stock: Integer (default: 0)
+To allow actual NULL storage, include `| Null` (or forthcoming `nullable` keyword form). For deeper discussion see [Nullable vs Optional](../guides/nullable-vs-optional.md) and [Syntax Conventions](../reference/conventions.md).
 
-  // Dynamic values (function calls)
-  createdAt: DateTime (default: now())
-  ```
-  > **Note:** Default values for `Integer` fields must be within the 32-bit signed integer range (-2,147,483,648 to 2,147,483,647).
+#### `?` (Optional Marker)
+Applies only to *non‑list* scalar or relation foreign key fields. Do **not** use on list types (`Tags: String[]?` invalid).
 
-- **`(map: "...")`**
-  Specifies a different, underlying column name in the database. This is useful for mapping to legacy databases or for using a different naming convention.
-  ```locus
-  // This field is named 'emailAddress' in Locus code,
-  // but maps to the 'user_email' column in the database.
-  emailAddress: String (map: "user_email")
-  ```
+#### `@unique`
+Ensures every record has a unique value for this field.
+```locus
+email: String @unique
+```
+
+#### `@default(...)`
+Provides a default value when a record is created.
+```locus
+// Static values
+isActive: Boolean @default(true)
+role: String @default("user")
+stock: Integer @default(0)
+
+// Dynamic values (function calls)
+createdAt: DateTime @default(now())
+```
+> **Integer Range:** Numeric defaults for `Integer` must be within 32‑bit signed range (−2,147,483,648 .. 2,147,483,647).
+
+##### Allowed Default Functions
+Only the following function-style defaults are currently supported:
+
+| Function | Description |
+|----------|-------------|
+| `now()` | Current timestamp |
+| `uuid()` | Random UUID v4 |
+| `cuid()` | Collision-resistant id |
+| `autoincrement()` | Auto-incrementing integer |
+
+If you use a non-whitelisted function (e.g. `random()`), validation fails with an error: `Unsupported default function 'random' ...`.
+
+#### `@map("...")`
+Overrides the underlying column name (helpful for legacy schemas or different naming conventions).
+```locus
+// Named 'emailAddress' in code, stored as 'user_email'
+emailAddress: String @map("user_email")
+```
+
+### Canonical Attribute Ordering
+When multiple annotations are present they are normalized to this order for deterministic generation:
+1. `@id`
+2. `@unique`
+3. `@default(...)`
+4. `@map(...)`
+5. `@policy(...)`
+6. Plugin / custom (alphabetical)
+
+> Applying this ordering avoids needless diff churn in generated artifacts & snapshots.
+
+### List & Default Rules (Callout)
+> **Warning:**
+> - List fields cannot be marked optional with `?`; represent absence as an empty list.
+> - List fields cannot have `@default(...)` (future enhancement may allow `@default([])`).
+> - A default of `null` on an optional‑only (non‑nullable) field is invalid; either remove the default or mark the field nullable (`| Null`).
 
 ## Relationships
 You define relationships between entities using special keywords.
@@ -127,14 +163,14 @@ database {
 
   entity Profile {
     // A profile belongs to one user, and this link must be unique
-    user: belongs_to User (unique)
+  user: belongs_to User @unique
 
     // You still need the foreign key field
     userId: Integer
   }
 }
 ```
-Here, `has_one` is used for clarity, but the uniqueness is enforced by the `(unique)` attribute on the `belongs_to` side.
+Here, `has_one` is used for clarity, but the uniqueness is enforced by the `@unique` annotation on the `belongs_to` side.
 
 ### Many-to-Many
 To create a many-to-many relationship, use `has_many` on both sides of the relationship. Locus will automatically create and manage the hidden join table for you.

@@ -74,7 +74,7 @@ database {
 
 A one-to-one relationship is used when a record in one table is linked to at most one record in another table. For example, a `User` has exactly one `Profile`.
 
-This is defined by adding the `(unique)` attribute to a `belongs_to` field.
+This is defined by adding the `@unique` annotation to a `belongs_to` field.
 
 ```locus
 database {
@@ -91,8 +91,8 @@ database {
     
     // This combination creates the one-to-one link.
     // `belongs_to` sets up the foreign key.
-    // `(unique)` ensures that no two profiles can point to the same user.
-    user: belongs_to User (unique)
+  // `@unique` ensures that no two profiles can point to the same user.
+  user: belongs_to User @unique
   }
 }
 ```

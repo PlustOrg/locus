@@ -48,6 +48,21 @@ If `jwtSecret` is set, an `auth/authUtils.ts` file is generated with:
 ### Performance
 Auth middleware is lightweight (session fetch + object assignment). Use `scripts/bench_auth.ts` to gauge overhead.
 
+### Validation Error Codeframes
+All syntax and validation errors surface with precise file/line/column spans. Example:
+
+```
+┌─ Validation Error: Unknown type 'Strng' ───────────────┐
+│                                                       │
+│  auth.locus:3:10                                      │
+│                                                       │
+│  3 │   email: Strng @unique                           │
+│    │          ^^^^^                                   │
+│                                                       │
+└───────────────────────────────────────────────────────┘
+```
+See [Syntax Conventions](../reference/conventions.md) for how spans are produced.
+
 # Authentication Guide
 
 Locus is designed to make common web application patterns, like user authentication, as simple as possible. While Locus doesn't have a single "auth" command, it provides all the necessary building blocks to create a robust and secure authentication system.
@@ -66,7 +81,7 @@ Open `src/database.locus` and define the entities:
 database {
   entity User {
     name: String
-    email: String (unique)
+  email: String @unique
     
     // A user has one credential record.
     credential: has_one Credential
@@ -77,7 +92,7 @@ database {
     passwordHash: String
     
     // This ensures a credential belongs to exactly one user.
-    user: belongs_to User (unique)
+  user: belongs_to User @unique
   }
 }
 ```

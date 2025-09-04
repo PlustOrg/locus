@@ -16,12 +16,16 @@ Welcome—this is the canonical guide to the Locus language, compiler, and tooli
 - [Design System Guide](./guides/design-system.md)
 - [Plugins & Extensibility Guide](./guides/plugins.md)
 - [Troubleshooting](./guides/troubleshooting.md)
+ - [Performance & Budgets](./guides/performance.md)
+ - [Snippet Validation](./reference/snippet-validation.md)
 
 ### Language Reference
 - [Data Modeling](./language/data-modeling.md)
 - [Application Logic](./language/application-logic.md)
 - [UI Syntax](./language/ui-syntax.md)
 - [Workflows (Experimental)](./language/workflows.md)
+ - [Syntax Conventions](./reference/conventions.md)
+ - [UI Lexical Mode & Locations](./guides/ui-lexical-mode.md)
 
 ### Toolchain & Operations
 - [CLI Reference](./toolchain/cli.md)

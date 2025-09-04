@@ -74,3 +74,45 @@ Each hook function receives a `ctx` object as its last argument. This context is
 You can use the `locus plugins` command to inspect your plugins:
 - **`locus plugins list`**: Shows which plugins are loaded.
 - **`locus plugins doctor`**: Runs a dry run of the build lifecycle and reports which hooks your plugins are using, along with any warnings or performance metrics. This is an essential tool for debugging.
+
+### Performance Budget Reporting
+`locus plugins doctor` loads timing data (and if present, compares against `.locus_plugin_perf.json`). Each hook duration >50ms is highlighted. A diff section `pluginPerfDiff` appears in build meta when a regression exceeds tolerance. Keep heavy work in `onAfterGenerate` or offload to external processes.
+
+### Security & Resource Flags
+Environment flags affecting plugin execution:
+| Flag | Purpose |
+|------|---------|
+| `LOCUS_PLUGIN_ISOLATE=1` | Runs plugins in a lightweight VM sandbox (experimental). |
+| `LOCUS_PLUGIN_HOOK_MEM_KB=XXXX` | Soft memory budget per hook; excess triggers warning. |
+| `LOCUS_PLUGIN_ALLOW=moduleA,moduleB` | Restricts `require()` to listed modules (deny-by-default when set). |
+
+### Workflow Step Kinds
+If your plugin introduces workflow step kinds, register them via `registerWorkflowStepKinds()` (returning array of descriptors). Unregistered kinds in user workflows will raise a validation error.
+
+```js
+export default [{
+  name: 'wfEvents',
+  registerWorkflowStepKinds() {
+    return [{
+      kind: 'publish_event',
+      run(step, { ctx }) { ctx.log && ctx.log('publishing'); return { ok: true }; }
+    }];
+  }
+}];
+```
+
+### Virtual AST Example
+You can synthesize an entity or page inside `onParseComplete`:
+
+```js
+onParseComplete(asts, ctx) {
+  ctx.addVirtualAst({
+    kind: 'entity',
+    name: 'TelemetryEvent',
+    fields: [ { name: 'id', type: 'Integer', annotations: ['@id','@unique'] }, { name: 'kind', type: 'String' } ],
+    loc: { file: 'virtual://plugin', line: 1, column: 1 }
+  });
+}
+```
+
+> Tip: Include minimal `loc` info so error messages remain consistent if later validation touches virtual nodes.

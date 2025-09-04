@@ -1,28 +1,57 @@
-# Locus Quick Reference (Phase 1)
+# Locus Quick Reference
 
 Core Blocks:
-- `database { entity Name { field: String? other: list of Integer } }`
-- `workflow Name { trigger { on: create(Entity) } steps { run { action: doThing } } }`
-- `design_system { colors { primary: #3366ff } }`
+- `database { entity Name { field: String? others: Integer[] } }`
+- `workflow Name { trigger { on:create(Entity) } steps { run doThing(id) } }`
+- `design_system { colors { "light" { primary: #3366ff } } }`
 
 Field Types:
-- Primitives: `String`, `Text`, `Integer`, `Decimal`, `Boolean`, `DateTime`, `Json`
-- Lists: `list of <Primitive>` (no optional marker on list)
-- Optional: append `?` to primitive (e.g. `String?`)
+- Primitives: `String` `Text` `Integer` `Decimal` `Boolean` `DateTime` `Json`
+- Lists: `Type[]` (legacy `list of Type` still parses). No `?` allowed on lists.
+- Optional: append `?` to primitive (e.g. `String?`). Nullable: `Type | Null`.
 
 Relations:
 - `has_many`, `belongs_to`, `has_one`
 
-Workflow Steps:
-- `run { action: myAction }`
-- `delay { seconds: 5 }`
-- `for_each item in items { run { action: process } }`
-- `branch { steps { ... } else { steps { ... } } }`
+Workflow Steps (MVP):
+- `run action(args)`
+- `delay { }` (placeholder)
+- `branch { condition: expr steps { ... } else { ... } }`
+- `forEach item in items { run act(item) }`
+- `send_email { to: userEmail, subject: Welcome }`
+- `http_request { }` (placeholder)
+- `retry { max: 2, backoff: exponential, factor: 2 }` (root)
+- `concurrency { group: name, limit: 5 }` (root)
+- `on_error { action1 action2 }` / `on_failure { action }`
 
-Reserved Keywords:
-`else`, `elseif`, `guard`, `in`
+Workflow Step Kinds (One-liners):
+| Kind | Purpose |
+|------|---------|
+| `run` | Invoke a named action handler. |
+| `delay` | Placeholder timing step (future scheduling). |
+| `branch` | Conditional execution with optional else. |
+| `forEach` | Iterate collection binding current item. |
+| `send_email` | Send email (to + subject/template). |
+| `http_request` | Placeholder HTTP call (runtime pending). |
+| `publish_event` | (Plugin example) emit app event. |
 
-Naming Guidelines (warnings only):
-- Use PascalCase for entities, components, pages, workflows.
+Reserved Keywords (partial): `else`, `elseif`, `guard`, `in`
+Reserved Triggers: `on:webhook`, `on:create`, `on:update`, `on:delete`
 
-This cheat sheet will expand in later phases.
+Optional vs Nullable Quick Grid:
+| Form | Optional? | Nullable? |
+|------|-----------|-----------|
+| `name: String?` | Yes | No |
+| `name: String | Null` | No | Yes |
+| `name: String? | Null` | Yes | Yes |
+
+Example Error (Nullable vs Optional):
+```
+Error: Field 'nickname' default null but field is optional-only. Add '| Null' or remove default.
+```
+
+Annotations (canonical order): `@id` `@unique` `@default(...)` `@map(...)` `@policy(...)` `@custom...`
+
+Naming Guidelines (warnings only): Use PascalCase for entities, components, pages, workflows.
+
+Determinism: Generators sort lists & keys; keep examples ordered predictably.
