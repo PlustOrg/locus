@@ -826,6 +826,15 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.defaultAnn) },
       { ALT: () => this.SUBRULE(this.mapAnn) },
       { ALT: () => this.SUBRULE(this.policyAnn) },
+      // future constraint annotations captured as raw tokens for now
+      { ALT: () => this.SUBRULE(this.constraintAnn) },
+    ]);
+  });
+
+  private constraintAnn = this.RULE('constraintAnn', () => {
+    // matches @min(...), @max(...), @length(...), @pattern(...), @email
+    this.OR([
+      { ALT: () => { this.CONSUME1(Identifier); this.OPTION(()=>{ this.CONSUME(LParen); this.OPTION1(()=> this.SUBRULE(this.literal)); this.MANY(()=>{ this.CONSUME(Comma); this.SUBRULE1(this.literal); }); this.CONSUME(RParen); }); } }
     ]);
   });
 

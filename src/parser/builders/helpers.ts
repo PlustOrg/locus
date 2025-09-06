@@ -23,7 +23,7 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
   const attributes: FieldAttribute[] = [];
   for (const ag of attrGroups) {
     const agCh = ag.children as CstChildrenDictionary;
-    const origin = (ag as any).name === 'fieldAnnotation' ? 'annotation' : 'paren';
+  const origin = (ag as any).name === 'fieldAnnotation' ? 'annotation' : 'paren';
   // Annotation nodes reuse inner tokens without parentheses; treat similarly
   if (agCh['Unique']) {
   attributes.push(Object.assign({ kind: 'unique' } as FieldAttributeUnique, { __origin: origin } as any));
@@ -32,7 +32,7 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
       const mch = mapNode.children as CstChildrenDictionary;
       const to = (mch['StringLiteral'] as IToken[])[0].image.slice(1, -1);
   attributes.push(Object.assign({ kind: 'map', to } as FieldAttributeMap, { __origin: origin } as any));
-    } else if (agCh['defaultAttr'] || agCh['defaultAnn']) {
+  } else if (agCh['defaultAttr'] || agCh['defaultAnn']) {
       const defNode = (agCh['defaultAttr'] || agCh['defaultAnn'] as any)[0];
       const dch = (defNode as any).children as CstChildrenDictionary;
       let work = dch;
@@ -73,6 +73,33 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
       const pch = polNode.children as CstChildrenDictionary;
       const valTok = (pch['Identifier'] as IToken[])[0];
   attributes.push(Object.assign({ kind: 'policy', value: valTok.image } as any, { __origin: origin }));
+    }
+    // constraint annotations appear as generic fieldAnnotation with Identifier chain captured in children
+    else if ((agCh as any)['constraintAnn']) {
+      const node = (agCh as any)['constraintAnn'][0] as CstNode;
+      const ch = node.children as CstChildrenDictionary;
+      // Identifier tokens for name; optional literal values
+      if (ch['Identifier']) {
+        const nameTok = (ch['Identifier'] as IToken[])[0].image;
+        const literals = (ch['literal'] as CstNode[] | undefined) || [];
+        const nums: number[] = [];
+        const strs: string[] = [];
+        for (const lit of literals) {
+          const lch = lit.children as CstChildrenDictionary;
+          if (lch['NumberLiteral']) nums.push(Number((lch['NumberLiteral'] as IToken[])[0].image));
+          else if (lch['StringLiteral']) strs.push((lch['StringLiteral'] as IToken[])[0].image.slice(1, -1));
+        }
+        switch (nameTok) {
+          case 'min': if (nums[0] !== undefined) attributes.push({ kind: 'min', value: nums[0] } as any); break;
+          case 'max': if (nums[0] !== undefined) attributes.push({ kind: 'max', value: nums[0] } as any); break;
+          case 'length': attributes.push({ kind: 'length', min: nums[0], max: nums[1] } as any); break;
+          case 'pattern': if (strs[0]) attributes.push({ kind: 'pattern', value: strs[0] } as any); break;
+          case 'email': attributes.push({ kind: 'email' } as any); break;
+          case 'enum': if (strs.length) attributes.push({ kind: 'enum', values: strs } as any); break;
+          case 'json': attributes.push({ kind: 'json' } as any); break;
+          case 'opaque': attributes.push({ kind: 'opaque' } as any); break;
+        }
+      }
     }
   }
   return attributes;

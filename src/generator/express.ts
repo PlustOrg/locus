@@ -1,4 +1,5 @@
 import { Entity } from '../ast';
+import { generateValidationModules } from './validation';
 
 function pluralize(name: string): string {
   if (name.endsWith('y') && !/[aeiou]y$/i.test(name)) return name.slice(0, -1) + 'ies';
@@ -13,6 +14,8 @@ export interface AuthConfig {
 
 export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[] }): Record<string, string> {
   const files: Record<string, string> = {};
+  // generate validation schemas first
+  Object.assign(files, generateValidationModules(entities));
   const mounts: string[] = [];
   const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
   for (const e of sorted) {
@@ -20,6 +23,8 @@ export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?
     const routeBase = opts?.pluralizeRoutes ? pluralize(base) : base;
   const route = `import { Router } from 'express'
 import { PrismaClient } from '@prisma/client'
+import { validate${e.name}Body, validate${e.name}Update } from '../validation/${e.name}'
+import { validationErrorEnvelope } from '../runtime/validateRuntime'
 const prisma = new PrismaClient()
 export const router = Router()
 
@@ -56,7 +61,8 @@ router.get('/${routeBase}/:id', async (req, res) => {
 // POST /${routeBase}
 router.post('/${routeBase}', async (req, res) => {
   try {
-  // TODO(validation): derive schema from entity definition and validate body
+  const validation = validate${e.name}Body(req.body, 'create');
+  if (!validation.ok) return res.status(400).json(validationErrorEnvelope(validation.errors!));
   const created = await prisma.${base}.create({ data: req.body })
     res.status(201).json(created)
   } catch (err: any) {
@@ -69,7 +75,8 @@ router.put('/${routeBase}/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
-  // TODO(validation): derive schema from entity definition and validate body
+  const validation = validate${e.name}Update(req.body);
+  if (!validation.ok) return res.status(400).json(validationErrorEnvelope(validation.errors!));
   const updated = await prisma.${base}.update({ where: { id }, data: req.body })
     res.json(updated)
   } catch (err: any) {

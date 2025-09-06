@@ -58,8 +58,16 @@ export interface FieldAttributeDefault {
 export interface FieldAttributeUnique { kind: 'unique' }
 export interface FieldAttributeMap { kind: 'map'; to: string }
 export interface FieldAttributePolicy { kind: 'policy'; value: string }
+export interface FieldAttributeMin { kind: 'min'; value: number }
+export interface FieldAttributeMax { kind: 'max'; value: number }
+export interface FieldAttributeLength { kind: 'length'; min?: number; max?: number }
+export interface FieldAttributePattern { kind: 'pattern'; value: string }
+export interface FieldAttributeEmail { kind: 'email' }
+export interface FieldAttributeEnum { kind: 'enum'; values: string[] }
+export interface FieldAttributeJson { kind: 'json' }
+export interface FieldAttributeOpaque { kind: 'opaque' }
 
-export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | FieldAttributeMap | FieldAttributePolicy;
+export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | FieldAttributeMap | FieldAttributePolicy | FieldAttributeMin | FieldAttributeMax | FieldAttributeLength | FieldAttributePattern | FieldAttributeEmail | FieldAttributeEnum | FieldAttributeJson | FieldAttributeOpaque;
 
 export interface Field {
   name: string;

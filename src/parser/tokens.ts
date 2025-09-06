@@ -103,6 +103,12 @@ export const AtSign = createToken({ name: 'AtSign', pattern: /@/ });
 export const Unique = createToken({ name: 'Unique', pattern: /unique\b/ });
 export const Default = createToken({ name: 'Default', pattern: /default\b/ });
 export const MapTok = createToken({ name: 'MapTok', pattern: /map\b/ });
+export const MinTok = createToken({ name: 'MinTok', pattern: /min\b/ });
+export const MaxTok2 = createToken({ name: 'MaxTok2', pattern: /max\b/ });
+export const LengthTok = createToken({ name: 'LengthTok', pattern: /length\b/ });
+export const PatternTok = createToken({ name: 'PatternTok', pattern: /pattern\b/ });
+export const EmailTok = createToken({ name: 'EmailTok', pattern: /email\b/ });
+export const EnumTok = createToken({ name: 'EnumTok', pattern: /enum\b/ });
 export const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"(?:[^"\\]|\\.)*"/ });
 export const HexColor = createToken({ name: 'HexColor', pattern: /#[0-9A-Fa-f]{3,8}\b/ });
 export const Duration = createToken({ name: 'Duration', pattern: /[0-9]+(?:ms|s|m|h)\b/ });
@@ -213,6 +219,12 @@ export const AllTokens = [
   Unique,
   Default,
   MapTok,
+  MinTok,
+  MaxTok2,
+  LengthTok,
+  PatternTok,
+  EmailTok,
+  EnumTok,
   StringLiteral,
   HexColor,
   Duration,
