@@ -19,6 +19,17 @@ export function registerValidationConstraint(fn: PluginConstraintFn) { pluginCon
   const i = pluginConstraints.indexOf(fn); if (i>=0) pluginConstraints.splice(i,1);
 }; }
 
+// Pre-validation transforms (mutate body safely before validation). They can push errors directly.
+export type PreValidationTransform = (body: any, schema: SimpleSchema, mode: 'create'|'update', push: (e: ValidationErrorItem)=>void) => void;
+const preTransforms: PreValidationTransform[] = [];
+export function registerPreValidationTransform(fn: PreValidationTransform) { preTransforms.push(fn); return () => { const i = preTransforms.indexOf(fn); if (i>=0) preTransforms.splice(i,1); }; }
+
+// Validation loggers (observability)
+export interface ValidationLogEvent { entity: string; mode: 'create'|'update'; ok: boolean; errors: number; durationMs: number }
+type ValidationLogger = (ev: ValidationLogEvent) => void;
+const loggers: ValidationLogger[] = [];
+export function registerValidationLogger(fn: ValidationLogger) { loggers.push(fn); return () => { const i = loggers.indexOf(fn); if (i>=0) loggers.splice(i,1); }; }
+
 function typeMatches(expected: string, value: any): boolean {
   switch(expected){
     case 'string': return typeof value === 'string';
@@ -38,6 +49,7 @@ function typeMatches(expected: string, value: any): boolean {
 }
 
 export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'create'|'update' = 'create'): ValidationResult {
+  const start = Date.now();
   const errors: ValidationErrorItem[] = [];
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return { ok: false, errors: [{ path: '', message: 'Body must be an object', code: 'type_mismatch' }] };
@@ -54,6 +66,13 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
     (schema as any)._ruleMap = ruleMap;
   }
   try { scanStructure(body, '', 0, errors); } catch {}
+  // run pre-transforms (can mutate body, add errors)
+  if (errors.length === 0) { // only run if no structural errors yet
+    for (const tf of preTransforms) {
+      try { tf(body, schema, mode, e => errors.push(e)); } catch {/* swallow transform errors */}
+      if (errors.length) break;
+    }
+  }
   for (const key of Object.keys(body)) if (!ruleMap[key]) errors.push({ path: key, message: 'Unexpected property', code: 'unexpected_property' });
   for (const f of schema.fields) {
     const v = (body as any)[f.name];
@@ -79,7 +98,8 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
     }
     const newVal = (body as any)[f.name];
     if (!(f as any).json && !(f as any).opaque && !typeMatches(f.type, newVal)) {
-      errors.push({ path: f.name, message: `Expected ${f.type}`, code: 'type_mismatch' });
+      const msgOverride = (f as any).message;
+      errors.push({ path: f.name, message: msgOverride || `Expected ${f.type}`, code: 'type_mismatch' });
     }
     if (typeof newVal === 'number') {
       if (f.min !== undefined && newVal < f.min) errors.push({ path: f.name, message: `Min ${f.min}`, code: 'min' });
@@ -95,7 +115,10 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
         }
       }
       if (f.email && !/^[^@]+@[^@]+\.[^@]+$/.test(newVal)) errors.push({ path: f.name, message: 'Invalid email', code: 'email' });
-      if (f.enum && !f.enum.includes(newVal)) errors.push({ path: f.name, message: 'Invalid enum value', code: 'enum' });
+      if (f.enum && !f.enum.includes(newVal)) {
+        const msgOverride = (f as any).message;
+        errors.push({ path: f.name, message: msgOverride || 'Invalid enum value', code: 'enum' });
+      }
       if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(newVal) || /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(newVal)) {
         errors.push({ path: f.name, message: 'Invalid control or surrogate character', code: 'invalid_chars' });
       }
@@ -104,8 +127,25 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
       try { fn(f, newVal, f.name, e => errors.push(e)); } catch {}
     }
   }
-  if (errors.length) return { ok: false, errors };
-  return { ok: true };
+  // discriminator post-checks
+  const discriminatorFields = (schema.fields as any[]).filter(f => f.discriminator);
+  if (discriminatorFields.length > 1) {
+    errors.push({ path: '', message: 'Multiple discriminators defined', code: 'discriminator_conflict' });
+  } else if (discriminatorFields.length === 1 && mode === 'create') {
+    const df = discriminatorFields[0];
+    const val = (body as any)[df.name];
+    if (val === undefined || val === null || val === '') {
+      errors.push({ path: df.name, message: 'Discriminator required', code: 'required' });
+    }
+  }
+  const ok = errors.length === 0;
+  const result: ValidationResult = ok ? { ok: true } : { ok: false, errors };
+  const durationMs = Date.now() - start;
+  if (loggers.length) {
+    const ev: ValidationLogEvent = { entity: schema.entity, mode, ok, errors: errors.length, durationMs };
+    for (const lg of loggers) { try { lg(ev); } catch {/* ignore logger errors */} }
+  }
+  return result;
 }
 
 function scanStructure(value: any, path: string, depth: number, errors: ValidationErrorItem[]) {

@@ -15,6 +15,8 @@ export interface ValidationFieldRule {
   defaultValue?: any;
   json?: boolean;
   opaque?: boolean;
+  discriminator?: boolean;
+  message?: string;
 }
 
 export interface EntityValidationSchema {
@@ -50,6 +52,8 @@ function applyConstraints(rule: ValidationFieldRule, attrs: FieldAttribute[]) {
   case 'default': rule.defaultValue = a.value; break;
   case 'json': rule.json = true; break;
   case 'opaque': rule.opaque = true; break;
+  case 'discriminator': rule.discriminator = true; break;
+  case 'message': rule.message = a.value; break;
     }
   }
 }
@@ -72,6 +76,7 @@ export function buildPartialUpdateSchema(e: Entity): EntityValidationSchema {
 
 export function generateValidationModules(entities: Entity[]): Record<string,string> {
   const files: Record<string,string> = {};
+  const indexEntries: string[] = [];
   for (const e of entities) {
     const schema = buildEntityValidationSchema(e);
   const partial = buildPartialUpdateSchema(e);
@@ -83,8 +88,12 @@ export function generateValidationModules(entities: Entity[]): Record<string,str
 `export function validate${e.name}Body(body: any){ return validateBodyAgainst(schema, body, 'create'); }\n`+
 `export function validate${e.name}Update(body: any){ return validateBodyAgainst(updateSchema, body, 'update'); }\n`;
     files[`validation/${e.name}.ts`] = code;
+    indexEntries.push(`import * as ${e.name}Val from './${e.name}';`);
   }
-  // index barrel
+  // index barrel exports
   files['validation/index.ts'] = entities.map(e => `export * from './${e.name}';`).join('\n');
+  // dynamic aggregate
+  const aggregate = `${indexEntries.join('\n')}\n\nexport const AllEntityValidators = {\n${entities.map(e => `  ${e.name}: { schema: ${e.name}Val.schema, updateSchema: ${e.name}Val.updateSchema, validate: ${e.name}Val.validate${e.name}Body, validateUpdate: ${e.name}Val.validate${e.name}Update }`).join(',\n')}\n} as const;\n`;
+  files['validation/all.ts'] = aggregate;
   return files;
 }

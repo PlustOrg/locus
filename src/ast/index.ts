@@ -66,8 +66,10 @@ export interface FieldAttributeEmail { kind: 'email' }
 export interface FieldAttributeEnum { kind: 'enum'; values: string[] }
 export interface FieldAttributeJson { kind: 'json' }
 export interface FieldAttributeOpaque { kind: 'opaque' }
+export interface FieldAttributeDiscriminator { kind: 'discriminator' }
+export interface FieldAttributeMessage { kind: 'message'; value: string }
 
-export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | FieldAttributeMap | FieldAttributePolicy | FieldAttributeMin | FieldAttributeMax | FieldAttributeLength | FieldAttributePattern | FieldAttributeEmail | FieldAttributeEnum | FieldAttributeJson | FieldAttributeOpaque;
+export type FieldAttribute = FieldAttributeDefault | FieldAttributeUnique | FieldAttributeMap | FieldAttributePolicy | FieldAttributeMin | FieldAttributeMax | FieldAttributeLength | FieldAttributePattern | FieldAttributeEmail | FieldAttributeEnum | FieldAttributeJson | FieldAttributeOpaque | FieldAttributeDiscriminator | FieldAttributeMessage;
 
 export interface Field {
   name: string;

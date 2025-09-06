@@ -98,6 +98,8 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
           case 'enum': if (strs.length) attributes.push({ kind: 'enum', values: strs } as any); break;
           case 'json': attributes.push({ kind: 'json' } as any); break;
           case 'opaque': attributes.push({ kind: 'opaque' } as any); break;
+          case 'discriminator': attributes.push({ kind: 'discriminator' } as any); break;
+          case 'message': if (strs[0]) attributes.push({ kind: 'message', value: strs[0] } as any); break;
         }
       }
     }

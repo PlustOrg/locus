@@ -109,6 +109,8 @@ export const LengthTok = createToken({ name: 'LengthTok', pattern: /length\b/ })
 export const PatternTok = createToken({ name: 'PatternTok', pattern: /pattern\b/ });
 export const EmailTok = createToken({ name: 'EmailTok', pattern: /email\b/ });
 export const EnumTok = createToken({ name: 'EnumTok', pattern: /enum\b/ });
+export const DiscriminatorTok = createToken({ name: 'DiscriminatorTok', pattern: /discriminator\b/ });
+export const MessageTok = createToken({ name: 'MessageTok', pattern: /message\b/ });
 export const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"(?:[^"\\]|\\.)*"/ });
 export const HexColor = createToken({ name: 'HexColor', pattern: /#[0-9A-Fa-f]{3,8}\b/ });
 export const Duration = createToken({ name: 'Duration', pattern: /[0-9]+(?:ms|s|m|h)\b/ });
@@ -225,6 +227,8 @@ export const AllTokens = [
   PatternTok,
   EmailTok,
   EnumTok,
+  DiscriminatorTok,
+  MessageTok,
   StringLiteral,
   HexColor,
   Duration,
