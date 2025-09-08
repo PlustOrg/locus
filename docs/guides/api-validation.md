@@ -24,11 +24,13 @@ Locus generates deterministic runtime validators for each entity-based route. Va
 | `@pattern("regex")` | Regex pattern match (JS syntax) |
 | `@email` | Email format check |
 | `@enum("A","B",...)` | Restrict value to enumerated set |
+| `@discriminator` | Marks field as required polymorphic discriminator (max one) |
+| `@message("text")` | Override default error message for type/enum violations |
 
 ## Error Envelope
 
 ```
-{ "code": "validation_error", "errors": [ { "path": "field", "message": "...", "code": "min" } ] }
+{ "version":1, "code": "validation_error", "errors": [ { "path": "field", "message": "...", "code": "min" } ] }
 ```
 
 `path` uses dot & bracket notation for nested/array values. Ordering of errors is deterministic by path.
@@ -55,5 +57,7 @@ PUT routes use an `updateSchema` with all fields optional while preserving const
 
 - Enum + custom plugin validators (extensible interface)
 - Fuzz & performance regression suites integrated in CI
-- Structured span mapping for error messages
+- Structured span mapping for error messages (locations metadata present; full path spans planned)
 - Nested relation validation rules
+- Rate-limit telemetry & structured logging integration flags
+- See Advanced Patterns guide for patch vs update, relation connect, JIT mode

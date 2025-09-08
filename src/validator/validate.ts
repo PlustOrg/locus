@@ -48,6 +48,8 @@ function walkUi(node: any, fn: (n:any)=>void) {
   for (const p of (ast.pages || []) as any[]) if (!pascal(p.name)) namingWarnings.push(`Page '${p.name}' should use PascalCase.`);
   for (const c of (ast.components || []) as any[]) if (!pascal(c.name)) namingWarnings.push(`Component '${c.name}' should use PascalCase.`);
   for (const w of (ast.workflows || []) as any[]) if (!pascal(w.name)) namingWarnings.push(`Workflow '${w.name}' should use PascalCase.`);
+  // Upload policies naming
+  for (const u of (ast.uploads || []) as any[]) if (u.name && !pascal(u.name)) namingWarnings.push(`Upload policy '${u.name}' should use PascalCase.`);
   // Basic workflow validations (Phase 3)
   for (const w of ast.workflows || []) {
     if (!w.trigger) {
@@ -285,6 +287,23 @@ function walkUi(node: any, fn: (n:any)=>void) {
         if (!keyOk(k)) badKeys.push({ key: k, loc: (m as any)[k]?.loc });
       }
     };
+    // Upload policy semantic validation
+    for (const u of (ast.uploads || []) as any[]) {
+      if (!u.fields.length) throw new VError(`Upload policy '${u.name}' must declare at least one field.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      const seen = new Set<string>();
+      for (const f of u.fields) {
+        if (!f.name) throw new VError(`Upload policy '${u.name}' has field with missing name.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+        if (seen.has(f.name)) throw new VError(`Upload policy '${u.name}' duplicate field '${f.name}'.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+        seen.add(f.name);
+        if (!f.mime || !f.mime.length) throw new VError(`Upload policy '${u.name}' field '${f.name}' must declare at least one mime type.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+        if (f.maxSizeBytes != null && f.maxSizeBytes <= 0) throw new VError(`Upload policy '${u.name}' field '${f.name}' maxSize must be > 0.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+        if (f.maxCount <= 0) throw new VError(`Upload policy '${u.name}' field '${f.name}' maxCount must be >= 1.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      }
+      if (u.storage) {
+        if (!u.storage.path) throw new VError(`Upload policy '${u.name}' storage path required.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+        if (!u.storage.naming) throw new VError(`Upload policy '${u.name}' storage naming required.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      }
+    }
     checkMap(ds.spacing);
     checkMap(ds.radii);
     checkMap(ds.shadows);

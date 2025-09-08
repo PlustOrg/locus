@@ -1,4 +1,4 @@
-import { DesignSystemBlock, Entity, LocusFileAST, WorkflowBlock } from '../ast';
+import { DesignSystemBlock, Entity, LocusFileAST, WorkflowBlock, UploadPolicyAst } from '../ast';
 import { LocusError } from '../errors';
 
 export class MergeError extends LocusError {
@@ -14,6 +14,7 @@ export interface UnifiedAST {
   components: any[];
   stores: any[];
   workflows: WorkflowBlock[];
+  uploads?: UploadPolicyAst[];
 }
 
 export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
@@ -92,6 +93,17 @@ export function mergeAsts(files: LocusFileAST[]): UnifiedAST {
     wfNames.add(w.name); workflows.push(w);
   }
 
-  return { database: { entities }, designSystem, pages, components, stores, workflows };
+  // Merge upload policies with duplicate detection
+  const uploads: UploadPolicyAst[] = [];
+  const upNames = new Set<string>();
+  for (const f of files) for (const u of (f.uploads || [])) {
+    if (upNames.has(u.name)) {
+      const loc = (u as any).nameLoc;
+      throw new MergeError(`Upload policy '${u.name}' defined multiple times`, f.sourceFile, loc?.line, loc?.column);
+    }
+    upNames.add(u.name); uploads.push(u);
+  }
+
+  return { database: { entities }, designSystem, pages, components, stores, workflows, uploads };
 }
 

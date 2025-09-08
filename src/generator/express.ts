@@ -1,5 +1,6 @@
-import { Entity } from '../ast';
+import { Entity, UploadPolicyAst } from '../ast';
 import { generateValidationModules } from './validation';
+import { generateUploadPolicyModules } from './uploads';
 
 function pluralize(name: string): string {
   if (name.endsWith('y') && !/[aeiou]y$/i.test(name)) return name.slice(0, -1) + 'ies';
@@ -12,10 +13,13 @@ export interface AuthConfig {
   jwtSecret?: string;
 }
 
-export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[] }): Record<string, string> {
+export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[], uploads?: UploadPolicyAst[] }): Record<string, string> {
   const files: Record<string, string> = {};
   // generate validation schemas first
   Object.assign(files, generateValidationModules(entities));
+  if (opts?.uploads && opts.uploads.length) {
+    Object.assign(files, generateUploadPolicyModules(opts.uploads));
+  }
   const mounts: string[] = [];
   const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
   for (const e of sorted) {
@@ -136,6 +140,7 @@ app.use(express.json())
 if (process.env.ENABLE_CORS === '1') { app.use(cors()) }
 const publicDir = path.join(__dirname, 'next-app', 'public')
 try { app.use(express.static(publicDir)) } catch {}
+// TODO: attach multipart handlers for upload policies (generated in uploads/*)
 // Basic health/readiness endpoints
 app.get('/healthz', (req, res) => { res.json({ ok: true, uptime: process.uptime(), ts: Date.now() }) })
 let startedAt = Date.now();

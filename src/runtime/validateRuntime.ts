@@ -3,6 +3,7 @@ interface SimpleSchema { entity: string; fields: SimpleFieldRule[] }
 
 export interface ValidationErrorItem { path: string; message: string; code: string }
 export interface ValidationResult { ok: boolean; errors?: ValidationErrorItem[] }
+export interface ValidationResultWithLocations extends ValidationResult { locations?: Record<string, { line: number; column: number }>; meta?: Record<string, any> }
 
 // Default security / safety limits (can be adjusted later via config)
 export const MAX_NESTED_DEPTH = 8;
@@ -20,12 +21,12 @@ export function registerValidationConstraint(fn: PluginConstraintFn) { pluginCon
 }; }
 
 // Pre-validation transforms (mutate body safely before validation). They can push errors directly.
-export type PreValidationTransform = (body: any, schema: SimpleSchema, mode: 'create'|'update', push: (e: ValidationErrorItem)=>void) => void;
+export type PreValidationTransform = (body: any, schema: SimpleSchema, mode: 'create'|'update'|'patch', push: (e: ValidationErrorItem)=>void) => void;
 const preTransforms: PreValidationTransform[] = [];
 export function registerPreValidationTransform(fn: PreValidationTransform) { preTransforms.push(fn); return () => { const i = preTransforms.indexOf(fn); if (i>=0) preTransforms.splice(i,1); }; }
 
 // Validation loggers (observability)
-export interface ValidationLogEvent { entity: string; mode: 'create'|'update'; ok: boolean; errors: number; durationMs: number }
+export interface ValidationLogEvent { entity: string; mode: 'create'|'update'|'patch'; ok: boolean; errors: number; durationMs: number }
 type ValidationLogger = (ev: ValidationLogEvent) => void;
 const loggers: ValidationLogger[] = [];
 export function registerValidationLogger(fn: ValidationLogger) { loggers.push(fn); return () => { const i = loggers.indexOf(fn); if (i>=0) loggers.splice(i,1); }; }
@@ -48,8 +49,11 @@ function typeMatches(expected: string, value: any): boolean {
   }
 }
 
-export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'create'|'update' = 'create'): ValidationResult {
+export function validateBodyAgainst(schema: any, body: any, mode: 'create'|'update'|'patch' = 'create'): ValidationResultWithLocations {
   const start = Date.now();
+  if (process.env.LOCUS_VALIDATION_DISABLE === '1') {
+    return { ok: true };
+  }
   const errors: ValidationErrorItem[] = [];
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return { ok: false, errors: [{ path: '', message: 'Body must be an object', code: 'type_mismatch' }] };
@@ -73,13 +77,22 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
       if (errors.length) break;
     }
   }
-  for (const key of Object.keys(body)) if (!ruleMap[key]) errors.push({ path: key, message: 'Unexpected property', code: 'unexpected_property' });
+  const relationNames: string[] = Array.isArray((schema as any).relations) ? (schema as any).relations : [];
+  for (const key of Object.keys(body)) {
+    if (!ruleMap[key] && !relationNames.includes(key)) {
+      errors.push({ path: key, message: 'Unexpected property', code: 'unexpected_property' });
+    }
+  }
   for (const f of schema.fields) {
     const v = (body as any)[f.name];
     if (v === undefined || v === null) {
       if (mode === 'create' && (f as any).defaultValue !== undefined) {
         (body as any)[f.name] = (f as any).defaultValue;
-      } else if (!f.optional && mode === 'create') errors.push({ path: f.name, message: 'Required', code: 'required' });
+      } else if (mode === 'create' && !f.optional) {
+        errors.push({ path: f.name, message: 'Required', code: 'required' });
+      }
+      // update & patch both permit omission/null (null still triggers type mismatch later unless nullable semantics added)
+      if (mode !== 'create') continue;
       continue;
     }
     if (f.list) {
@@ -105,6 +118,35 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
       if (f.min !== undefined && newVal < f.min) errors.push({ path: f.name, message: `Min ${f.min}`, code: 'min' });
       if (f.max !== undefined && newVal > f.max) errors.push({ path: f.name, message: `Max ${f.max}`, code: 'max' });
     }
+    // BigInt normalization (store as string to avoid JSON serialization issues)
+    if (f.type === 'bigint') {
+      if (typeof newVal === 'bigint') {
+        (body as any)[f.name] = newVal.toString();
+      } else if (typeof newVal === 'number') {
+        if (!Number.isSafeInteger(newVal)) {
+          errors.push({ path: f.name, message: 'BigInt numeric literal exceeds JS safe integer range', code: 'bigint_range' });
+        } else {
+          (body as any)[f.name] = String(newVal);
+        }
+      } else if (typeof newVal === 'string') {
+        if (!/^[-]?\d+$/.test(newVal)) errors.push({ path: f.name, message: 'Invalid BigInt string', code: 'bigint_format' });
+      }
+    }
+    // Date canonicalization (ISO 8601) for DateTime fields
+    if (f.type === 'datetime' && typeof newVal === 'string') {
+      // Basic ISO 8601 regex (YYYY-MM-DDTHH:MM(:SS(.sss))?(Z|±HH:MM))
+      const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
+      if (!isoRe.test(newVal)) {
+        errors.push({ path: f.name, message: 'Invalid ISO8601 datetime', code: 'date_format' });
+      } else {
+        const d = new Date(newVal);
+        if (isNaN(d.getTime())) {
+          errors.push({ path: f.name, message: 'Unparseable datetime', code: 'date_format' });
+        } else {
+          (body as any)[f.name] = d.toISOString();
+        }
+      }
+    }
     if (typeof newVal === 'string' && !(f as any).opaque) {
       if (newVal.length > MAX_FIELD_STRING_LENGTH) errors.push({ path: f.name, message: `Field string exceeds ${MAX_FIELD_STRING_LENGTH} bytes`, code: 'field_size_exceeded' });
       if (f.lenMin !== undefined && newVal.length < f.lenMin) errors.push({ path: f.name, message: `Length < ${f.lenMin}`, code: 'length' });
@@ -127,6 +169,25 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
       try { fn(f, newVal, f.name, e => errors.push(e)); } catch {}
     }
   }
+  // basic relation validation (connect shape only for now)
+  for (const rel of relationNames) {
+    const val = (body as any)[rel];
+    if (val === undefined) continue;
+    // allow { connect: { id: <string|number> } } or array of such
+    const validateConnect = (obj: any, path: string) => {
+      if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) { errors.push({ path, message: 'Relation value must be object', code: 'relation_shape' }); return; }
+      const c = obj.connect;
+      if (!c || typeof c !== 'object' || Array.isArray(c)) { errors.push({ path, message: 'Missing connect object', code: 'relation_shape' }); return; }
+      if (!('id' in c)) { errors.push({ path: path + '.connect', message: 'Missing id in connect', code: 'relation_shape' }); return; }
+      const idv = c.id;
+      if (typeof idv !== 'string' && typeof idv !== 'number') errors.push({ path: path + '.connect.id', message: 'Invalid id type', code: 'relation_shape' });
+    };
+    if (Array.isArray(val)) {
+      for (let i=0;i<val.length;i++) validateConnect(val[i], `${rel}[${i}]`);
+    } else {
+      validateConnect(val, rel);
+    }
+  }
   // discriminator post-checks
   const discriminatorFields = (schema.fields as any[]).filter(f => f.discriminator);
   if (discriminatorFields.length > 1) {
@@ -139,7 +200,12 @@ export function validateBodyAgainst(schema: SimpleSchema, body: any, mode: 'crea
     }
   }
   const ok = errors.length === 0;
-  const result: ValidationResult = ok ? { ok: true } : { ok: false, errors };
+  const result: ValidationResultWithLocations = ok ? { ok: true } : { ok: false, errors };
+  if (schema.locations) result.locations = schema.locations;
+  // Basic failure rate telemetry (per entity) optional
+  if (!ok) {
+    applyFailureTelemetry(schema.entity, result);
+  }
   const durationMs = Date.now() - start;
   if (loggers.length) {
     const ev: ValidationLogEvent = { entity: schema.entity, mode, ok, errors: errors.length, durationMs };
@@ -173,5 +239,30 @@ function scanStructure(value: any, path: string, depth: number, errors: Validati
 export function validationErrorEnvelope(errors: ValidationErrorItem[]) {
   // deterministic ordering by path
   const ordered = [...errors].sort((a,b)=> a.path.localeCompare(b.path));
-  return { code: 'validation_error', errors: ordered };
+  return { version: 1, code: 'validation_error', errors: ordered };
+}
+
+// --- Failure telemetry & rate-limiting (simple in-memory) ---
+interface FailureBucket { count: number; windowStart: number }
+const FAILURE_WINDOW_MS = 60_000; // 1 minute
+const buckets: Record<string, FailureBucket> = Object.create(null);
+const FAIL_LIMIT = parseInt(process.env.LOCUS_VALIDATION_FAIL_LIMIT || '200', 10);
+
+function applyFailureTelemetry(entity: string, result: ValidationResultWithLocations) {
+  const now = Date.now();
+  let b = buckets[entity];
+  if (!b || now - b.windowStart > FAILURE_WINDOW_MS) {
+    b = { count: 0, windowStart: now };
+    buckets[entity] = b;
+  }
+  b.count++;
+  if (b.count > FAIL_LIMIT) {
+    (result.meta ||= {}).rateLimited = true;
+    if (process.env.LOCUS_VALIDATION_LOG && process.env.LOCUS_VALIDATION_LOG !== '0') {
+      try { process.stderr.write(JSON.stringify({ lvl: 'warn', msg: 'validation rate limit exceeded', entity, count: b.count, limit: FAIL_LIMIT }) + '\n'); } catch {}
+    }
+  }
+  if (process.env.LOCUS_VALIDATION_LOG && process.env.LOCUS_VALIDATION_LOG !== '0') {
+    try { process.stderr.write(JSON.stringify({ lvl: 'debug', msg: 'validation_fail', entity, count: b.count }) + '\n'); } catch {}
+  }
 }

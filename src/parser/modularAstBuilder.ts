@@ -37,6 +37,20 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
   const components: any[] = [];
   const stores: any[] = [];
   const workflows: any[] = [];
+  const uploads: any[] = [];
+  function parseSizeLiteral(txt?: string): number | undefined {
+    if (!txt) return undefined; // e.g. 5MB
+    const m = /^([0-9]+)(B|KB|MB|GB)$/.exec(txt);
+    if (!m) return undefined;
+    const n = Number(m[1]);
+    switch (m[2]) {
+      case 'B': return n;
+      case 'KB': return n * 1024;
+      case 'MB': return n * 1024 * 1024;
+      case 'GB': return n * 1024 * 1024 * 1024;
+    }
+    return undefined;
+  }
 
   const topChildren = cst.children as CstChildrenDictionary;
   const blocks = (topChildren['topLevel'] as CstNode[]) || [];
@@ -50,6 +64,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
     const compNodes = (ch['componentBlock'] as CstNode[]) || [];
   const storeNodes = (ch['storeBlock'] as CstNode[]) || [];
   const workflowNodes = (ch['workflowBlock'] as CstNode[]) || [];
+    const uploadNodes = (ch['uploadBlock'] as CstNode[]) || [];
     if (pageNodes.length || compNodes.length || storeNodes.length) {
       const f = buildFeatureBlocksLegacy(pageNodes, compNodes, storeNodes, originalSource || '');
       // Post-process style_override CST blocks to populate styleOverride
@@ -71,7 +86,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
       }
       pages.push(...f.pages); components.push(...f.components); stores.push(...f.stores);
     }
-    if (workflowNodes.length) {
+  if (workflowNodes.length) {
       for (const w of workflowNodes) {
         const nameTok = (w.children.Identifier?.[0] as any);
         const block: WorkflowBlock = {
@@ -404,8 +419,65 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
         workflows.push(block);
       }
     }
+    if (uploadNodes.length && originalSource) {
+      for (const u of uploadNodes) {
+        const nameTok: any = u.children.Identifier?.[0];
+  const lcurly: any = u.children.LCurly?.[0];
+  const rcurly: any = u.children.RCurly?.[u.children.RCurly.length -1];
+  const rawInner = (lcurly && rcurly) ? originalSource.slice(lcurly.endOffset + 1, rcurly.startOffset).trim() : '';
+        const fieldDecls: any[] = (u.children.uploadFieldDecl || []) as any[];
+        const storeDecls: any[] = (u.children.uploadStoreDecl || []) as any[];
+        const fields: any[] = [];
+        for (const fd of fieldDecls) {
+          const fdCh: any = fd.children;
+          const fnameTok = fdCh.Identifier?.[0];
+          const maxSizeTok = fdCh.SizeLiteral?.[0];
+          const maxCountTok = fdCh.NumberLiteral?.[0];
+          const required = !!fdCh.RequiredKw;
+          const mimeDecl: any = fdCh.mimeDecl?.[0];
+          const mime: string[] = [];
+          if (mimeDecl) {
+            const mvNodes: any[] = mimeDecl.children.mimeValue || [];
+            for (const mv of mvNodes) {
+              const mvCh: any = mv.children;
+              const p1 = mvCh.Identifier?.[0]?.image;
+              const p2 = mvCh.Identifier?.[1]?.image;
+              mime.push(p2 ? `${p1}/${p2}` : p1);
+            }
+          }
+          fields.push({
+            kind: 'upload_field',
+            name: fnameTok?.image,
+            maxSizeBytes: parseSizeLiteral(maxSizeTok?.image),
+            maxCount: maxCountTok ? Number(maxCountTok.image) : 1,
+            mime,
+            required,
+            loc: fnameTok ? { line: fnameTok.startLine, column: fnameTok.startColumn } : undefined,
+          });
+        }
+        let storage: any;
+        if (storeDecls.length) {
+          const decl = storeDecls[0];
+          const sCh: any = decl.children;
+          let strategy: string | undefined;
+          let path: string | undefined;
+          let naming: string | undefined;
+          for (const arr of Object.values(sCh) as any[]) {
+            if (!Array.isArray(arr)) continue;
+            for (const entry of arr) {
+              const eCh: any = entry.children;
+              if (eCh.StrategyKw) strategy = eCh.Identifier?.[0]?.image;
+              if (eCh.PathKw) path = eCh.StringLiteral?.[0]?.image?.slice(1,-1);
+              if (eCh.NamingKw) naming = eCh.Identifier?.[0]?.image;
+            }
+          }
+          storage = { strategy, path, naming };
+        }
+        uploads.push({ kind: 'upload_policy', name: nameTok?.image, nameLoc: nameTok ? { line: nameTok.startLine, column: nameTok.startColumn } : undefined, raw: rawInner, fields, storage });
+      }
+    }
   }
-  const ast: LocusFileAST = { databases, designSystems, pages, components, stores, workflows } as any;
+  const ast: LocusFileAST = { databases, designSystems, pages, components, stores, workflows, uploads } as any;
   if (filePath) defineHidden(ast as any, 'sourceFile', filePath);
   return ast;
 }

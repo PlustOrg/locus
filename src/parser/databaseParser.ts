@@ -103,6 +103,18 @@ import {
   AtSign,
   StyleOverride,
   PipeTok,
+  // upload tokens
+  UploadKw,
+  FieldKw,
+  MaxSizeKw,
+  MaxCountKw,
+  MimeKw,
+  StoreKw,
+  StrategyKw,
+  PathKw,
+  NamingKw,
+  RequiredKw,
+  SizeLiteral,
 } from './tokens';
 
 export class DatabaseCstParser extends CstParser {
@@ -123,6 +135,7 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.componentBlock) },
       { ALT: () => this.SUBRULE(this.storeBlock) },
       { ALT: () => this.SUBRULE(this.workflowBlock) },
+  { ALT: () => this.SUBRULE(this.uploadBlock) },
     ]);
   });
 
@@ -198,6 +211,85 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(LCurly);
     this.OPTION(() => this.SUBRULE(this.rawContent));
     this.CONSUME(RCurly);
+  });
+
+  // --- Upload DSL ---
+  private uploadBlock = this.RULE('uploadBlock', () => {
+    this.CONSUME(UploadKw);
+    this.CONSUME(Identifier);
+    this.CONSUME(LCurly);
+    this.MANY(() => this.OR([
+      { ALT: () => this.SUBRULE(this.uploadFieldDecl) },
+      { ALT: () => this.SUBRULE(this.uploadStoreDecl) },
+    ]));
+    this.CONSUME(RCurly);
+  });
+
+  private uploadFieldDecl = this.RULE('uploadFieldDecl', () => {
+    this.CONSUME(FieldKw);
+    this.CONSUME1(Identifier); // field name
+    this.OPTION(() => this.SUBRULE(this.maxSizeDecl));
+    this.OPTION1(() => this.SUBRULE(this.maxCountDecl));
+    this.SUBRULE(this.mimeDecl);
+    this.OPTION2(() => this.CONSUME(RequiredKw));
+  });
+
+  private maxSizeDecl = this.RULE('maxSizeDecl', () => {
+    this.CONSUME(MaxSizeKw);
+    this.CONSUME(Colon);
+    this.CONSUME(SizeLiteral);
+  });
+
+  private maxCountDecl = this.RULE('maxCountDecl', () => {
+    this.CONSUME(MaxCountKw);
+    this.CONSUME(Colon);
+    this.CONSUME(NumberLiteral);
+  });
+
+  private mimeDecl = this.RULE('mimeDecl', () => {
+    this.CONSUME(MimeKw);
+    this.CONSUME(Colon);
+    this.CONSUME(LBracketTok);
+    this.AT_LEAST_ONE_SEP({
+      SEP: Comma,
+      DEF: () => this.SUBRULE(this.mimeValue)
+    });
+    this.CONSUME(RBracketTok);
+  });
+
+  private mimeValue = this.RULE('mimeValue', () => {
+    this.CONSUME(Identifier);
+    this.OPTION(() => {
+      this.CONSUME(SlashTok);
+      this.CONSUME1(Identifier);
+    });
+  });
+
+  private uploadStoreDecl = this.RULE('uploadStoreDecl', () => {
+    this.CONSUME(StoreKw);
+    this.MANY(() => this.OR([
+      { ALT: () => this.SUBRULE(this.strategyDecl) },
+      { ALT: () => this.SUBRULE(this.pathDecl) },
+      { ALT: () => this.SUBRULE(this.namingDecl) },
+    ]));
+  });
+
+  private strategyDecl = this.RULE('strategyDecl', () => {
+    this.CONSUME(StrategyKw);
+    this.CONSUME(Colon);
+    this.CONSUME(Identifier);
+  });
+
+  private pathDecl = this.RULE('pathDecl', () => {
+    this.CONSUME(PathKw);
+    this.CONSUME(Colon);
+    this.CONSUME(StringLiteral);
+  });
+
+  private namingDecl = this.RULE('namingDecl', () => {
+    this.CONSUME(NamingKw);
+    this.CONSUME(Colon);
+    this.CONSUME(Identifier);
   });
   
   // Steps block within workflow

@@ -24,7 +24,8 @@
     "docs:update-hash": "TS_NODE_TRANSPILE_ONLY=1 ts-node scripts/validate-docs.ts --update-hash",
     "perf:baseline": "ts-node scripts/measure_baseline.ts",
     "docs:update-kpis": "ts-node scripts/update_kpis.ts",
-    "locus": "dist/index.js"
+    "locus": "dist/index.js",
+    "ci:validate": "npm run lint && npm test"
   },
   "repository": {
     "type": "git",

@@ -111,6 +111,17 @@ export const EmailTok = createToken({ name: 'EmailTok', pattern: /email\b/ });
 export const EnumTok = createToken({ name: 'EnumTok', pattern: /enum\b/ });
 export const DiscriminatorTok = createToken({ name: 'DiscriminatorTok', pattern: /discriminator\b/ });
 export const MessageTok = createToken({ name: 'MessageTok', pattern: /message\b/ });
+export const UploadKw = createToken({ name: 'UploadKw', pattern: /upload\b/ });
+export const FieldKw = createToken({ name: 'FieldKw', pattern: /field\b/ });
+export const MaxSizeKw = createToken({ name: 'MaxSizeKw', pattern: /maxSize\b/ });
+export const MaxCountKw = createToken({ name: 'MaxCountKw', pattern: /maxCount\b/ });
+export const MimeKw = createToken({ name: 'MimeKw', pattern: /mime\b/ });
+export const StoreKw = createToken({ name: 'StoreKw', pattern: /store\b/ });
+export const StrategyKw = createToken({ name: 'StrategyKw', pattern: /strategy\b/ });
+export const PathKw = createToken({ name: 'PathKw', pattern: /path\b/ });
+export const NamingKw = createToken({ name: 'NamingKw', pattern: /naming\b/ });
+export const RequiredKw = createToken({ name: 'RequiredKw', pattern: /required\b/ });
+export const SizeLiteral = createToken({ name: 'SizeLiteral', pattern: /[0-9]+(?:B|KB|MB|GB)\b/ });
 export const StringLiteral = createToken({ name: 'StringLiteral', pattern: /"(?:[^"\\]|\\.)*"/ });
 export const HexColor = createToken({ name: 'HexColor', pattern: /#[0-9A-Fa-f]{3,8}\b/ });
 export const Duration = createToken({ name: 'Duration', pattern: /[0-9]+(?:ms|s|m|h)\b/ });
@@ -229,6 +240,17 @@ export const AllTokens = [
   EnumTok,
   DiscriminatorTok,
   MessageTok,
+  UploadKw,
+  FieldKw,
+  MaxSizeKw,
+  MaxCountKw,
+  MimeKw,
+  StoreKw,
+  StrategyKw,
+  PathKw,
+  NamingKw,
+  RequiredKw,
+  SizeLiteral,
   StringLiteral,
   HexColor,
   Duration,

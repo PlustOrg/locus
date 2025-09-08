@@ -7,6 +7,7 @@ export interface LocusFileAST {
   components: ComponentBlock[];
   stores: StoreBlock[];
   workflows?: WorkflowBlock[]; // Phase 2 typed
+  uploads?: UploadPolicyAst[]; // upload policies
   // optional: file this AST came from (for diagnostics)
   sourceFile?: string;
 }
@@ -141,6 +142,26 @@ export interface UnknownStep extends BaseStep { kind: 'unknown' }
 
 export interface RawWorkflowSection {
   raw: string; // raw inner text slice for future structured parsing
+  loc?: { line: number; column: number };
+}
+
+// --- Upload Policy AST ---
+export interface UploadPolicyAst {
+  kind: 'upload_policy';
+  name: string;
+  nameLoc?: { line: number; column: number };
+  raw?: string;
+  fields: UploadFieldAst[];
+  storage?: { strategy?: string; path?: string; naming?: string };
+}
+
+export interface UploadFieldAst {
+  kind: 'upload_field';
+  name: string;
+  maxSizeBytes?: number;
+  maxCount: number;
+  mime: string[];
+  required: boolean;
   loc?: { line: number; column: number };
 }
 

@@ -175,7 +175,7 @@ export async function buildProject(opts: {
     // Add express server if auth configured
     if (auth) {
       const guarded = (merged.pages || []).filter((p: any) => p.guard).map((p: any) => ({ name: p.name, role: p.guard.role }));
-      const expressFiles = generateExpressApi((merged.database?.entities) || [], { auth, pagesWithGuards: guarded });
+  const expressFiles = generateExpressApi((merged.database?.entities) || [], { auth, pagesWithGuards: guarded, uploads: (merged as any).uploads || [] });
       for (const [k, v] of Object.entries(expressFiles)) { artifacts[k] = v; }
     }
     // Plugin hook: after code generation

@@ -1,4 +1,17 @@
 # Changelog
+## Unreleased
+### Added
+- Comprehensive API input validation pipeline (schemas, runtime validator, patch/update modes)
+- Constraint annotations: @min, @max, @length, @pattern, @email, @enum, @json, @opaque, @discriminator, @message
+- Relation connect shape validation (basic)
+- JIT validator (env `LOCUS_VALIDATION_JIT=1`) and opt-out (`LOCUS_VALIDATION_DISABLE=1`)
+- Rate-limit telemetry & structured logging (env `LOCUS_VALIDATION_FAIL_LIMIT`, `LOCUS_VALIDATION_LOG`)
+- Locations metadata in validation results
+### Changed
+- Error envelope now versioned with `version:1`
+### Security
+- Added depth/array/body/string limits and prototype pollution key rejection in validators
+
 
 All notable changes to this project will be documented in this file.
 
