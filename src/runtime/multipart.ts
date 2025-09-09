@@ -2,7 +2,7 @@ import { IncomingMessage } from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import crypto from 'crypto';
-import { recordTiming } from '../metrics';
+import { recordTiming, incUploadFiles, incUploadBytes, incUploadFailure } from '../metrics';
 
 export interface UploadFieldRule {
   name: string; required: boolean; maxSizeBytes?: number; maxCount: number; mime: string[];
@@ -28,7 +28,7 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
   let total = 0; const maxReq = opts?.maxRequestBytes || Number(process.env.LOCUS_UPLOAD_MAX_SIZE) || 25*1024*1024;
   for await (const chunk of req) {
     total += (chunk as Buffer).length;
-    if (total > maxReq) return { ok: false, errors: [{ code: 'file_too_large', message: 'Aggregate upload size exceeded', path: '' }] };
+  if (total > maxReq) { incUploadFailure('file_too_large'); return { ok: false, errors: [{ code: 'file_too_large', message: 'Aggregate upload size exceeded', path: '' }] }; }
     buffers.push(chunk as Buffer);
   }
   const data = Buffer.concat(buffers);
@@ -57,15 +57,13 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
     const contentTypeMatch = /content-type:\s*([^\r\n]+)/i.exec(headerText);
     if (filenameMatch) {
       const rule = fieldRules.get(fieldName);
-      if (!rule) return err('unexpected_file_field', `Unexpected file field '${fieldName}'`, fieldName);
+  if (!rule) { incUploadFailure('unexpected_file_field'); return err('unexpected_file_field', `Unexpected file field '${fieldName}'`, fieldName); }
       const count = (fieldCounts.get(fieldName) || 0) + 1; fieldCounts.set(fieldName, count);
-      if (count > rule.maxCount) return err('file_count_exceeded', `Too many files for field '${fieldName}'`, fieldName);
+  if (count > rule.maxCount) { incUploadFailure('file_count_exceeded'); return err('file_count_exceeded', `Too many files for field '${fieldName}'`, fieldName); }
       const mime = (contentTypeMatch?.[1] || '').trim().toLowerCase();
-      if (rule.mime.length && !rule.mime.includes(mime)) {
-        return err('file_mime_invalid', `Invalid MIME '${mime}' for field '${fieldName}'`, fieldName);
-      }
+  if (rule.mime.length && !rule.mime.includes(mime)) { incUploadFailure('file_mime_invalid'); return err('file_mime_invalid', `Invalid MIME '${mime}' for field '${fieldName}'`, fieldName); }
       const buf = Buffer.from(bodyContent, 'binary');
-      if (rule.maxSizeBytes != null && buf.length > rule.maxSizeBytes) return err('file_too_large', `File too large for field '${fieldName}'`, fieldName);
+  if (rule.maxSizeBytes != null && buf.length > rule.maxSizeBytes) { incUploadFailure('file_too_large'); return err('file_too_large', `File too large for field '${fieldName}'`, fieldName); }
       // Write to temp path
       const naming = policy.storage?.naming || 'uuid';
       const fileBase = naming === 'hash' ? crypto.createHash('sha256').update(buf).digest('hex') : crypto.randomUUID();
@@ -79,7 +77,8 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
         return err('file_stream_error', `Failed to write file: ${e.message}`, fieldName);
       }
       const hash = crypto.createHash('sha256').update(buf).digest('hex');
-      files.push({ field: fieldName, path: tmpPath, size: buf.length, mime, hash, originalName: filenameMatch[1] });
+  files.push({ field: fieldName, path: tmpPath, size: buf.length, mime, hash, originalName: filenameMatch[1] });
+  incUploadFiles(1); incUploadBytes(buf.length);
     } else {
       // regular field
   const val = Buffer.from(bodyContent, 'binary').toString();
@@ -90,7 +89,7 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
   // Required file check
   for (const f of policy.fields) {
     if (f.required && !files.some(fi => fi.field === f.name)) {
-      return err('file_required_missing', `Required file field '${f.name}' missing`, f.name);
+  incUploadFailure('file_required_missing'); return err('file_required_missing', `Required file field '${f.name}' missing`, f.name);
     }
   }
   const dur = Date.now() - t0; recordTiming('uploadParseMs', dur);
