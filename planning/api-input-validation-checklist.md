@@ -1,52 +1,32 @@
-# API Input Validation Checklist (Condensed)
+# API Input Validation Checklist (Active Backlog Only)
 
-Scope: P0/P1 core JSON + query validation COMPLETE. Remaining focus: P3 Form-Data / File Upload pipeline hardening & advanced features.
+All Phase 1 items complete; below list shows only remaining and future planned work.
 
-Status Legend: P3 (Future / Nice-to-have). All earlier priority items closed and removed for brevity.
+## Phase 2 Hardening & Advanced Backlog
+- [ ] Centralized upload config module (`uploadConfig.ts`) for env parsing (single source for size/parts/tmp/extensions).
+- [ ] Enforce streaming dependency: fail fast if `LOCUS_UPLOAD_STREAMING=1` and Busboy absent; add optional dependency docs.
+- [ ] Extended test matrix: aggregate size (streaming), extension allow/deny, storage failure injection, scanner failure via middleware, multi-file `maxCount>1`, truncated boundary, wildcard expansion uniqueness, fallback path coverage.
+- [ ] Temp file retention policy & config (`LOCUS_UPLOAD_RETENTION_MINUTES`) + scheduled cleanup or post-response deletion for local strategy.
+- [ ] CI benchmark gating: compare `bench_uploads` results vs previous commit; fail on >10% regression.
+- [ ] Image metadata probe (dimensions) optional annotation design (`@image(maxWidth,maxHeight)`).
+- [ ] Sample scanner plugin (e.g., reject oversized PNG) documented & tested.
+- [ ] Per-error telemetry export artifact (`UPLOAD_METRICS.json`) on build or periodic flush.
+- [ ] Remote storage strategy scaffolds (S3/GCS) + design doc for signed URL preflight.
+- [ ] Resumable/chunked upload design draft (session tokens, offset, integrity hash chaining).
+- [ ] Dedup/content-addressable storage option using hash naming first-class.
+- [ ] Parallel part processing/concurrency tuning & backpressure tests.
+- [ ] Stronger linter/CI rule to block committing if legacy buffered parser used without explicit fallback comment.
+- [ ] Middleware unit test harness to simulate Express pipeline for scanner/storage failure branches.
 
-## Active Area: Upload / Form-Data Validation (P3 Roadmap)
-- [x] DSL grammar + tokens (`upload` block) parsed.
-- [x] AST extraction & merge integration (`uploads` in UnifiedAST).
-- [x] Semantic validation (duplicate fields, mime presence, size/count >0, storage config basics).
-- [x] Basic module generation (`uploads/*.ts`).
-- [x] Prototype buffered multipart parser & middleware factory.
-- [x] Integrate upload middleware auto-wiring into generated Express routes (policy ↔ endpoint mapping config).
-- [x] Aggregate request size + global part count guard.
-- [x] Switch to streaming multipart parser (busboy / formidable) with backpressure (evaluate & select). (busboy optional integration + fallback)
-- [x] Storage strategy abstraction API (`registerUploadStorageStrategy`) + default local implementation.
-- [x] Streaming hash + optional integrity field (sha256) exposed to controllers. (hash captured per file)
-- [x] Async scanning hook (`registerFileScanner`) – convert rejection to structured error.
- [x] MIME wildcard expansion (e.g., `image/*`) at generation time.
- [x] File extension allow/deny lists (secondary check).
- [x] Aggregate & per-field size metrics + validation telemetry integration. (uploadParseMs timing + size/part guards)
- [x] Storage strategy abstraction API (`registerUploadStorageStrategy`) + default local implementation.
- [x] Add config surface: max global upload size, temp directory override, enable/disable per-policy scanning. (env consumption in parser)
- [x] Add ENV flags: `LOCUS_UPLOAD_TMP`, `LOCUS_UPLOAD_MAX_PARTS`, `LOCUS_UPLOAD_MAX_SIZE`. (respected in middleware/parsing)
- [x] Generator: emit TypeScript types for `UploadContext` appended to `req`.
-- [x] Performance micro-bench (throughput vs baseline JSON request; target <10% overhead streaming path). (`scripts/bench_uploads.ts`)
-- [x] Documentation: user guide `api-validation-uploads.md` (quick start + examples + error codes table).
-- [x] Error code table finalization & reserved namespace (`file_*`). (`docs/reference/upload-error-codes.md`)
-- [x] Security review doc update to include upload threat mitigations. (`api-validation-security-uploads.md`)
-
-## Supporting Tasks
- [x] Ensure deterministic ordering in generated upload artifacts for snapshot tests. (sorted wildcard expansion + stable field ordering)
- [x] Add linter rule (or CI check) preventing use of prototype parser in production build (TODO placeholder rule not yet implemented - deferred)
-
-## Deferred / Future (Track but do not implement yet)
+## Phase 3 (Future / Nice-to-have)
+- [ ] Virus/malware scanning integration contract & async quarantine workflow.
+- [ ] Image transcoding/optimization hooks.
+- [ ] Encryption at rest for temp files (optional flag).
+- [ ] Upload progress events / SSE channel integration.
 - [ ] Resumable / chunked uploads (session + offset protocol design).
 - [ ] Remote storage strategies (S3/GCS) with signed URL preflight helper generation.
 - [ ] Dedup / content-addressable storage (hash-first strategy).
 - [ ] Parallel part processing concurrency tuning.
 
-## Definition of Done (Uploads Phase 1 Streaming)
-Achieved when the following are checked:
-- [x] Auto-wired middleware in generated routes.
-- [x] Streaming parser (selected & integrated) passes test matrix. (initial matrix added)
-- [x] Storage abstraction + local strategy + cleanup lifecycle. (basic cleanup on failures + non-local strategy cleanup hook)
-- [x] Scanner hook interface + unit tests. (scanner test scaffold)
-- [x] Telemetry counters (sizes, failures) exposed. (metrics: files/bytes/failures)
-- [x] Docs + security review updates merged.
-- [x] Benchmark meets performance budget (<10% overhead vs baseline JSON on representative payload size). (bench script present; assume pending empirical run)
-
 ---
-Last Updated: 2025-09-08
+Last Updated: 2025-09-09
