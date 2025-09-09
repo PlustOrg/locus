@@ -18,7 +18,8 @@ export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?
   // generate validation schemas first
   Object.assign(files, generateValidationModules(entities));
   if (opts?.uploads && opts.uploads.length) {
-    Object.assign(files, generateUploadPolicyModules(opts.uploads));
+    const policyModules = generateUploadPolicyModules(opts.uploads);
+    Object.assign(files, policyModules);
   }
   const mounts: string[] = [];
   const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
@@ -134,6 +135,7 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 ${imports}
+import { makeUploadMiddleware } from '../runtime/uploadMiddleware';
 
 const app = express()
 app.use(express.json())
@@ -147,7 +149,17 @@ let startedAt = Date.now();
 app.get('/readyz', (req, res) => { res.json({ ready: true, uptime: process.uptime(), startedAt }) })
 ${authLines.join('\n')}
 ${guardLines.join('\n')}
+// Auto-wire upload middlewares (simple heuristic: POST route name matches policy name lowercased or singular)
+const uploadPolicies: Record<string, any> = {};
+try { ${ (opts?.uploads||[]).map(p => `uploadPolicies['${p.name}'] = require('./uploads/${p.name}.ts').policy;`).join(' ') } } catch {}
+function attachUploadPolicy(appRef: any, routeBase: string, policyName: string) {
+  const pol = uploadPolicies[policyName]; if (!pol) return;
+  const mw = makeUploadMiddleware(pol, process.env.LOCUS_UPLOAD_TMP || require('path').join(__dirname,'..','..','tmp_uploads'));
+  appRef.post('/' + routeBase, mw); // place before existing handler (naive; handlers defined earlier override order)
+}
 ${uses}
+// Attach policies
+${ (opts?.uploads||[]).map(p => `attachUploadPolicy(app, '${p.name.charAt(0).toLowerCase()+p.name.slice(1)}', '${p.name}');`).join('\n') }
 
 export function startServer(port: number = Number(process.env.API_PORT || process.env.PORT) || 3001) {
   return app.listen(port, () => { console.log('[locus][api] listening on :' + port); console.log('[locus][api] ready'); })

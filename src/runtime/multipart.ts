@@ -2,6 +2,7 @@ import { IncomingMessage } from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
 import crypto from 'crypto';
+import { recordTiming } from '../metrics';
 
 export interface UploadFieldRule {
   name: string; required: boolean; maxSizeBytes?: number; maxCount: number; mime: string[];
@@ -15,7 +16,8 @@ export interface UploadedFileMeta { field: string; path: string; size: number; m
 export interface MultipartResult { ok: boolean; errors?: Array<{ code: string; message: string; path: string }>; files?: UploadedFileMeta[]; bodyFields?: Record<string, any> }
 
 // Minimal streaming multipart parser (boundary scan). Not production-grade but adequate placeholder until lib integration.
-export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyRuntime, tmpDir: string): Promise<MultipartResult> {
+export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyRuntime, tmpDir: string, opts?: { maxRequestBytes?: number; maxParts?: number; allowExt?: string[]; denyExt?: string[] }): Promise<MultipartResult> {
+  const t0 = Date.now();
   const ctype = req.headers['content-type'] || '';
   const m = /boundary=([^;]+)/i.exec(ctype as string);
   if (!/multipart\/form-data/.test(ctype) || !m) {
@@ -23,7 +25,12 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
   }
   const boundary = '--' + m[1];
   const buffers: Buffer[] = [];
-  for await (const chunk of req) buffers.push(chunk as Buffer);
+  let total = 0; const maxReq = opts?.maxRequestBytes || Number(process.env.LOCUS_UPLOAD_MAX_SIZE) || 25*1024*1024;
+  for await (const chunk of req) {
+    total += (chunk as Buffer).length;
+    if (total > maxReq) return { ok: false, errors: [{ code: 'file_too_large', message: 'Aggregate upload size exceeded', path: '' }] };
+    buffers.push(chunk as Buffer);
+  }
   const data = Buffer.concat(buffers);
   const parts = data.toString('binary').split(boundary);
   const files: UploadedFileMeta[] = [];
@@ -31,8 +38,12 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
   const fieldRules = new Map(policy.fields.map(f => [f.name, f] as const));
   const fieldCounts = new Map<string, number>();
   function err(code: string, message: string, pathField: string): MultipartResult { return { ok: false, errors: [{ code, message, path: pathField }] }; }
+  const maxParts = opts?.maxParts || Number(process.env.LOCUS_UPLOAD_MAX_PARTS) || 100;
+  let partCounter = 0;
   for (const rawPart of parts) {
+    if (partCounter > maxParts) return err('file_count_exceeded', 'Too many multipart parts', '');
     if (!rawPart || rawPart === '--\r\n' || rawPart === '--') continue;
+    partCounter++;
     const idx = rawPart.indexOf('\r\n\r\n');
     if (idx === -1) continue;
     const headerText = rawPart.slice(0, idx);
@@ -58,7 +69,11 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
       // Write to temp path
       const naming = policy.storage?.naming || 'uuid';
       const fileBase = naming === 'hash' ? crypto.createHash('sha256').update(buf).digest('hex') : crypto.randomUUID();
-      const ext = path.extname(filenameMatch[1] || '');
+  const ext = path.extname(filenameMatch[1] || '').toLowerCase();
+  const allow = opts?.allowExt || (process.env.LOCUS_UPLOAD_ALLOW_EXT ? process.env.LOCUS_UPLOAD_ALLOW_EXT.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean) : undefined);
+  const deny = opts?.denyExt || (process.env.LOCUS_UPLOAD_DENY_EXT ? process.env.LOCUS_UPLOAD_DENY_EXT.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean) : undefined);
+  if (allow && allow.length && !allow.includes(ext.replace(/^\./,''))) return err('file_extension_invalid', `Extension not allowed for field '${fieldName}'`, fieldName);
+  if (deny && deny.length && deny.includes(ext.replace(/^\./,''))) return err('file_extension_invalid', `Extension denied for field '${fieldName}'`, fieldName);
       const tmpPath = path.join(tmpDir, fileBase + ext);
       try { fs.writeFileSync(tmpPath, buf); } catch (e: any) {
         return err('file_stream_error', `Failed to write file: ${e.message}`, fieldName);
@@ -78,5 +93,6 @@ export async function parseMultipart(req: IncomingMessage, policy: UploadPolicyR
       return err('file_required_missing', `Required file field '${f.name}' missing`, f.name);
     }
   }
+  const dur = Date.now() - t0; recordTiming('uploadParseMs', dur);
   return { ok: true, files, bodyFields };
 }
