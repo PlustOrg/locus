@@ -1,7 +1,7 @@
 import { LocusError, errorToDiagnostic } from '../errors';
 import chalk from 'chalk';
 import boxen from 'boxen';
-import { colorizeFriendlyMessage, humanizeToken, simplifyChevrotainMessage } from './reportUtils';
+import { colorizeFriendlyMessage, simplifyChevrotainMessage } from './reportUtils';
 
 export type ErrorOutputFormat = 'pretty' | 'json';
 

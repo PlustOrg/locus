@@ -10,11 +10,11 @@ export function mapPrimitiveToken(key: string): FieldType['name'] {
     case 'BooleanT': return 'Boolean';
     case 'DateTimeT': return 'DateTime';
     case 'JsonT': return 'Json';
-  case 'BigIntT': return 'BigInt';
-  case 'FloatT': return 'Float';
-  case 'UUIDT': return 'UUID';
-  case 'EmailT': return 'Email';
-  case 'URLT': return 'URL';
+    case 'BigIntT': return 'BigInt';
+    case 'FloatT': return 'Float';
+    case 'UUIDT': return 'UUID';
+    case 'EmailT': return 'Email';
+    case 'URLT': return 'URL';
     default: return 'String';
   }
 }

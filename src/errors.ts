@@ -89,10 +89,17 @@ function extractOffendingIdentifier(msg: string): string | undefined {
 }
 function computeSuggestions(msg: string): string[] | undefined {
   const tok = extractOffendingIdentifier(msg);
-  if (!tok) return undefined;
-  const ranked = SUGGEST_KEYWORDS.map(k => [k, levenshtein(tok, k)] as const).sort((a,b)=>a[1]-b[1]);
-  const best = ranked.filter(r => r[1] <= 2).slice(0,3).map(r=>r[0]);
-  return best.length ? best : undefined;
+  const suggestions: string[] = [];
+  if (tok) {
+    const ranked = SUGGEST_KEYWORDS.map(k => [k, levenshtein(tok, k)] as const).sort((a,b)=>a[1]-b[1]);
+    suggestions.push(...ranked.filter(r => r[1] <= 2).slice(0,3).map(r=>r[0]));
+  }
+  // Heuristics for common multi-token mistakes
+  if (/else\s+if/.test(msg)) suggestions.push('elseif');
+  if (/for\s+each/i.test(msg)) suggestions.push('forEach');
+  if (/on\s+delete/i.test(msg)) suggestions.push('on_delete');
+  const dedup = Array.from(new Set(suggestions));
+  return dedup.length ? dedup : undefined;
 }
 
 export function errorToDiagnostic(e: LocusError): Diagnostic {
@@ -152,8 +159,8 @@ export class GeneratorError extends Error {
 
 /** Validation Error */
 export class VError extends LocusError {
-  constructor(message: string, filePath?: string, line?: number, col?: number) {
-    super({ code: 'validation_error', message, filePath, line, column: col });
+  constructor(message: string, filePath?: string, line?: number, col?: number, length?: number) {
+    super({ code: 'validation_error', message, filePath, line, column: col, length });
   }
 }
 

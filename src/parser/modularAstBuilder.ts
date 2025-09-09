@@ -227,6 +227,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
             if (buf.trim()) parts.push(buf.trim());
             return parts;
           };
+          let stepAuto = 0;
           const buildStepsFromNodes = (nodes: any[]): WorkflowStep[] => nodes.map(st => {
             const raw = extractText(st);
             let runNode = findFirstChildByName(st, 'runStep');
@@ -268,7 +269,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               const bm = /^\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(raw);
               if (bm) binding = bm[1];
               const loc = actionTok ? { line: actionTok.startLine, column: actionTok.startColumn } : undefined;
-              return { kind: 'run', raw, action: actionTok?.image, argsRaw: inner, args, expr, binding, loc } as any;
+              return { kind: 'run', raw, action: actionTok?.image, argsRaw: inner, args, expr, binding, loc, id: 's' + (stepAuto++) } as any;
             }
             // BRANCH
             if (branchNode) {
@@ -302,7 +303,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               // use first token inside branchNode (it should start with Branch token)
               const brTok: any = (branchNode as any).children?.Branch?.[0];
               const loc = brTok ? { line: brTok.startLine, column: brTok.startColumn } : undefined;
-              return { kind: 'branch', raw, conditionRaw, conditionExpr, steps: thenSteps, elseSteps, loc } as any;
+              return { kind: 'branch', raw, conditionRaw, conditionExpr, steps: thenSteps, elseSteps, loc, id: 's' + (stepAuto++) } as any;
             }
             // FOR EACH
             if (forEachNode) {
@@ -314,13 +315,13 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               const bodySteps = buildStepsFromNodes(fChildren.workflowStepStmt || []);
               const feTok: any = (forEachNode as any).children?.ForEach?.[0];
               const loc = feTok ? { line: feTok.startLine, column: feTok.startColumn } : undefined;
-              return { kind: 'for_each', raw, loopVar: loopVarTok?.image, iterRaw, iterExpr, steps: bodySteps, loc } as any;
+              return { kind: 'for_each', raw, loopVar: loopVarTok?.image, iterRaw, iterExpr, steps: bodySteps, loc, id: 's' + (stepAuto++) } as any;
             }
             // DELAY
             if (delayNode) {
               const dTok: any = (delayNode as any).children?.Delay?.[0];
               const loc = dTok ? { line: dTok.startLine, column: dTok.startColumn } : undefined;
-              return { kind: 'delay', raw, loc } as any;
+              return { kind: 'delay', raw, loc, id: 's' + (stepAuto++) } as any;
             }
             // HTTP REQUEST
             if (httpNode) {
@@ -334,7 +335,7 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
                 const ec: any = ecArr[ecArr.length - 1];
                 if (sc && ec && originalSource) inner = originalSource.slice(sc.endOffset + 1, ec.startOffset).trim();
               } catch {}
-              return { kind: 'http_request', raw: inner, loc } as any;
+              return { kind: 'http_request', raw: inner, loc, id: 's' + (stepAuto++) } as any;
             }
             // SEND EMAIL (structured block) - capture raw section between braces (already in raw)
             if (sendEmailNode) {
@@ -361,41 +362,39 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
               const template = grab('template');
               const seTok: any = (sendEmailNode as any).children?.SendEmail?.[0];
               const loc = seTok ? { line: seTok.startLine, column: seTok.startColumn } : undefined;
-              return { kind: 'send_email', raw, to, subject, template, loc } as any;
+              return { kind: 'send_email', raw, to, subject, template, loc, id: 's' + (stepAuto++) } as any;
             }
             // PARALLEL placeholder raw capture
             if (/^\s*parallel\b/.test(raw)) {
-              return { kind: 'parallel', raw } as any;
+              return { kind: 'parallel', raw, id: 's' + (stepAuto++) } as any;
             }
             if (/^\s*queue_publish\b/.test(raw)) {
-              return { kind: 'queue_publish', raw } as any;
+              return { kind: 'queue_publish', raw, id: 's' + (stepAuto++) } as any;
             }
             if (/^\s*db_tx\b/.test(raw)) {
-              return { kind: 'db_tx', raw } as any;
+              return { kind: 'db_tx', raw, id: 's' + (stepAuto++) } as any;
             }
             // fallback heuristic
             const trimmed = raw.trim();
-            if (/^(?:const\s+\w+\s*=\s*)?delay\b/.test(trimmed)) return { kind: 'delay', raw } as any;
-            if (/^\s*http_request\b/.test(raw)) return { kind: 'http_request', raw } as any;
+            if (/^(?:const\s+\w+\s*=\s*)?delay\b/.test(trimmed)) return { kind: 'delay', raw, id: 's' + (stepAuto++) } as any;
+            if (/^\s*http_request\b/.test(raw)) return { kind: 'http_request', raw, id: 's' + (stepAuto++) } as any;
             // legacy heuristic fallback retains for free-form steps (kept for unknown kinds)
             const childVals: any[] = (st as any).children ? (Object.values((st as any).children) as any[]) : [];
             const firstArr: any = childVals.length ? childVals[0] : undefined;
             const firstTok: any = Array.isArray(firstArr) ? firstArr[0] : firstArr;
             const loc = firstTok && firstTok.startLine ? { line: firstTok.startLine, column: firstTok.startColumn } : undefined;
-            return { kind: 'unknown', raw, loc } as any;
+            return { kind: 'unknown', raw, loc, id: 's' + (stepAuto++) } as any;
           });
           (block as any).steps = buildStepsFromNodes(stepChildren);
-            // Assign stable numeric ids
-            if (Array.isArray((block as any).steps)) {
-              (block as any).steps.forEach((s: any, idx: number) => { if (!s.id) s.id = idx + 1; });
-              // Experimental step gating: hide experimental kinds unless enabled via env flag
-              const expEnabled = process.env.LOCUS_ENABLE_EXPERIMENTAL_STEPS === '1';
-              if (!expEnabled) {
-                (block as any).steps.forEach((s: any) => {
-                  if (['parallel','queue_publish','db_tx'].includes(s.kind)) s.kind = 'unknown';
-                });
-              }
+          // Experimental step gating: hide experimental kinds unless enabled via env flag
+          if (Array.isArray((block as any).steps)) {
+            const expEnabled = process.env.LOCUS_ENABLE_EXPERIMENTAL_STEPS === '1';
+            if (!expEnabled) {
+              (block as any).steps.forEach((s: any) => {
+                if (['parallel','queue_publish','db_tx'].includes(s.kind)) s.kind = 'unknown';
+              });
             }
+          }
           }
         }
         else capture(chW.stepsWorkflowBlock, 'steps');

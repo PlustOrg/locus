@@ -8,11 +8,10 @@
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg" alt="Node.js version">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
-  <img src="https://img.shields.io/badge/docs%20overhaul-in%20progress-yellow" alt="Docs Overhaul Progress">
   <a href="https://deepwiki.com/PlustOrg/locus"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </div>
 
-
+---
 
 Locus is a source-to-source compiler and toolchain for building full-stack web applications with maximum velocity and clarity. Write simple, declarative `.locus` files and generate:
 

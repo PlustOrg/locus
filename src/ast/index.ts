@@ -129,7 +129,7 @@ export interface WorkflowBlock {
 
 // Structured workflow step (Phase 4+ incremental)
 export type WorkflowStep = RunStep | DelayStep | BranchStep | ForEachStep | HttpRequestStep | SendEmailStep | ParallelStep | QueuePublishStep | DbTxStep | UnknownStep;
-export interface BaseStep { kind: string; raw: string; }
+export interface BaseStep { kind: string; raw: string; id?: string; }
 export interface RunStep extends BaseStep { kind: 'run'; action: string; argsRaw?: string; args?: string[]; expr?: ExprNode }
 export interface DelayStep extends BaseStep { kind: 'delay' }
 export interface HttpRequestStep extends BaseStep { kind: 'http_request'; name?: string }

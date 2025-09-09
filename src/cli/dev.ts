@@ -9,7 +9,7 @@ import chalk from 'chalk';
 import { getAppName } from '../generator/outputs';
 import { loadConfig } from '../config/config';
 import { createIncrementalBuilder } from './incremental';
-import { collectLocusFiles, spawnSafe, createDebounce } from './utils';
+import { spawnSafe, createDebounce } from './utils';
 
 /**
  * Format the startup banner for dev mode.

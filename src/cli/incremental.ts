@@ -97,9 +97,9 @@ export function createIncrementalBuilder(opts: {
       if (!filePath.endsWith('.locus')) return; // ignore non-locus changes
       try {
         const content = readFileSync(filePath, 'utf8');
-  const hash = crypto.createHash('sha256').update(content).digest('hex');
-  if (contentHash.get(filePath) === hash) return; // no block-level changes
-  contentHash.set(filePath, hash);
+        const hash = crypto.createHash('sha256').update(content).digest('hex');
+        if (contentHash.get(filePath) === hash) return; // no block-level changes
+        contentHash.set(filePath, hash);
         opts.fileMap.set(filePath, content);
         cache.set(filePath, parseLocus(content, filePath));
       } catch (e) {

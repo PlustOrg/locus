@@ -1,7 +1,7 @@
-import { dirname } from 'path';
-// (removed duplicate import)
-import { exec } from 'child_process';
 // Utility functions for CLI operations
+
+import { dirname } from 'path';
+import { exec } from 'child_process';
 import { readdirSync, statSync, promises as fsp, existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { spawn } from 'child_process';

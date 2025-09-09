@@ -28,8 +28,8 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Create formal trigger DSL grammar: `trigger { on: create(Entity) | update(Entity) | webhook(secret: NAME) }` (implemented in `triggerBlock` + builder extraction)
 - [x] (P0) Implement structured step grammar replacing raw sections (steps CST + modularAstBuilder structured extraction)
 - [x] (P0) Add retry configuration schema: `retry { max: Int backoff: fixed|exponential factor: Int delay: Duration }` (retryBlock + parsed fields)
-- [ ] (P1) Validate step references against available actions/operations
-- [ ] (P1) Add deterministic step ID assignment for tracing
+- [x] (P1) Validate step references against available actions/operations (validator cross-references run step action names)
+- [x] (P1) Add deterministic step ID assignment for tracing (auto 'sN' IDs in modularAstBuilder)
 - [ ] (P2) Implement step dependency analysis and ordering
 
 ## 2. Type System Enhancements
@@ -67,9 +67,9 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ## 3. Error Reporting & Diagnostics
 
 ### Error Quality Improvements
-- [ ] (P0) Provide precise token spans for all error types via unified CST
-- [ ] (P0) Implement multi-token suggestions using Levenshtein distance
-- [ ] (P0) Add context-specific error messages for attribute misuse
+- [x] (P0) Provide precise token spans for all error types via unified CST (PError/VError support length; parser populates spans)
+- [x] (P0) Implement multi-token suggestions using Levenshtein distance (enhanced computeSuggestions heuristics)
+- [x] (P0) Add context-specific error messages for attribute misuse (initial: optional list, optional+nullable, relation policy, workflow trigger conflicts)
 - [ ] (P1) Include suggested replacement snippets in error metadata
 - [ ] (P1) Implement quick-fix suggestions for common errors
 - [ ] (P2) Add error correlation across multiple files
