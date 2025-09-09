@@ -25,6 +25,11 @@ import {
   UUIDT,
   EmailT,
   URLT,
+  NullT,
+  OnDelete,
+  Cascade,
+  Restrict,
+  SetNull,
   Question,
   LParen,
   RParen,
@@ -109,7 +114,7 @@ import {
   MaxSizeKw,
   MaxCountKw,
   MimeKw,
-  StoreKw,
+  // StoreKw removed (duplicate pattern)
   StrategyKw,
   PathKw,
   NamingKw,
@@ -266,7 +271,7 @@ export class DatabaseCstParser extends CstParser {
   });
 
   private uploadStoreDecl = this.RULE('uploadStoreDecl', () => {
-    this.CONSUME(StoreKw);
+  this.CONSUME(Store);
     this.MANY(() => this.OR([
       { ALT: () => this.SUBRULE(this.strategyDecl) },
       { ALT: () => this.SUBRULE(this.pathDecl) },
@@ -528,7 +533,28 @@ export class DatabaseCstParser extends CstParser {
   private styleOverrideBlock = this.RULE('styleOverrideBlock', () => {
     this.CONSUME(StyleOverride);
     this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
+    // Allow CSS-ish arbitrary content similar to styleBlock but simpler
+    this.MANY(() => this.OR([
+      { ALT: () => { this.CONSUME1(LCurly); this.SUBRULE(this.rawContent); this.CONSUME1(RCurly); } },
+      { ALT: () => this.CONSUME(Identifier) },
+      { ALT: () => this.CONSUME(StringLiteral) },
+      { ALT: () => this.CONSUME(NumberLiteral) },
+      { ALT: () => this.CONSUME(Comma) },
+      { ALT: () => this.CONSUME(Colon) },
+      { ALT: () => this.CONSUME(SemicolonTok) },
+      { ALT: () => this.CONSUME(DotTok) },
+      { ALT: () => this.CONSUME(PlusTok) },
+      { ALT: () => this.CONSUME(HyphenTok) },
+      { ALT: () => this.CONSUME(SlashTok) },
+      { ALT: () => this.CONSUME(StarTok) },
+      { ALT: () => this.CONSUME(LBracketTok) },
+      { ALT: () => this.CONSUME(RBracketTok) },
+      { ALT: () => this.CONSUME(SingleQuoteTok) },
+      { ALT: () => this.CONSUME(Question) },
+      { ALT: () => this.CONSUME(Less) },
+      { ALT: () => this.CONSUME(Greater) },
+      { ALT: () => this.CONSUME(Unknown) },
+    ]));
     this.CONSUME(RCurly);
   });
   private styleBlock = this.RULE('styleBlock', () => {
@@ -873,31 +899,34 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); } },
 	{ ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); this.OPTION1(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
     ]);
-  this.OPTION2(() => {
-  if (this.LA(1).image === 'nullable') this.CONSUME(Identifier);
-    });
-    // Optional nullability union syntax: Type | Null
-    this.OPTION3(() => {
-      if (this.LA(1).tokenType.name === 'PipeTok') {
-    this.CONSUME(PipeTok);
-        if (this.LA(1).image === 'Null') this.CONSUME1(Identifier);
-      }
-    });
+    // Support 'nullable' keyword OR union with NullT
+    this.OPTION2(() => { if (this.LA(1).image === 'nullable') this.CONSUME(Identifier); });
+    this.OPTION3(() => { if (this.LA(1).tokenType === PipeTok) { this.CONSUME(PipeTok); this.CONSUME(NullT); } });
   });
 
   private relationDecl = this.RULE('relationDecl', () => {
-  this.CONSUME1(Identifier); // relation field name
+	this.CONSUME1(Identifier); // relation field name
     this.CONSUME(Colon);
     this.OR([
       { ALT: () => this.CONSUME(HasMany) },
       { ALT: () => this.CONSUME(BelongsTo) },
       { ALT: () => this.CONSUME(HasOne) },
     ]);
-  this.CONSUME2(Identifier); // target entity name
-  this.MANY(() => this.OR1([
+	this.CONSUME2(Identifier); // target entity name
+	this.MANY(() => this.OR1([
       { ALT: () => this.SUBRULE(this.fieldAttributeGroup) },
       { ALT: () => this.SUBRULE(this.fieldAnnotation) },
     ]));
+    // optional referential integrity clause: on_delete: cascade|restrict|set_null
+    this.OPTION4(() => {
+      this.CONSUME(OnDelete);
+      this.CONSUME(Colon);
+      this.OR2([
+        { ALT: () => this.CONSUME(Cascade) },
+        { ALT: () => this.CONSUME(Restrict) },
+        { ALT: () => this.CONSUME(SetNull) },
+      ]);
+    });
   });
 
   private fieldAttributeGroup = this.RULE('fieldAttributeGroup', () => {

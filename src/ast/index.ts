@@ -89,6 +89,7 @@ export interface Relation {
   optional?: boolean; // for belongs_to ?
   nameLoc?: { line: number; column: number };
   targetLoc?: { line: number; column: number };
+  onDelete?: 'cascade' | 'restrict' | 'set_null';
 }
 
 // Design System (Phase 1.2)

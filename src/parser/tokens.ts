@@ -80,6 +80,11 @@ export const FloatT = createToken({ name: 'FloatT', pattern: /Float\b/ });
 export const UUIDT = createToken({ name: 'UUIDT', pattern: /UUID\b/ });
 export const EmailT = createToken({ name: 'EmailT', pattern: /Email\b/ });
 export const URLT = createToken({ name: 'URLT', pattern: /URL\b/ });
+export const NullT = createToken({ name: 'NullT', pattern: /Null\b/ });
+export const OnDelete = createToken({ name: 'OnDelete', pattern: /on_delete\b/ });
+export const Cascade = createToken({ name: 'Cascade', pattern: /cascade\b/ });
+export const Restrict = createToken({ name: 'Restrict', pattern: /restrict\b/ });
+export const SetNull = createToken({ name: 'SetNull', pattern: /set_null\b/ });
 export const LCurly = createToken({ name: 'LCurly', pattern: /\{/ });
 export const RCurly = createToken({ name: 'RCurly', pattern: /\}/ });
 export const Colon = createToken({ name: 'Colon', pattern: /:/ });
@@ -104,7 +109,6 @@ export const Unique = createToken({ name: 'Unique', pattern: /unique\b/ });
 export const Default = createToken({ name: 'Default', pattern: /default\b/ });
 export const MapTok = createToken({ name: 'MapTok', pattern: /map\b/ });
 export const MinTok = createToken({ name: 'MinTok', pattern: /min\b/ });
-export const MaxTok2 = createToken({ name: 'MaxTok2', pattern: /max\b/ });
 export const LengthTok = createToken({ name: 'LengthTok', pattern: /length\b/ });
 export const PatternTok = createToken({ name: 'PatternTok', pattern: /pattern\b/ });
 export const EmailTok = createToken({ name: 'EmailTok', pattern: /email\b/ });
@@ -116,7 +120,6 @@ export const FieldKw = createToken({ name: 'FieldKw', pattern: /field\b/ });
 export const MaxSizeKw = createToken({ name: 'MaxSizeKw', pattern: /maxSize\b/ });
 export const MaxCountKw = createToken({ name: 'MaxCountKw', pattern: /maxCount\b/ });
 export const MimeKw = createToken({ name: 'MimeKw', pattern: /mime\b/ });
-export const StoreKw = createToken({ name: 'StoreKw', pattern: /store\b/ });
 export const StrategyKw = createToken({ name: 'StrategyKw', pattern: /strategy\b/ });
 export const PathKw = createToken({ name: 'PathKw', pattern: /path\b/ });
 export const NamingKw = createToken({ name: 'NamingKw', pattern: /naming\b/ });
@@ -209,6 +212,11 @@ export const AllTokens = [
   UUIDT,
   EmailT,
   URLT,
+  NullT,
+  OnDelete,
+  Cascade,
+  Restrict,
+  SetNull,
   LCurly,
   RCurly,
   Colon,
@@ -233,7 +241,7 @@ export const AllTokens = [
   Default,
   MapTok,
   MinTok,
-  MaxTok2,
+  // MaxTok2 removed (duplicate of MaxKw)
   LengthTok,
   PatternTok,
   EmailTok,
@@ -245,7 +253,7 @@ export const AllTokens = [
   MaxSizeKw,
   MaxCountKw,
   MimeKw,
-  StoreKw,
+  // StoreKw removed (duplicate of Store)
   StrategyKw,
   PathKw,
   NamingKw,

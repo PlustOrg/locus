@@ -42,6 +42,17 @@ function renderModel(entity: Entity, _all: Entity[]): string {
   }
   // relations
   for (const r of entity.relations) {
+    // Append referential action if present
+    if (r.onDelete) {
+      // Prisma syntax example: @relation(onDelete: Cascade)
+      const action = r.onDelete === 'cascade' ? 'Cascade' : r.onDelete === 'restrict' ? 'Restrict' : r.onDelete === 'set_null' ? 'SetNull' : undefined;
+      if (action) {
+        fields.push(`  // on_delete hint`);
+        const rel = `${r.name} ${r.target} @relation(fields: [${r.name}Id], references: [id], onDelete: ${action})`;
+        fields.push(rel);
+        continue;
+      }
+    }
     if (r.kind === 'has_many') {
       fields.push(`${r.name} ${r.target}[]`);
     } else if (r.kind === 'belongs_to') {

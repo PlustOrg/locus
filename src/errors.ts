@@ -3,6 +3,19 @@ export type LocusErrorCode =
   //
   'lex_error' | 'parse_error' | 'merge_error' | 'validation_error';
 
+// Structured diagnostic machine codes (Phase 1 initial set)
+export const DiagnosticCode = {
+  PARSE_UNEXPECTED_TOKEN: 'PARSE_UNEXPECTED_TOKEN',
+  PARSE_MISSING_TOKEN: 'PARSE_MISSING_TOKEN',
+  PARSE_UNKNOWN_KEYWORD: 'PARSE_UNKNOWN_KEYWORD',
+  VALIDATION_UNKNOWN_ENTITY: 'VALIDATION_UNKNOWN_ENTITY',
+  VALIDATION_DUP_FIELD: 'VALIDATION_DUP_FIELD',
+  RELATION_INVALID_ON_DELETE: 'RELATION_INVALID_ON_DELETE',
+  TYPE_OPTIONAL_LIST: 'TYPE_OPTIONAL_LIST',
+  TYPE_INCOMPATIBLE_OPTIONAL_NULLABLE: 'TYPE_INCOMPATIBLE_OPTIONAL_NULLABLE'
+} as const;
+export type DiagnosticCodeKey = keyof typeof DiagnosticCode;
+
 export type DiagnosticSeverity = 'error' | 'warning' | 'info';
 
 export interface Diagnostic {
@@ -96,6 +109,7 @@ export function errorToDiagnostic(e: LocusError): Diagnostic {
     merge_error: 'MERGE_ERROR',
     validation_error: 'VALIDATION_ERROR'
   };
+  // Keep suggestions length-based highlight for parse errors
   return {
     kind,
     code: codeMap[e.code] || 'UNKNOWN',

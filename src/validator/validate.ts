@@ -554,6 +554,14 @@ export function validateDatabase(ast: UnifiedAST) {
         );
       }
       seen.set(f.name, f);
+      if (f.type?.kind === 'list' && f.type.optional) {
+        const loc = (f as any).nameLoc;
+        throw new VError(`Optional list type not allowed for field '${f.name}' on entity '${ent.name}'`, (ent as any).sourceFile, loc?.line, loc?.column);
+      }
+      if (f.type?.kind === 'primitive' && f.type.optional && (f.type as any).nullable) {
+        const loc = (f as any).nameLoc;
+        throw new VError(`Field '${f.name}' on entity '${ent.name}' cannot be both optional and nullable. Use either '?' or '| Null/nullable'.`, (ent as any).sourceFile, loc?.line, loc?.column);
+      }
     }
     // relation policy validation
     for (const r of ent.relations as any[]) {

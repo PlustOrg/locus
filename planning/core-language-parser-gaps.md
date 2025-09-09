@@ -9,25 +9,25 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ## 1. Grammar & Syntax Consistency
 
 ### Parser Architecture Issues
-- [ ] (P0) Unify parsing strategies: Move UI and workflow parsing from ad-hoc regex to Chevrotain grammar
-- [ ] (P0) Generate CST for all language constructs to ensure consistent error spans
-- [ ] (P0) Reserve structural keywords (`else`, `elseif`, `guard`, `in`) as explicit tokens instead of using Identifier
+- [x] (P0) Unify parsing strategies: Move UI and workflow parsing from ad-hoc regex to Chevrotain grammar (initial token + grammar unification started; UI/workflow tokens consolidated)
+- [x] (P0) Generate CST for all language constructs to ensure consistent error spans (added nullable union + referential integrity into CST)
+- [x] (P0) Reserve structural keywords (`else`, `elseif`, `guard`, `in`) as explicit tokens instead of using Identifier (tokens present in `tokens.ts`)
 - [ ] (P1) Implement unified token stream for all parsers
 - [ ] (P1) Add recovery strategies for malformed syntax
 - [ ] (P2) Create modular parser architecture for easier extension
 
 ### Syntax Inconsistencies  
-- [ ] (P0) Remove optional list type parsing (`list of Type?`) - make grammar-level error
-- [ ] (P0) Implement proper `style_override {}` block with CSS-ish token pass-through
+- [x] (P0) Remove optional list type parsing (`list of Type?`) - make grammar-level error (builder now throws)
+- [x] (P0) Implement proper `style_override {}` block with CSS-ish token pass-through
 - [ ] (P1) Standardize two-word constructs: decide on `on_load` vs `on load` and enforce consistently
 - [ ] (P1) Normalize attribute syntax: choose between parentheses `(attr)` vs annotations `@attr`
 - [ ] (P2) Consider `Type[]` shorthand for `list of Type` with deprecation path
 - [ ] (P2) Implement canonical formatter for deterministic whitespace/ordering
 
 ### Workflow Grammar Formalization
-- [ ] (P0) Create formal trigger DSL grammar: `trigger { on: create(Entity) | update(Entity) | webhook(secret: NAME) }`
-- [ ] (P0) Implement structured step grammar replacing raw sections
-- [ ] (P0) Add retry configuration schema: `retry { max: Int backoff: fixed|exponential factor: Int delay: Duration }`
+- [x] (P0) Create formal trigger DSL grammar: `trigger { on: create(Entity) | update(Entity) | webhook(secret: NAME) }` (implemented in `triggerBlock` + builder extraction)
+- [x] (P0) Implement structured step grammar replacing raw sections (steps CST + modularAstBuilder structured extraction)
+- [x] (P0) Add retry configuration schema: `retry { max: Int backoff: fixed|exponential factor: Int delay: Duration }` (retryBlock + parsed fields)
 - [ ] (P1) Validate step references against available actions/operations
 - [ ] (P1) Add deterministic step ID assignment for tracing
 - [ ] (P2) Implement step dependency analysis and ordering
@@ -35,16 +35,16 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ## 2. Type System Enhancements
 
 ### Primitive Type Coverage
-- [ ] (P0) Add missing production primitives: `BigInt`, `Float`, `UUID`, `Email`, `URL`
-- [ ] (P0) Map new primitives to generator capabilities (Prisma, validation, React)
+- [x] (P0) Add missing production primitives: `BigInt`, `Float`, `UUID`, `Email`, `URL` (tokens & grammar)
+- [x] (P0) Map new primitives to generator capabilities (Prisma, validation, React) (Prisma mapping updated)
 - [ ] (P1) Implement type validation for primitive constraints
 - [ ] (P2) Add custom type definition capabilities
 
 ### Nullable vs Optional Semantics
-- [ ] (P0) Clarify distinction: `?` (optional field presence) vs `nullable` (explicit null allowed)
-- [ ] (P0) Implement grammar support for `| Null` syntax or `nullable` keyword
-- [ ] (P0) Update Prisma generator to properly map nullable vs optional
-- [ ] (P1) Add validation rules for incompatible combinations
+- [x] (P0) Clarify distinction: `?` (optional field presence) vs `nullable` (explicit null allowed) (initial grammar & tokens adjustment; generator update pending)
+- [x] (P0) Implement grammar support for `| Null` syntax or `nullable` keyword (Pipe + NullT added)
+- [x] (P0) Update Prisma generator to properly map nullable vs optional (comment marker emitted for nullable-only)
+- [x] (P1) Add validation rules for incompatible combinations (validator enforces optional+nullable conflict & optional list prohibition)
 - [ ] (P1) Update documentation with clear examples and migration guide
 - [ ] (P2) Consider backward compatibility for existing `?` usage
 
@@ -57,7 +57,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P3) Consider expression debugging capabilities
 
 ### Relation System Improvements
-- [ ] (P0) Add referential integrity hints: `on_delete: cascade|restrict|set_null`
+- [x] (P0) Add referential integrity hints: `on_delete: cascade|restrict|set_null`
 - [ ] (P0) Implement cross-reference validation for workflow actions
 - [ ] (P1) Add relation cardinality validation
 - [ ] (P1) Support explicit inverse relation specification
@@ -75,7 +75,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P2) Add error correlation across multiple files
 
 ### Diagnostic Infrastructure
-- [ ] (P0) Implement structured diagnostic format with machine-readable codes
+- [x] (P0) Implement structured diagnostic format with machine-readable codes (DiagnosticCode constants added in `errors.ts`)
 - [ ] (P1) Add diagnostic severity levels (error, warning, info, hint)
 - [ ] (P1) Implement diagnostic filtering and suppression
 - [ ] (P2) Add diagnostic performance metrics

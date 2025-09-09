@@ -39,6 +39,9 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         }
         let fieldType: any;
         if (isList) {
+          if (optional) {
+            throw new Error("ParseError: Optional list types 'list of Type?' or 'Type[]?' are not allowed; remove '?' after list.");
+          }
           primitiveTokenName = Object.keys(scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
           fieldType = { kind: 'list', of: mapPrimitiveToken(primitiveTokenName!), optional, nullable };
           if (usedLegacyList) {
@@ -58,7 +61,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
       }
 
   const relationDecls = (entChildren['relationDecl'] as CstNode[]) || [];
-      for (const rd of relationDecls) {
+  for (const rd of relationDecls) {
         const rch = rd.children as CstChildrenDictionary;
         const idToks = (rch['Identifier'] as IToken[]);
         const relNameTok = idToks[0];
@@ -72,7 +75,16 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         const target = targetTok.image;
   const attrGroups2 = ((rch['fieldAttributeGroup'] as CstNode[]) || []).concat((rch['fieldAnnotation'] as CstNode[]) || []);
   const attributes: FieldAttribute[] = collectRelationAttributes(attrGroups2);
+        // Extract referential integrity hint if present
+        let onDelete: string | undefined;
+        if (rch['OnDelete']) {
+          const cascade = rch['Cascade'] ? 'cascade' : undefined;
+          const restrict = rch['Restrict'] ? 'restrict' : undefined;
+          const setNull = rch['SetNull'] ? 'set_null' : undefined;
+          onDelete = cascade || restrict || setNull;
+        }
         const relNode: any = { name: relName, kind, target, attributes };
+        if (onDelete) relNode.onDelete = onDelete;
         defineHidden(relNode, 'nameLoc', posOf(relNameTok));
         defineHidden(relNode, 'targetLoc', posOf(targetTok));
         relations.push(relNode);
