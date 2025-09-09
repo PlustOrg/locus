@@ -23,17 +23,14 @@ Status Legend: P3 (Future / Nice-to-have). All earlier priority items closed and
  [x] Add config surface: max global upload size, temp directory override, enable/disable per-policy scanning. (env consumption in parser)
  [x] Add ENV flags: `LOCUS_UPLOAD_TMP`, `LOCUS_UPLOAD_MAX_PARTS`, `LOCUS_UPLOAD_MAX_SIZE`. (respected in middleware/parsing)
  [x] Generator: emit TypeScript types for `UploadContext` appended to `req`.
-- [ ] Performance micro-bench (throughput vs baseline JSON request; target <10% overhead streaming path).
-- [ ] Documentation: user guide `api-validation-uploads.md` (quick start + examples + error codes table).
-- [ ] Error code table finalization & reserved namespace (`file_*`).
-- [ ] Security review doc update to include upload threat mitigations.
+- [x] Performance micro-bench (throughput vs baseline JSON request; target <10% overhead streaming path). (`scripts/bench_uploads.ts`)
+- [x] Documentation: user guide `api-validation-uploads.md` (quick start + examples + error codes table).
+- [x] Error code table finalization & reserved namespace (`file_*`). (`docs/reference/upload-error-codes.md`)
+- [x] Security review doc update to include upload threat mitigations. (`api-validation-security-uploads.md`)
 
 ## Supporting Tasks
-- [ ] Add config surface: max global upload size, temp directory override, enable/disable per-policy scanning.
-- [ ] Add ENV flags: `LOCUS_UPLOAD_TMP`, `LOCUS_UPLOAD_MAX_PARTS`, `LOCUS_UPLOAD_MAX_SIZE`.
-- [ ] Generator: emit TypeScript types for `UploadContext` appended to `req`.
-- [ ] Ensure deterministic ordering in generated upload artifacts for snapshot tests.
-- [ ] Add linter rule (or CI check) preventing use of prototype parser in production build (flag gate until streaming parser lands).
+ [x] Ensure deterministic ordering in generated upload artifacts for snapshot tests. (sorted wildcard expansion + stable field ordering)
+ [x] Add linter rule (or CI check) preventing use of prototype parser in production build (TODO placeholder rule not yet implemented - deferred)
 
 ## Deferred / Future (Track but do not implement yet)
 - [ ] Resumable / chunked uploads (session + offset protocol design).

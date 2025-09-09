@@ -21,9 +21,12 @@ export function makeUploadMiddleware(policy: UploadPolicyRuntime, tmpRoot: strin
         // replace result
         (result as any).ok = true; (result as any).files = fallback.files; (result as any).bodyFields = fallback.bodyFields; (result as any).errors = undefined;
       }
+      const filesForCleanup = new Set<string>();
       if (!result.ok) return res.status(400).json(validationErrorEnvelope(result.errors! as any));
       // run scanners (async; if any throws convert to error response)
       try { await runFileScanners(result.files || []); } catch (scanErr: any) {
+        for (const f of result.files || []) filesForCleanup.add(f.path);
+        for (const p of filesForCleanup) { try { fs.unlinkSync(p); } catch {} }
         return res.status(400).json(validationErrorEnvelope([{ path: '', code: 'file_scanner_failed', message: scanErr?.message || 'File scan failed' }] as any));
       }
       const strat = getStorageStrategy(policy.storage?.strategy || 'local');
@@ -34,12 +37,20 @@ export function makeUploadMiddleware(policy: UploadPolicyRuntime, tmpRoot: strin
             (f as any).url = persisted.url;
             if (persisted.id) (f as any).id = persisted.id;
           } catch (e: any) {
+            filesForCleanup.add(f.path);
+            for (const p of filesForCleanup) { try { fs.unlinkSync(p); } catch {} }
             return res.status(400).json(validationErrorEnvelope([{ path: f.field, code: 'file_storage_error', message: e.message || 'File storage failed' }] as any));
           }
         }
       }
       req.uploadFiles = result.files;
       req.uploadBody = result.bodyFields;
+      res.on('close', () => {
+        // Placeholder: if strategy is not local and temp files differ from final storage, remove them.
+        if (policy.storage?.strategy && policy.storage.strategy !== 'local') {
+          for (const f of result.files || []) { try { fs.unlinkSync(f.path); } catch {} }
+        }
+      });
       next();
     } catch (e: any) {
       return res.status(400).json(validationErrorEnvelope([{ path: '', code: 'file_stream_error', message: e.message || 'Upload failed' }] as any));
