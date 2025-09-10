@@ -159,5 +159,7 @@ export function buildOutputArtifacts(unified: UnifiedAST, opts: BuildArtifactsOp
     const v = files[k];
     if (typeof v === 'string') files[k] = stabilizeContent(v);
   }
+  // Provide TypeScript shims for generated React tests (Node globals & module stubs) without pulling full @types/node
+  files['react/shims.d.ts'] = `// AUTO-GENERATED shims for generated React code\n// eslint-disable-next-line @typescript-eslint/no-explicit-any\ndeclare const process: any;\n// eslint-disable-next-line @typescript-eslint/no-explicit-any\ndeclare const Buffer: any;\n// Minimal module stubs\ndeclare module 'fs';\ndeclare module 'path';\ndeclare module 'crypto';\ndeclare module 'http';\n`;
   return { files, meta } as any;
 }

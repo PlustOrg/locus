@@ -246,7 +246,10 @@ export function validationErrorEnvelope(errors: ValidationErrorItem[]) {
 interface FailureBucket { count: number; windowStart: number }
 const FAILURE_WINDOW_MS = 60_000; // 1 minute
 const buckets: Record<string, FailureBucket> = Object.create(null);
-const FAIL_LIMIT = parseInt(process.env.LOCUS_VALIDATION_FAIL_LIMIT || '200', 10);
+function getFailLimit(): number {
+  const v = parseInt(process.env.LOCUS_VALIDATION_FAIL_LIMIT || '200', 10);
+  return Number.isFinite(v) && v > 0 ? v : 200;
+}
 
 function applyFailureTelemetry(entity: string, result: ValidationResultWithLocations) {
   const now = Date.now();
@@ -256,10 +259,11 @@ function applyFailureTelemetry(entity: string, result: ValidationResultWithLocat
     buckets[entity] = b;
   }
   b.count++;
+  const FAIL_LIMIT = getFailLimit();
   if (b.count > FAIL_LIMIT) {
     (result.meta ||= {}).rateLimited = true;
     if (process.env.LOCUS_VALIDATION_LOG && process.env.LOCUS_VALIDATION_LOG !== '0') {
-      try { process.stderr.write(JSON.stringify({ lvl: 'warn', msg: 'validation rate limit exceeded', entity, count: b.count, limit: FAIL_LIMIT }) + '\n'); } catch {}
+  try { process.stderr.write(JSON.stringify({ lvl: 'warn', msg: 'validation rate limit exceeded', entity, count: b.count, limit: FAIL_LIMIT }) + '\n'); } catch {}
     }
   }
   if (process.env.LOCUS_VALIDATION_LOG && process.env.LOCUS_VALIDATION_LOG !== '0') {
