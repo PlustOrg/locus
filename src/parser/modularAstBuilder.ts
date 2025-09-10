@@ -483,7 +483,9 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
       }
     }
   }
-  const ast: LocusFileAST = { databases, designSystems, pages, components, stores, workflows, uploads } as any;
+  const astObj: any = { databases, designSystems, pages, components, stores, workflows };
+  if (uploads.length) astObj.uploads = uploads;
+  const ast: LocusFileAST = astObj;
   if (filePath) defineHidden(ast as any, 'sourceFile', filePath);
   return ast;
 }

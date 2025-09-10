@@ -858,15 +858,27 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier);
     this.CONSUME(LCurly);
     this.MANY(() => this.OR([
+      {
+        ALT: () => this.SUBRULE(this.relationDecl),
+        GATE: () => {
+          // Lookahead: after Identifier (field/relation name) we may have optional Colon then relation keyword.
+          // We peek tokens beyond current consumption inside relationDecl definition by examining LA(1..3) here.
+          const t2: any = this.LA(2); // could be Colon or relation keyword or type
+          const t3: any = this.LA(3);
+          const relSet = new Set([HasMany, BelongsTo, HasOne]);
+          if (relSet.has(t2.tokenType)) return true; // name relationKind ...
+          if (t2.tokenType === Colon && relSet.has(t3.tokenType)) return true; // name : relationKind ...
+          return false;
+        }
+      },
       { ALT: () => this.SUBRULE(this.fieldDecl) },
-      { ALT: () => this.SUBRULE(this.relationDecl) },
     ]));
     this.CONSUME(RCurly);
   });
 
   private fieldDecl = this.RULE('fieldDecl', () => {
     this.CONSUME(Identifier); // field name
-    this.CONSUME(Colon);
+  this.OPTION(()=> this.CONSUME(Colon)); // optional colon (supports terse syntax)
     this.SUBRULE(this.fieldType);
     this.MANY(() => this.OR([
       { ALT: () => this.SUBRULE(this.fieldAttributeGroup) },
@@ -894,7 +906,7 @@ export class DatabaseCstParser extends CstParser {
   private fieldType = this.RULE('fieldType', () => {
     this.OR([
       { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); } },
-	{ ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); this.OPTION1(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
+      { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION(() => this.CONSUME(Question)); this.OPTION1(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
     ]);
     // Support 'nullable' keyword OR union with NullT
     this.OPTION2(() => { if (this.LA(1).image === 'nullable') this.CONSUME(Identifier); });
@@ -903,7 +915,7 @@ export class DatabaseCstParser extends CstParser {
 
   private relationDecl = this.RULE('relationDecl', () => {
 	this.CONSUME1(Identifier); // relation field name
-    this.CONSUME(Colon);
+  this.OPTION(()=> this.CONSUME(Colon));
     this.OR([
       { ALT: () => this.CONSUME(HasMany) },
       { ALT: () => this.CONSUME(BelongsTo) },
@@ -915,11 +927,10 @@ export class DatabaseCstParser extends CstParser {
       { ALT: () => this.SUBRULE(this.fieldAnnotation) },
     ]));
     // optional referential integrity clause: on_delete: cascade|restrict|set_null
-    this.OPTION4(() => {
+  this.OPTION1(() => {
       this.CONSUME(OnDelete);
-      // Second Colon in this rule must be numbered to avoid Chevrotain definition error
       this.CONSUME1(Colon);
-  this.CONSUME3(Identifier); // referential action identifier
+	this.CONSUME3(Identifier); // referential action identifier
     });
   });
 

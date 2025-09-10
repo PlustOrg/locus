@@ -41,6 +41,13 @@ function walkUi(node: any, fn: (n:any)=>void) {
           if (def && def.value === 'null' && f.type?.optional && !(f.type as any).nullable) {
             throw new VError(`Field '${f.name}' cannot have default null when optional-only (mark as nullable or remove default).`, e.filePath || f.filePath, f.line, f.column);
           }
+          const t: any = f.type;
+          if (t && t.kind === 'list' && t.optional) {
+            throw new VError('Optional list type not allowed', e.filePath || f.filePath, f.line, f.column);
+          }
+          if (t && t.optional && t.nullable) {
+            throw new VError(`Field '${f.name}' cannot be both optional and nullable`, e.filePath || f.filePath, f.line, f.column);
+          }
         } catch (err) { throw err; }
       }
     }
@@ -539,7 +546,8 @@ function walkUi(node: any, fn: (n:any)=>void) {
 
 // Additional validations over unified database
 export function validateDatabase(ast: UnifiedAST) {
-  const entities = ast.database.entities || [];
+  if (!ast || !(ast as any).database) return; // nothing to validate if unified shape not built yet
+  const entities = (ast as any).database.entities || [];
   for (const ent of entities) {
     // duplicate field names within entity
     const seen = new Map<string, any>();
