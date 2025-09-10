@@ -3,6 +3,8 @@
 exports[`Generator snapshots Express routes snapshot 1`] = `
 "import { Router } from 'express'
 import { PrismaClient } from '@prisma/client'
+import { validateUserBody, validateUserUpdate } from '../validation/User'
+import { validationErrorEnvelope } from '../runtime/validateRuntime'
 const prisma = new PrismaClient()
 export const router = Router()
 
@@ -39,7 +41,8 @@ router.get('/user/:id', async (req, res) => {
 // POST /user
 router.post('/user', async (req, res) => {
   try {
-  // TODO(validation): derive schema from entity definition and validate body
+  const validation = validateUserBody(req.body, 'create');
+  if (!validation.ok) return res.status(400).json(validationErrorEnvelope(validation.errors!));
   const created = await prisma.user.create({ data: req.body })
     res.status(201).json(created)
   } catch (err: any) {
@@ -52,7 +55,8 @@ router.put('/user/:id', async (req, res) => {
   try {
     const id = Number(req.params.id)
   if (Number.isNaN(id)) return res.status(400).json({ error: 'id must be a number' })
-  // TODO(validation): derive schema from entity definition and validate body
+  const validation = validateUserUpdate(req.body);
+  if (!validation.ok) return res.status(400).json(validationErrorEnvelope(validation.errors!));
   const updated = await prisma.user.update({ where: { id }, data: req.body })
     res.json(updated)
   } catch (err: any) {

@@ -461,15 +461,22 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
           let strategy: string | undefined;
           let path: string | undefined;
           let naming: string | undefined;
-          for (const arr of Object.values(sCh) as any[]) {
-            if (!Array.isArray(arr)) continue;
-            for (const entry of arr) {
-              const eCh: any = entry.children;
-              if (eCh.StrategyKw) strategy = eCh.Identifier?.[0]?.image;
-              if (eCh.PathKw) path = eCh.StringLiteral?.[0]?.image?.slice(1,-1);
-              if (eCh.NamingKw) naming = eCh.Identifier?.[0]?.image;
-            }
+          // strategyDecl/pathDecl/namingDecl appear as their own rule names
+          const stratNodes: any[] = sCh.strategyDecl || [];
+          if (stratNodes.length) {
+            const stChildren: any = stratNodes[0].children;
+            strategy = stChildren.Identifier?.[0]?.image;
           }
+          const pathNodes: any[] = sCh.pathDecl || [];
+          if (pathNodes.length) {
+            const pChildren: any = pathNodes[0].children;
+            path = pChildren.StringLiteral?.[0]?.image?.slice(1,-1);
+          }
+            const namingNodes: any[] = sCh.namingDecl || [];
+            if (namingNodes.length) {
+              const nChildren: any = namingNodes[0].children;
+              naming = nChildren.Identifier?.[0]?.image;
+            }
           storage = { strategy, path, naming };
         }
         uploads.push({ kind: 'upload_policy', name: nameTok?.image, nameLoc: nameTok ? { line: nameTok.startLine, column: nameTok.startColumn } : undefined, raw: rawInner, fields, storage });

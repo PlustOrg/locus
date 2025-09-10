@@ -91,7 +91,9 @@
       {"name":"FloatT","pattern":"Float\\b"},
       {"name":"UUIDT","pattern":"UUID\\b"},
       {"name":"EmailT","pattern":"Email\\b"},
-      {"name":"URLT","pattern":"URL\\b"}
+  {"name":"URLT","pattern":"URL\\b"},
+  {"name":"NullT","pattern":"Null\\b"},
+  {"name":"OnDelete","pattern":"on_delete\\b"}
     ]},
     { "name": "punctuation", "tokens": [
       {"name":"LCurly","pattern":"\\{"},
@@ -118,7 +120,23 @@
     { "name": "attributes", "tokens": [
       {"name":"Unique","pattern":"unique\\b"},
       {"name":"Default","pattern":"default\\b"},
-      {"name":"MapTok","pattern":"map\\b"}
+  {"name":"MapTok","pattern":"map\\b"},
+  {"name":"MinTok","pattern":"min\\b"},
+  {"name":"LengthTok","pattern":"length\\b"},
+  {"name":"PatternTok","pattern":"pattern\\b"},
+  {"name":"EnumTok","pattern":"enum\\b"},
+  {"name":"DiscriminatorTok","pattern":"discriminator\\b"},
+  {"name":"MessageTok","pattern":"message\\b"},
+  {"name":"UploadKw","pattern":"upload\\b"},
+  {"name":"FieldKw","pattern":"field\\b"},
+  {"name":"MaxSizeKw","pattern":"maxSize\\b"},
+  {"name":"MaxCountKw","pattern":"maxCount\\b"},
+  {"name":"MimeKw","pattern":"mime\\b"},
+  {"name":"StrategyKw","pattern":"strategy\\b"},
+  {"name":"PathKw","pattern":"path\\b"},
+  {"name":"NamingKw","pattern":"naming\\b"},
+  {"name":"RequiredKw","pattern":"required\\b"},
+  {"name":"SizeLiteral","pattern":"[0-9]+(?:B|KB|MB|GB)\\b"}
     ]},
     { "name": "literals", "tokens": [
       {"name":"StringLiteral","pattern":"\"(?:[^\"\\\\]|\\\\.)*\""},

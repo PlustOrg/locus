@@ -82,9 +82,6 @@ export const EmailT = createToken({ name: 'EmailT', pattern: /Email\b/ });
 export const URLT = createToken({ name: 'URLT', pattern: /URL\b/ });
 export const NullT = createToken({ name: 'NullT', pattern: /Null\b/ });
 export const OnDelete = createToken({ name: 'OnDelete', pattern: /on_delete\b/ });
-export const Cascade = createToken({ name: 'Cascade', pattern: /cascade\b/ });
-export const Restrict = createToken({ name: 'Restrict', pattern: /restrict\b/ });
-export const SetNull = createToken({ name: 'SetNull', pattern: /set_null\b/ });
 export const LCurly = createToken({ name: 'LCurly', pattern: /\{/ });
 export const RCurly = createToken({ name: 'RCurly', pattern: /\}/ });
 export const Colon = createToken({ name: 'Colon', pattern: /:/ });
@@ -111,7 +108,6 @@ export const MapTok = createToken({ name: 'MapTok', pattern: /map\b/ });
 export const MinTok = createToken({ name: 'MinTok', pattern: /min\b/ });
 export const LengthTok = createToken({ name: 'LengthTok', pattern: /length\b/ });
 export const PatternTok = createToken({ name: 'PatternTok', pattern: /pattern\b/ });
-export const EmailTok = createToken({ name: 'EmailTok', pattern: /email\b/ });
 export const EnumTok = createToken({ name: 'EnumTok', pattern: /enum\b/ });
 export const DiscriminatorTok = createToken({ name: 'DiscriminatorTok', pattern: /discriminator\b/ });
 export const MessageTok = createToken({ name: 'MessageTok', pattern: /message\b/ });
@@ -214,9 +210,6 @@ export const AllTokens = [
   URLT,
   NullT,
   OnDelete,
-  Cascade,
-  Restrict,
-  SetNull,
   LCurly,
   RCurly,
   Colon,
@@ -241,10 +234,8 @@ export const AllTokens = [
   Default,
   MapTok,
   MinTok,
-  // MaxTok2 removed (duplicate of MaxKw)
   LengthTok,
   PatternTok,
-  EmailTok,
   EnumTok,
   DiscriminatorTok,
   MessageTok,
@@ -253,7 +244,6 @@ export const AllTokens = [
   MaxSizeKw,
   MaxCountKw,
   MimeKw,
-  // StoreKw removed (duplicate of Store)
   StrategyKw,
   PathKw,
   NamingKw,

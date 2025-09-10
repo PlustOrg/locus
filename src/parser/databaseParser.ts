@@ -27,9 +27,6 @@ import {
   URLT,
   NullT,
   OnDelete,
-  Cascade,
-  Restrict,
-  SetNull,
   Question,
   LParen,
   RParen,
@@ -920,12 +917,9 @@ export class DatabaseCstParser extends CstParser {
     // optional referential integrity clause: on_delete: cascade|restrict|set_null
     this.OPTION4(() => {
       this.CONSUME(OnDelete);
-      this.CONSUME(Colon);
-      this.OR2([
-        { ALT: () => this.CONSUME(Cascade) },
-        { ALT: () => this.CONSUME(Restrict) },
-        { ALT: () => this.CONSUME(SetNull) },
-      ]);
+      // Second Colon in this rule must be numbered to avoid Chevrotain definition error
+      this.CONSUME1(Colon);
+  this.CONSUME3(Identifier); // referential action identifier
     });
   });
 

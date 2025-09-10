@@ -35,8 +35,10 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         if (!nullable && typeCh['Identifier']) {
           const ids = (typeCh['Identifier'] as any[]);
           if (ids.some(t => t.image === 'nullable')) nullable = true;
-          if (ids.some(t => t.image === 'Null')) nullable = true;
+          if (ids.some(t => t.image === 'Null')) nullable = true; // pre-NullT legacy fallback
         }
+        // Union form with explicit NullT token (via fieldType OPTION3)
+        if (!nullable && typeCh['NullT']) nullable = true;
         let fieldType: any;
         if (isList) {
           if (optional) {
@@ -78,10 +80,16 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         // Extract referential integrity hint if present
         let onDelete: string | undefined;
         if (rch['OnDelete']) {
-          const cascade = rch['Cascade'] ? 'cascade' : undefined;
-          const restrict = rch['Restrict'] ? 'restrict' : undefined;
-          const setNull = rch['SetNull'] ? 'set_null' : undefined;
-          onDelete = cascade || restrict || setNull;
+          // Heuristic: identifiers layout: [relName, targetName, (maybe attribute ids...), actionId]
+          const ids = (rch['Identifier'] as IToken[]);
+          if (ids.length >= 3) {
+            const candidate = ids[ids.length - 1].image;
+            if (candidate !== relName && candidate !== target) onDelete = candidate;
+            else if (ids.length >= 4) {
+              const candidate2 = ids[ids.length - 2].image;
+              if (candidate2 !== relName && candidate2 !== target) onDelete = candidate2;
+            }
+          }
         }
         const relNode: any = { name: relName, kind, target, attributes };
         if (onDelete) relNode.onDelete = onDelete;

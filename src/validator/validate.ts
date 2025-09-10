@@ -263,6 +263,23 @@ function walkUi(node: any, fn: (n:any)=>void) {
       namingWarnings.push(`Use canonical 'on load' instead of 'onLoad' in page '${pg.name}'.`);
     }
   }
+  // Upload policy semantic validation (always run)
+  for (const u of (ast.uploads || []) as any[]) {
+    if (!u.fields.length) throw new VError(`Upload policy '${u.name}' must declare at least one field.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+    const seen = new Set<string>();
+    for (const f of u.fields) {
+      if (!f.name) throw new VError(`Upload policy '${u.name}' has field with missing name.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      if (seen.has(f.name)) throw new VError(`Upload policy '${u.name}' duplicate field '${f.name}'.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      seen.add(f.name);
+      if (!f.mime || !f.mime.length) throw new VError(`Upload policy '${u.name}' field '${f.name}' must declare at least one mime type.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      if (f.maxSizeBytes != null && f.maxSizeBytes <= 0) throw new VError(`Upload policy '${u.name}' field '${f.name}' maxSize must be > 0.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      if (f.maxCount <= 0) throw new VError(`Upload policy '${u.name}' field '${f.name}' maxCount must be >= 1.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+    }
+    if (u.storage) {
+      if (!u.storage.path) throw new VError(`Upload policy '${u.name}' storage path required.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+      if (!u.storage.naming) throw new VError(`Upload policy '${u.name}' storage naming required.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
+    }
+  }
   const ds = ast.designSystem;
   if (ds) {
     const sourceFile = (ds as any).sourceFile;
@@ -287,23 +304,6 @@ function walkUi(node: any, fn: (n:any)=>void) {
         if (!keyOk(k)) badKeys.push({ key: k, loc: (m as any)[k]?.loc });
       }
     };
-    // Upload policy semantic validation
-    for (const u of (ast.uploads || []) as any[]) {
-      if (!u.fields.length) throw new VError(`Upload policy '${u.name}' must declare at least one field.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-      const seen = new Set<string>();
-      for (const f of u.fields) {
-        if (!f.name) throw new VError(`Upload policy '${u.name}' has field with missing name.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-        if (seen.has(f.name)) throw new VError(`Upload policy '${u.name}' duplicate field '${f.name}'.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-        seen.add(f.name);
-        if (!f.mime || !f.mime.length) throw new VError(`Upload policy '${u.name}' field '${f.name}' must declare at least one mime type.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-        if (f.maxSizeBytes != null && f.maxSizeBytes <= 0) throw new VError(`Upload policy '${u.name}' field '${f.name}' maxSize must be > 0.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-        if (f.maxCount <= 0) throw new VError(`Upload policy '${u.name}' field '${f.name}' maxCount must be >= 1.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-      }
-      if (u.storage) {
-        if (!u.storage.path) throw new VError(`Upload policy '${u.name}' storage path required.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-        if (!u.storage.naming) throw new VError(`Upload policy '${u.name}' storage naming required.`, (u as any).sourceFile, u.nameLoc?.line, u.nameLoc?.column);
-      }
-    }
     checkMap(ds.spacing);
     checkMap(ds.radii);
     checkMap(ds.shadows);
