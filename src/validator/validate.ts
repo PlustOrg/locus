@@ -32,7 +32,8 @@ function walkUi(node: any, fn: (n:any)=>void) {
 }
   const pascal = (s: string) => /^[A-Z][A-Za-z0-9]*$/.test(s);
   if (ast.database) {
-    for (const e of (ast.database.entities || []) as any[]) {
+  const dbEntities = (ast as any).database?.entities || (ast as any).databases?.[0]?.entities || [];
+  for (const e of dbEntities as any[]) {
       if (!pascal(e.name)) namingWarnings.push(`Entity '${e.name}' should use PascalCase.`);
       // Field rules (nullable vs optional)
       for (const f of e.fields || []) {
@@ -292,7 +293,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
     const sourceFile = (ds as any).sourceFile;
     // token key naming
     // Relation shape validation: belongs_to must have corresponding field name + 'Id' scalar in model generation expectations.
-    for (const e of ast.database.entities as any[]) {
+  for (const e of ((ast as any).database?.entities || (ast as any).databases?.[0]?.entities || []) as any[]) {
       const fieldNames = new Set(e.fields.map((f: any) => f.name));
       for (const r of e.relations) {
         if (r.kind === 'belongs_to') {
@@ -376,7 +377,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
   validateDatabase(ast);
   // Deprecation: paren attribute form (Phase 2 soft warning)
   if (ast.database) {
-    for (const e of (ast.database.entities || []) as any[]) {
+  for (const e of ((ast as any).database?.entities || (ast as any).databases?.[0]?.entities || []) as any[]) {
       for (const f of e.fields) {
         if ((f.attributes||[]).some((a: any) => a.__origin === 'paren')) {
           if (!(ast as any).namingWarnings) (ast as any).namingWarnings = [];
@@ -401,7 +402,8 @@ function walkUi(node: any, fn: (n:any)=>void) {
   // Integer default value range validation (-2^31 .. 2^31-1)
   const INT_MIN = -2147483648;
   const INT_MAX = 2147483647;
-  for (const ent of ast.database.entities as any[]) {
+  const _dbEntities = (ast as any).database?.entities || (ast as any).databases?.[0]?.entities || [];
+  for (const ent of _dbEntities as any[]) {
     for (const f of ent.fields) {
       // list type validations
       if (f.type?.kind === 'list') {
@@ -451,7 +453,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
   }
   // Legacy paren attribute hard removal gate
   if ((process.env.REMOVE_PAREN_ATTRS === '1' || process.env.AUTO_PAREN_REMOVAL === '1') && ast.database) {
-    for (const e of (ast.database.entities || []) as any[]) {
+  for (const e of ((ast as any).database?.entities || (ast as any).databases?.[0]?.entities || []) as any[]) {
       for (const f of e.fields) {
         if ((f.attributes||[]).some((a:any)=>a.__origin==='paren')) {
           const loc = (f as any).nameLoc;
@@ -468,7 +470,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
   }
   // Structured deprecation recording for legacy paren attributes
   if (ast.database) {
-    for (const e of (ast.database.entities || []) as any[]) {
+  for (const e of ((ast as any).database?.entities || (ast as any).databases?.[0]?.entities || []) as any[]) {
       for (const f of e.fields) {
         for (const a of (f.attributes||[])) if (a.__origin==='paren') registerDeprecation('paren_attr', 'Legacy paren attribute syntax is deprecated', 'v1.0.0', 'Use @attribute form');
       }

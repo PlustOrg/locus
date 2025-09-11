@@ -178,31 +178,28 @@ export class DatabaseCstParser extends CstParser {
 
   private triggerDecl = this.RULE('triggerDecl', () => {
     this.CONSUME(On);
+    this.OPTION(() => this.CONSUME(Colon)); // allow optional colon after 'on'
     this.OR([
       { ALT: () => {
-        // webhook variant: optional colon after 'on'
-        this.OPTION(() => this.CONSUME(Colon)); // Colon #1
         this.CONSUME(WebhookKw);
-        this.OPTION1(() => { // parentheses block optional
-          this.CONSUME(LParen); // LParen #1
-          this.OPTION2(() => { // secret assignment optional
-            this.CONSUME(Identifier); // Identifier #1
-            this.CONSUME1(Colon); // Colon #2
-            this.CONSUME1(Identifier); // Identifier #2
+        this.OPTION1(() => {
+          this.CONSUME(LParen);
+          // optional secret: Identifier Colon Identifier
+          this.OPTION2(() => {
+            this.CONSUME(Identifier);
+            this.CONSUME1(Colon);
+            this.CONSUME1(Identifier);
           });
-          this.CONSUME(RParen); // RParen #1
+          this.CONSUME(RParen);
         });
       } },
       { ALT: () => {
-        // entity event variant: optional colon after 'on'
-        this.OPTION3(() => this.CONSUME2(Colon)); // Colon #3
-        this.OR([
-          { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); this.OPTION(() => this.CONSUME(Question)); } },
-          { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION1(() => this.CONSUME1(Question)); this.OPTION2(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
+        this.OR1([
+          { ALT: () => this.CONSUME(CreateKw) },
+          { ALT: () => this.CONSUME(UpdateKw) },
+          { ALT: () => this.CONSUME(DeleteKw) },
         ]);
-        this.CONSUME1(LParen); // LParen #2
-        this.CONSUME2(Identifier); // Identifier #3
-        this.CONSUME1(RParen); // RParen #2
+        this.CONSUME2(Identifier); // entity name
       } }
     ]);
   });
@@ -893,6 +890,7 @@ export class DatabaseCstParser extends CstParser {
   private fieldType = this.RULE('fieldType', () => {
     this.OR([
   { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); this.OPTION(() => { if (this.LA(1).tokenType === Question) { this.CONSUME(Question); /* mark optional list for validator */ (this as any)._sawOptionalList = true; } }); } },
+  // primitive scalar or scalar? or scalar[] style (legacy optional [] branch retained)
       { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION1(() => this.CONSUME1(Question)); this.OPTION2(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
     ]);
     // Support 'nullable' keyword OR union with NullT
