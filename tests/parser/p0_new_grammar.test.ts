@@ -13,7 +13,7 @@ function parseSource(src: string) {
 }
 
 test('nullable union Type | Null parsed', () => {
-  const cst = parseSource('database { entity User { age Integer | Null } }');
+  const cst = parseSource('database { entity User { age: Integer | Null } }');
   expect(cst).toBeTruthy();
   const dbBlocks = buildDatabaseBlocks((cst.children.databaseBlock as any[])||[]);
   const user = dbBlocks[0].entities[0];
@@ -21,7 +21,7 @@ test('nullable union Type | Null parsed', () => {
 });
 
 test('on_delete referential integrity captured', () => {
-  const cst = parseSource('database { entity A { id Integer } entity B { a belongs_to A on_delete: cascade } }');
+  const cst = parseSource('database { entity A { id: Integer } entity B { a: belongs_to A on_delete: cascade } }');
   const dbBlocks = buildDatabaseBlocks((cst.children.databaseBlock as any[])||[]);
   const entB = dbBlocks[0].entities.find(e=>e.name==='B')!;
   const rel = entB.relations[0] as any;
@@ -29,7 +29,7 @@ test('on_delete referential integrity captured', () => {
 });
 
 test('optional list type rejected', () => {
-  expect(() => parseSource('database { entity U { tags list of String? } }')).toThrow(/Optional list types/);
+  expect(() => parseSource('database { entity U { tags: list of String? } }')).toThrow(/Optional list types/);
 });
 
 test('style_override block arbitrary content', () => {
