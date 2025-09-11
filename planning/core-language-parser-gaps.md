@@ -58,9 +58,9 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 
 ### Relation System Improvements
 - [x] (P0) Add referential integrity hints: `on_delete: cascade|restrict|set_null`
-- [ ] (P0) Implement cross-reference validation for workflow actions
+- [x] (P0) Implement cross-reference validation for workflow actions (validator + tests)
 - [x] (P1) Add relation cardinality validation (duplicate has_one detection in both parse and unified validation)
-- [ ] (P1) Support explicit inverse relation specification
+- [x] (P1) Support explicit inverse relation specification (inverse: fieldName syntax parsed & validated)
 - [ ] (P2) Add relation indexing hints
 - [ ] (P2) Implement cascade policy validation
 
@@ -70,7 +70,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Provide precise token spans for all error types via unified CST (PError/VError support length; parser populates spans)
 - [x] (P0) Implement multi-token suggestions using Levenshtein distance (enhanced computeSuggestions heuristics)
 - [x] (P0) Add context-specific error messages for attribute misuse (initial: optional list, optional+nullable, relation policy, workflow trigger conflicts)
-- [ ] (P1) Include suggested replacement snippets in error metadata
+- [x] (P1) Include suggested replacement snippets in error metadata (errors carry suggestions array; on_load provides 'on load')
 - [ ] (P1) Implement quick-fix suggestions for common errors
 - [ ] (P2) Add error correlation across multiple files
 
@@ -120,7 +120,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 
 ### Compile-time Validation
 - [ ] (P0) Implement exhaustive validation for all language constructs
-- [ ] (P0) Add cross-reference validation (entities, components, workflows)
+- [x] (P0) Add cross-reference validation (entities, components, workflows) (actions aggregated across pages/components/stores)
 - [ ] (P1) Implement unused code detection
 - [ ] (P1) Add circular dependency detection
 - [ ] (P2) Implement dead code elimination

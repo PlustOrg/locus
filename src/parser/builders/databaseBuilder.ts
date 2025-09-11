@@ -80,6 +80,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         const attributes: FieldAttribute[] = collectRelationAttributes(attrGroups2);
         // Extract referential integrity hint if present
         let onDelete: string | undefined;
+  let inverse: string | undefined;
         if (rch['OnDelete']) {
           // Action should appear as the last Identifier after the on_delete clause
           const ids = (rch['Identifier'] as IToken[]);
@@ -88,8 +89,17 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
             if (actionTok.image !== relName && actionTok.image !== target) onDelete = actionTok.image;
           }
         }
+        // inverse clause detection: look for identifier 'inverse' and subsequent identifier
+        const idsAll = (rch['Identifier'] as IToken[]);
+        for (let i=0;i<idsAll.length-1;i++) {
+          if (idsAll[i].image === 'inverse') {
+            const iv = idsAll[i+1].image;
+            if (iv !== relName && iv !== target) inverse = iv;
+          }
+        }
         const relNode: any = { name: relName, kind, target, attributes };
         if (onDelete) relNode.onDelete = onDelete;
+        if (inverse) relNode.inverse = inverse;
         defineHidden(relNode, 'nameLoc', posOf(relNameTok));
         defineHidden(relNode, 'targetLoc', posOf(targetTok));
         relations.push(relNode);

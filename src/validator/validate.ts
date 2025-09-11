@@ -69,6 +69,15 @@ function walkUi(node: any, fn: (n:any)=>void) {
   const hasOneCounts = new Map<string, number>();
   for (const r of (e.relations || []) as any[]) if (r.kind === 'has_one') hasOneCounts.set(r.target, (hasOneCounts.get(r.target)||0)+1);
   for (const [target, count] of hasOneCounts) if (count > 1) throw new VError(`duplicate has_one relations to '${target}' on entity '${e.name}'`, e.filePath || (e as any).sourceFile, e.line, e.column);
+      // inverse validation (parse AST path)
+      for (const r of (e.relations || []) as any[]) {
+        if (r.inverse) {
+          const targetEnt = dbEntities.find((te: any) => te.name === r.target);
+          if (!targetEnt) throw new VError(`Relation '${r.name}' references missing target entity '${r.target}'.`, e.filePath || (e as any).sourceFile, e.line, e.column);
+          const inv = (targetEnt.relations || []).find((rr: any) => rr.name === r.inverse && rr.target === e.name);
+          if (!inv) throw new VError(`Relation '${r.name}' declares inverse '${r.inverse}' not found on target '${r.target}'.`, e.filePath || (e as any).sourceFile, e.line, e.column);
+        }
+      }
     }
   }
   for (const p of (ast.pages || []) as any[]) if (!pascal(p.name)) namingWarnings.push(`Page '${p.name}' should use PascalCase.`);
@@ -608,6 +617,17 @@ export function validateDatabase(ast: UnifiedAST) {
           if (!allowed.has(a.value)) {
             throw new VError(`Unsupported relation policy '${a.value}' on '${r.name}'. Allowed: cascade, restrict, delete.`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
           }
+        }
+      }
+    }
+    // inverse relation validation
+    for (const r of ent.relations as any[]) {
+      if (r.inverse) {
+        const targetEnt = entities.find((e: any) => e.name === r.target);
+        if (!targetEnt) throw new VError(`Relation '${r.name}' references missing target entity '${r.target}'.`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
+        const inv = (targetEnt.relations || []).find((rr: any) => rr.name === r.inverse && rr.target === ent.name);
+        if (!inv) {
+          throw new VError(`Relation '${r.name}' declares inverse '${r.inverse}' not found on target '${r.target}'.`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
         }
       }
     }

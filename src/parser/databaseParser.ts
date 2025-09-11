@@ -925,6 +925,14 @@ export class DatabaseCstParser extends CstParser {
       this.CONSUME1(Colon);
 	this.CONSUME3(Identifier); // referential action identifier
     });
+    // optional inverse clause: inverse: fieldName (Identifier 'inverse')
+    this.OPTION5(() => {
+      if (this.LA(1).tokenType === Identifier && this.LA(1).image === 'inverse') {
+        this.CONSUME4(Identifier); // 'inverse'
+        this.CONSUME2(Colon);
+        this.CONSUME5(Identifier); // inverse field name
+      }
+    });
   });
 
   private fieldAttributeGroup = this.RULE('fieldAttributeGroup', () => {
