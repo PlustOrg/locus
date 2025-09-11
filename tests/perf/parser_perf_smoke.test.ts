@@ -1,7 +1,7 @@
 import { parseLocus } from '../../src/parser';
 
 function buildSource(n: number): string {
-  const ents = [];
+  const ents: string[] = [];
   for (let i=0;i<n;i++) ents.push(`entity E${i} { f: String }`);
   return 'database { ' + ents.join(' ') + ' }';
 }
