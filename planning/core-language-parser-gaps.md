@@ -19,7 +19,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ### Syntax Inconsistencies  
 - [x] (P0) Remove optional list type parsing (`list of Type?`) - make grammar-level error (builder now throws)
 - [x] (P0) Implement proper `style_override {}` block with CSS-ish token pass-through
-- [ ] (P1) Standardize two-word constructs: decide on `on_load` vs `on load` and enforce consistently
+- [x] (P1) Standardize two-word constructs: enforce `on load`; parser pre-check rejects `on_load` with guidance
 - [ ] (P1) Normalize attribute syntax: choose between parentheses `(attr)` vs annotations `@attr`
 - [ ] (P2) Consider `Type[]` shorthand for `list of Type` with deprecation path
 - [ ] (P2) Implement canonical formatter for deterministic whitespace/ordering
@@ -37,7 +37,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ### Primitive Type Coverage
 - [x] (P0) Add missing production primitives: `BigInt`, `Float`, `UUID`, `Email`, `URL` (tokens & grammar)
 - [x] (P0) Map new primitives to generator capabilities (Prisma, validation, React) (Prisma mapping updated)
-- [ ] (P1) Implement type validation for primitive constraints
+- [x] (P1) Implement type validation for primitive constraints (min/max numeric; length string/text)
 - [ ] (P2) Add custom type definition capabilities
 
 ### Nullable vs Optional Semantics
@@ -59,7 +59,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ### Relation System Improvements
 - [x] (P0) Add referential integrity hints: `on_delete: cascade|restrict|set_null`
 - [ ] (P0) Implement cross-reference validation for workflow actions
-- [ ] (P1) Add relation cardinality validation
+- [x] (P1) Add relation cardinality validation (duplicate has_one detection in both parse and unified validation)
 - [ ] (P1) Support explicit inverse relation specification
 - [ ] (P2) Add relation indexing hints
 - [ ] (P2) Implement cascade policy validation
@@ -76,7 +76,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 
 ### Diagnostic Infrastructure
 - [x] (P0) Implement structured diagnostic format with machine-readable codes (DiagnosticCode constants added in `errors.ts`)
-- [ ] (P1) Add diagnostic severity levels (error, warning, info, hint)
+- [x] (P1) Add diagnostic severity levels (severity field added; currently all 'error')
 - [ ] (P1) Implement diagnostic filtering and suppression
 - [ ] (P2) Add diagnostic performance metrics
 - [ ] (P2) Create diagnostic aggregation and reporting
@@ -139,7 +139,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ### Parser Testing
 - [ ] (P0) Add comprehensive fuzz testing for all grammar rules
 - [ ] (P0) Implement property-based testing for parser correctness
-- [ ] (P1) Add regression testing for error message quality
+- [x] (P1) Add regression testing for error message quality (stability test for optional list message)
 - [ ] (P1) Implement parser benchmark suite
 - [ ] (P2) Add mutation testing for parser robustness
 - [ ] (P2) Implement coverage analysis for grammar rules

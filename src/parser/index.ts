@@ -7,6 +7,15 @@ import { buildAstModular } from './modularAstBuilder';
 
 
 export function parseLocus(source: string, filePath?: string): LocusFileAST {
+  // quick lexical pre-check for disallowed legacy constructs
+  if (/\bon_load\b/.test(source)) {
+    // approximate location: find first occurrence
+    const idx = source.indexOf('on_load');
+    const pre = source.slice(0, idx);
+    const line = pre.split(/\n/).length;
+    const col = idx - pre.lastIndexOf('\n');
+    throw new PError("Use 'on load' instead of legacy 'on_load'", filePath, line, col, 'on_load'.length);
+  }
   const lexResult = LocusLexer.tokenize(source.replace(/!/g, ' '));
   if (lexResult.errors.length) {
     const err = lexResult.errors[0];

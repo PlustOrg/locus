@@ -39,6 +39,7 @@ export interface LocusErrorOptions {
   length?: number;
   cause?: unknown;
   suggestions?: string[];
+  severity?: DiagnosticSeverity;
 }
 
 export class LocusError extends Error {
@@ -49,6 +50,7 @@ export class LocusError extends Error {
   public length?: number;
   public cause?: unknown;
   public suggestions?: string[];
+  public severity: DiagnosticSeverity;
 
   constructor(opts: LocusErrorOptions) {
     super(opts.message);
@@ -59,7 +61,8 @@ export class LocusError extends Error {
     this.column = opts.column;
     this.length = opts.length;
     this.cause = opts.cause;
-    this.suggestions = opts.suggestions;
+  this.suggestions = opts.suggestions;
+  this.severity = opts.severity || 'error';
     (Error as any).captureStackTrace?.(this, LocusError);
   }
 }
@@ -125,7 +128,7 @@ export function errorToDiagnostic(e: LocusError): Diagnostic {
     line: e.line,
     column: e.column,
     length: e.length,
-    severity: 'error'
+  severity: (e as any).severity || 'error'
   };
 }
 

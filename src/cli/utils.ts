@@ -103,6 +103,7 @@ export async function safeMkdir(dir: string) {
  * Safe write file (async preferred, fallback to sync).
  */
 export async function safeWrite(path: string, content: string) {
+  ensureDir(path);
   try {
     if ((fsp as any)?.writeFile) return await (fsp as any).writeFile(path, content, 'utf8');
   } catch {/* fall through to sync */}

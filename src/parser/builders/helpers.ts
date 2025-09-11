@@ -79,8 +79,14 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
       const node = (agCh as any)['constraintAnn'][0] as CstNode;
       const ch = node.children as CstChildrenDictionary;
       // Identifier tokens for name; optional literal values
-      if (ch['Identifier']) {
-        const nameTok = (ch['Identifier'] as IToken[])[0].image;
+      let nameTok: string | undefined;
+      if (ch['Identifier']) nameTok = (ch['Identifier'] as IToken[])[0].image;
+      else if ((ch as any)['MinTok']) nameTok = 'min';
+      else if ((ch as any)['MaxKw']) nameTok = 'max';
+      else if ((ch as any)['LengthTok']) nameTok = 'length';
+      else if ((ch as any)['PatternTok']) nameTok = 'pattern';
+      else if ((ch as any)['EmailT']) nameTok = 'email';
+      if (nameTok) {
         const literals = (ch['literal'] as CstNode[] | undefined) || [];
         const nums: number[] = [];
         const strs: string[] = [];
@@ -89,7 +95,7 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
           if (lch['NumberLiteral']) nums.push(Number((lch['NumberLiteral'] as IToken[])[0].image));
           else if (lch['StringLiteral']) strs.push((lch['StringLiteral'] as IToken[])[0].image.slice(1, -1));
         }
-        switch (nameTok) {
+  switch (nameTok) {
           case 'min': if (nums[0] !== undefined) attributes.push({ kind: 'min', value: nums[0] } as any); break;
           case 'max': if (nums[0] !== undefined) attributes.push({ kind: 'max', value: nums[0] } as any); break;
           case 'length': attributes.push({ kind: 'length', min: nums[0], max: nums[1] } as any); break;
@@ -100,7 +106,7 @@ export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] 
           case 'opaque': attributes.push({ kind: 'opaque' } as any); break;
           case 'discriminator': attributes.push({ kind: 'discriminator' } as any); break;
           case 'message': if (strs[0]) attributes.push({ kind: 'message', value: strs[0] } as any); break;
-        }
+  }
       }
     }
   }

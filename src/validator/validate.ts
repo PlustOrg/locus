@@ -49,13 +49,37 @@ function walkUi(node: any, fn: (n:any)=>void) {
           if (t && t.optional && t.nullable) {
             throw new VError(`Field '${f.name}' cannot be both optional and nullable`, e.filePath || f.filePath, f.line, f.column);
           }
+          // primitive constraint applicability checks
+          for (const a of f.attributes || []) {
+            if (a.kind === 'min' || a.kind === 'max') {
+              const prim = (f.type?.kind === 'primitive') ? (f.type as any).name : undefined;
+              if (!['Integer','Decimal','Float','BigInt'].includes(prim)) {
+                throw new VError(`@${a.kind} constraint only valid on numeric fields (Integer, Decimal, Float, BigInt).`, e.filePath || f.filePath, f.line, f.column);
+              }
+            } else if (a.kind === 'length') {
+              const prim = (f.type?.kind === 'primitive') ? (f.type as any).name : undefined;
+              if (!['String','Text'].includes(prim)) {
+                throw new VError(`@length constraint only valid on String/Text fields.`, e.filePath || f.filePath, f.line, f.column);
+              }
+            }
+          }
         } catch (err) { throw err; }
       }
+  // has_one duplication within entity (parse AST path)
+  const hasOneCounts = new Map<string, number>();
+  for (const r of (e.relations || []) as any[]) if (r.kind === 'has_one') hasOneCounts.set(r.target, (hasOneCounts.get(r.target)||0)+1);
+  for (const [target, count] of hasOneCounts) if (count > 1) throw new VError(`duplicate has_one relations to '${target}' on entity '${e.name}'`, e.filePath || (e as any).sourceFile, e.line, e.column);
     }
   }
   for (const p of (ast.pages || []) as any[]) if (!pascal(p.name)) namingWarnings.push(`Page '${p.name}' should use PascalCase.`);
   for (const c of (ast.components || []) as any[]) if (!pascal(c.name)) namingWarnings.push(`Component '${c.name}' should use PascalCase.`);
   for (const w of (ast.workflows || []) as any[]) if (!pascal(w.name)) namingWarnings.push(`Workflow '${w.name}' should use PascalCase.`);
+  // two-word construct standardization: disallow legacy underscore variant
+  for (const p of (ast.pages || []) as any[]) {
+    if (p.source && /on_load\s*\{/.test(p.source)) {
+      throw new VError(`Use 'on load' not 'on_load' in page '${p.name}'.`, p.sourceFile, p.nameLoc?.line, p.nameLoc?.column);
+    }
+  }
   // Upload policies naming
   for (const u of (ast.uploads || []) as any[]) if (u.name && !pascal(u.name)) namingWarnings.push(`Upload policy '${u.name}' should use PascalCase.`);
   // Basic workflow validations (Phase 3)
@@ -585,6 +609,15 @@ export function validateDatabase(ast: UnifiedAST) {
             throw new VError(`Unsupported relation policy '${a.value}' on '${r.name}'. Allowed: cascade, restrict, delete.`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
           }
         }
+      }
+    }
+    // relation cardinality: at most one has_one per target in unified AST
+    const hasOneCounts = new Map<string, number>();
+    for (const r of ent.relations as any[]) if (r.kind === 'has_one') hasOneCounts.set(r.target, (hasOneCounts.get(r.target)||0)+1);
+    for (const [target, count] of hasOneCounts) {
+      if (count > 1) {
+        const first = (ent.relations as any[]).find(r=>r.kind==='has_one' && r.target===target);
+        throw new VError(`duplicate has_one relations to '${target}' on entity '${ent.name}'`, (ent as any).sourceFile, first?.nameLoc?.line, first?.nameLoc?.column);
       }
     }
   }
