@@ -171,6 +171,13 @@ export class VError extends LocusError {
 export class PError extends LocusError {
   constructor(message: string, filePath?: string, line?: number, col?: number, length?: number) {
   super({ code: 'parse_error', message, filePath, line, column: col, length, suggestions: computeSuggestions(message) });
+    if (this.suggestions) {
+      const fixes: Array<{ title: string; replacement: string }> = [];
+      if (this.suggestions.includes('elseif')) fixes.push({ title: "Replace 'else if' with 'elseif'", replacement: 'elseif' });
+      if (this.suggestions.includes('on_delete')) fixes.push({ title: "Replace 'on delete' with 'on_delete'", replacement: 'on_delete' });
+      if (this.suggestions.includes('forEach')) fixes.push({ title: "Replace 'for each' with 'forEach'", replacement: 'forEach' });
+      if (fixes.length) (this as any).fixes = fixes;
+    }
     if (this.suggestions && this.suggestions.length) {
       incSuggestions(this.suggestions.length);
     }

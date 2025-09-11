@@ -406,6 +406,15 @@ function walkUi(node: any, fn: (n:any)=>void) {
     }
   }
 
+  // Unused action detection (warnings)
+  const declaredActions: string[] = [];
+  for (const p of (ast.pages || []) as any[]) for (const a of (p.actions||[])) declaredActions.push(a.name);
+  for (const c of (ast.components || []) as any[]) for (const a of (c.actions||[])) declaredActions.push(a.name);
+  for (const sblk of (ast.stores || []) as any[]) for (const a of (sblk.actions||[])) declaredActions.push(a.name);
+  const usedActions = new Set<string>();
+  for (const w of (ast.workflows || []) as any[]) for (const s of (w.steps||[]) as any[]) if (s.kind==='run' && s.action) usedActions.add(s.action);
+  for (const name of declaredActions) if (!usedActions.has(name)) namingWarnings.push(`Unused action '${name}'. Remove it or reference it from a workflow.`);
+
   // database-wide validations
   validateDatabase(ast);
   // Deprecation: paren attribute form (Phase 2 soft warning)
@@ -581,29 +590,34 @@ function walkUi(node: any, fn: (n:any)=>void) {
 
 // Additional validations over unified database
 export function validateDatabase(ast: UnifiedAST) {
-  if (!ast || !(ast as any).database) return; // nothing to validate if unified shape not built yet
+  if (!ast || !(ast as any).database) return;
   const entities = (ast as any).database.entities || [];
   for (const ent of entities) {
-    // duplicate field names within entity
     const seen = new Map<string, any>();
     for (const f of ent.fields) {
       if (seen.has(f.name)) {
         const loc = (f as any).nameLoc;
-        throw new VError(
-          `Duplicate field name '${f.name}' in entity '${ent.name}'.`,
-          (ent as any).sourceFile,
-          loc?.line,
-          loc?.column
-        );
+        throw new VError(`Duplicate field name '${f.name}' in entity '${ent.name}'.`, (ent as any).sourceFile, loc?.line, loc?.column);
       }
       seen.set(f.name, f);
       if (f.type?.kind === 'list' && f.type.optional) {
         const loc = (f as any).nameLoc;
         throw new VError(`Optional list type not allowed for field '${f.name}' on entity '${ent.name}'`, (ent as any).sourceFile, loc?.line, loc?.column);
       }
-  if (f.type && (f.type as any).optional && (f.type as any).nullable) {
+      if (f.type && (f.type as any).optional && (f.type as any).nullable) {
         const loc = (f as any).nameLoc;
         throw new VError(`Field '${f.name}' on entity '${ent.name}' cannot be both optional and nullable. Use either '?' or '| Null/nullable'.`, (ent as any).sourceFile, loc?.line, loc?.column);
+      }
+      // default function whitelist (validateDatabase pass)
+      for (const attr of f.attributes || []) {
+        if (attr.kind === 'default' && typeof (attr as any).value === 'object' && (attr as any).value.call) {
+          const fn = (attr as any).value.call;
+          const whitelist = new Set(['now','uuid','cuid','nanoid','autoincrement']);
+          if (!whitelist.has(fn)) {
+            const loc = (f as any).nameLoc;
+            throw new VError(`Default function '${fn}' not allowed. Allowed: ${Array.from(whitelist).join(', ')}.`, (ent as any).sourceFile, loc?.line, loc?.column);
+          }
+        }
       }
     }
     // relation policy validation
@@ -631,14 +645,12 @@ export function validateDatabase(ast: UnifiedAST) {
         }
       }
     }
-    // relation cardinality: at most one has_one per target in unified AST
+    // relation cardinality
     const hasOneCounts = new Map<string, number>();
     for (const r of ent.relations as any[]) if (r.kind === 'has_one') hasOneCounts.set(r.target, (hasOneCounts.get(r.target)||0)+1);
-    for (const [target, count] of hasOneCounts) {
-      if (count > 1) {
-        const first = (ent.relations as any[]).find(r=>r.kind==='has_one' && r.target===target);
-        throw new VError(`duplicate has_one relations to '${target}' on entity '${ent.name}'`, (ent as any).sourceFile, first?.nameLoc?.line, first?.nameLoc?.column);
-      }
+    for (const [target, count] of hasOneCounts) if (count > 1) {
+      const first = (ent.relations as any[]).find(r=>r.kind==='has_one' && r.target===target);
+      throw new VError(`duplicate has_one relations to '${target}' on entity '${ent.name}'`, (ent as any).sourceFile, first?.nameLoc?.line, first?.nameLoc?.column);
     }
   }
 }
