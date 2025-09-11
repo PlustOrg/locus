@@ -27,6 +27,9 @@ import {
   URLT,
   NullT,
   OnDelete,
+  MinTok,
+  LengthTok,
+  PatternTok,
   Question,
   LParen,
   RParen,
@@ -175,32 +178,37 @@ export class DatabaseCstParser extends CstParser {
     ]));
     this.CONSUME(RCurly);
   });
+  // Restored richer workflow trigger grammar using subrules to avoid Chevrotain occurrence collisions.
+  private webhookTrigger = this.RULE('webhookTrigger', () => {
+    this.CONSUME(WebhookKw);
+    this.OPTION(() => {
+      this.CONSUME(LParen);
+      this.OPTION1(() => {
+        this.CONSUME(Identifier); // secret name
+        this.CONSUME(Colon);
+        this.CONSUME1(Identifier); // secret value identifier / binding
+      });
+      this.CONSUME(RParen);
+    });
+  });
+
+  private entityTrigger = this.RULE('entityTrigger', () => {
+    this.OR([
+      { ALT: () => this.CONSUME(CreateKw) },
+      { ALT: () => this.CONSUME(UpdateKw) },
+      { ALT: () => this.CONSUME(DeleteKw) },
+    ]);
+    this.CONSUME(LParen);
+    this.CONSUME(Identifier); // entity name
+    this.CONSUME(RParen);
+  });
 
   private triggerDecl = this.RULE('triggerDecl', () => {
     this.CONSUME(On);
-    this.OPTION(() => this.CONSUME(Colon)); // allow optional colon after 'on'
+    this.OPTION(() => this.CONSUME(Colon)); // optional colon after 'on'
     this.OR([
-      { ALT: () => {
-        this.CONSUME(WebhookKw);
-        this.OPTION1(() => {
-          this.CONSUME(LParen);
-          // optional secret: Identifier Colon Identifier
-          this.OPTION2(() => {
-            this.CONSUME(Identifier);
-            this.CONSUME1(Colon);
-            this.CONSUME1(Identifier);
-          });
-          this.CONSUME(RParen);
-        });
-      } },
-      { ALT: () => {
-        this.OR1([
-          { ALT: () => this.CONSUME(CreateKw) },
-          { ALT: () => this.CONSUME(UpdateKw) },
-          { ALT: () => this.CONSUME(DeleteKw) },
-        ]);
-        this.CONSUME2(Identifier); // entity name
-      } }
+      { ALT: () => this.SUBRULE(this.webhookTrigger) },
+      { ALT: () => this.SUBRULE(this.entityTrigger) },
     ]);
   });
 
@@ -889,7 +897,7 @@ export class DatabaseCstParser extends CstParser {
 
   private fieldType = this.RULE('fieldType', () => {
     this.OR([
-  { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); this.OPTION(() => { if (this.LA(1).tokenType === Question) { this.CONSUME(Question); /* mark optional list for validator */ (this as any)._sawOptionalList = true; } }); } },
+  { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); this.OPTION(() => this.CONSUME(Question)); } },
   // primitive scalar or scalar? or scalar[] style (legacy optional [] branch retained)
       { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION1(() => this.CONSUME1(Question)); this.OPTION2(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
     ]);
@@ -945,7 +953,22 @@ export class DatabaseCstParser extends CstParser {
   private constraintAnn = this.RULE('constraintAnn', () => {
     // matches @min(...), @max(...), @length(...), @pattern(...), @email
     this.OR([
-      { ALT: () => { this.CONSUME1(Identifier); this.OPTION(()=>{ this.CONSUME(LParen); this.OPTION1(()=> this.SUBRULE(this.literal)); this.MANY(()=>{ this.CONSUME(Comma); this.SUBRULE1(this.literal); }); this.CONSUME(RParen); }); } }
+      { ALT: () => {
+        this.OR1([
+          { ALT: () => this.CONSUME(MinTok as any) },
+          { ALT: () => this.CONSUME(MaxKw) },
+          { ALT: () => this.CONSUME(LengthTok as any) },
+          { ALT: () => this.CONSUME(PatternTok as any) },
+          { ALT: () => this.CONSUME(EmailT) },
+          { ALT: () => this.CONSUME(Identifier) },
+        ]);
+        this.OPTION(() => {
+          this.CONSUME(LParen);
+          this.OPTION1(() => this.SUBRULE(this.literal));
+          this.MANY(() => { this.CONSUME(Comma); this.SUBRULE1(this.literal); });
+          this.CONSUME(RParen);
+        });
+      } }
     ]);
   });
 

@@ -72,23 +72,20 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         if (rch['BelongsTo']) kind = 'belongs_to';
         else if (rch['HasOne']) kind = 'has_one';
         else if (rch['HasMany']) kind = 'has_many';
-        const targetTokens = rch['Identifier'] as IToken[];
-        const targetTok = targetTokens[targetTokens.length - 1];
-        const target = targetTok.image;
+  const idTokensAll = rch['Identifier'] as IToken[];
+  // Pattern: relName (0), target (1), maybe more identifiers inside attributes, maybe action after on_delete
+  const targetTok = idTokensAll[1];
+  const target = targetTok.image;
         const attrGroups2 = ((rch['fieldAttributeGroup'] as CstNode[]) || []).concat((rch['fieldAnnotation'] as CstNode[]) || []);
         const attributes: FieldAttribute[] = collectRelationAttributes(attrGroups2);
         // Extract referential integrity hint if present
         let onDelete: string | undefined;
         if (rch['OnDelete']) {
-          // Heuristic: identifiers layout: [relName, targetName, (maybe attribute ids...), actionId]
+          // Action should appear as the last Identifier after the on_delete clause
           const ids = (rch['Identifier'] as IToken[]);
           if (ids.length >= 3) {
-            const candidate = ids[ids.length - 1].image;
-            if (candidate !== relName && candidate !== target) onDelete = candidate;
-            else if (ids.length >= 4) {
-              const candidate2 = ids[ids.length - 2].image;
-              if (candidate2 !== relName && candidate2 !== target) onDelete = candidate2;
-            }
+            const actionTok = ids[ids.length - 1];
+            if (actionTok.image !== relName && actionTok.image !== target) onDelete = actionTok.image;
           }
         }
         const relNode: any = { name: relName, kind, target, attributes };

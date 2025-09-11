@@ -114,14 +114,21 @@ export function buildAstModular(cst: CstNode, originalSource?: string, filePath?
           const events: any[] = [];
           for (const d of decls) {
             const dch = d.children;
-            if (dch.CreateKw || dch.UpdateKw || dch.DeleteKw) {
-              const kindTok = (dch.CreateKw||dch.UpdateKw||dch.DeleteKw)[0];
-              const entTok = dch.Identifier?.slice(-1)[0];
-              events.push({ kind: kindTok.image, entity: entTok?.image, loc: entTok ? { line: entTok.startLine, column: entTok.startColumn } : undefined });
-            } else if (dch.WebhookKw) {
-              const idents = dch.Identifier || [];
+            // New structure: triggerDecl -> (webhookTrigger | entityTrigger)
+            const wh = dch.webhookTrigger?.[0];
+            const ent = dch.entityTrigger?.[0];
+            if (ent) {
+              const ech = ent.children;
+              const kindTok = (ech.CreateKw||ech.UpdateKw||ech.DeleteKw)?.[0];
+              const entTok = ech.Identifier?.[ech.Identifier.length-1];
+              if (kindTok) {
+                events.push({ kind: kindTok.image, entity: entTok?.image, loc: entTok ? { line: entTok.startLine, column: entTok.startColumn } : undefined });
+              }
+            } else if (wh) {
+              const wch = wh.children;
+              const idents = wch.Identifier || [];
               let secretRef: string | undefined;
-              if (idents.length === 2) secretRef = idents[1].image; // pattern: webhook( secret: NAME ) simplified
+              if (idents.length === 2) secretRef = idents[1].image;
               events.push({ kind: 'webhook', secret: secretRef });
             }
           }

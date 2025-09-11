@@ -31,7 +31,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
   if (node.template) walkUi(node.template, fn);
 }
   const pascal = (s: string) => /^[A-Z][A-Za-z0-9]*$/.test(s);
-  if (ast.database) {
+  if ((ast as any).database || (ast as any).databases) {
   const dbEntities = (ast as any).database?.entities || (ast as any).databases?.[0]?.entities || [];
   for (const e of dbEntities as any[]) {
       if (!pascal(e.name)) namingWarnings.push(`Entity '${e.name}' should use PascalCase.`);
@@ -409,7 +409,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
       if (f.type?.kind === 'list') {
         if (f.type.optional) {
           const loc = (f as any).nameLoc;
-          throw new VError(`List field '${f.name}' uses deprecated optional marker '?'. Remove '?' (lists are always present, model emptiness with empty list).`, ent.loc?.filePath, loc?.line, loc?.column);
+          throw new VError(`Optional list type not allowed for field '${f.name}' on entity '${ent.name}'. Remove '?' (lists are always present; use empty list for none).`, ent.loc?.filePath, loc?.line, loc?.column);
         }
         // reject default attributes on list fields for now
         if ((f.attributes || []).some((a: any) => a.kind === 'default')) {
@@ -568,7 +568,7 @@ export function validateDatabase(ast: UnifiedAST) {
         const loc = (f as any).nameLoc;
         throw new VError(`Optional list type not allowed for field '${f.name}' on entity '${ent.name}'`, (ent as any).sourceFile, loc?.line, loc?.column);
       }
-      if (f.type?.kind === 'primitive' && f.type.optional && (f.type as any).nullable) {
+  if (f.type && (f.type as any).optional && (f.type as any).nullable) {
         const loc = (f as any).nameLoc;
         throw new VError(`Field '${f.name}' on entity '${ent.name}' cannot be both optional and nullable. Use either '?' or '| Null/nullable'.`, (ent as any).sourceFile, loc?.line, loc?.column);
       }
