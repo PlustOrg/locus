@@ -14,7 +14,7 @@ describe('Integer default range validation', () => {
   });
   test('out-of-range integer default fails', () => {
     const unified = unify('database { entity Foo { val: Integer (default: 999999999999) } }');
-    expect(() => validateUnifiedAst(unified as any)).toThrow(/out of range/);
+  expect(() => validateUnifiedAst(unified as any)).toThrow(/overflow|outside range/);
   });
   test('non-integer decimal default fails', () => {
     const unified = unify('database { entity Foo { val: Integer (default: 12.5) } }');

@@ -471,10 +471,23 @@ function walkUi(node: any, fn: (n:any)=>void) {
     const dbs:any[] = (ast as any).databases || (ast.database?[ast.database]:[]);
     for (const db of dbs) {
       for (const e of (db.entities||[]) as any[]) {
-        const rels = (e.fields||[]).filter((f:any)=> f.relation && f.relation.type==='belongs_to');
+  // Collect belongs_to relations from both field-level and relation list
+  const fieldRels = (e.fields||[]).filter((f:any)=> f.relation && (f.relation.type==='belongs_to' || f.relation.kind==='belongs_to'));
+  const entityRels = (e.relations||[]).filter((r:any)=> r.kind==='belongs_to');
+  const rels = [...fieldRels, ...entityRels];
         if (rels.length>1) {
           const unindexed = rels.filter((r:any)=> !(r.attributes||[]).some((a:any)=> /unique|index/i.test(a.name||a)));
           if (unindexed.length>1) namingWarnings.push(`Relation indexing hint: entity '${e.name}' has multiple belongs_to without explicit indexing. Consider adding @unique/@index.`);
+        }
+        // Cascade policy validation: set_null requires optional/nullable relation
+        for (const r of entityRels) {
+          if (r.onDelete === 'set_null') {
+            const fld = (e.fields||[]).find((f:any)=>f.name===r.name);
+            const isOptional = !!(fld?.type?.optional) || !!(fld?.type?.nullable);
+            if (!isOptional) {
+              throw new VError(`on_delete: set_null requires nullable or optional relation field '${r.name}' on entity '${e.name}'.`, (e as any).sourceFile || (e as any).loc?.filePath, (r as any).loc?.line, (r as any).loc?.column);
+            }
+          }
         }
       }
     }
@@ -647,7 +660,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
             if (typeof v === 'number') {
               if (!Number.isInteger(v) || v < INT_MIN || v > INT_MAX) {
                 const loc = (f as any).nameLoc;
-                throw new VError(`Integer default for field '${f.name}' is out of range (${v}). Expected ${INT_MIN}..${INT_MAX}.`, ent.loc?.filePath, loc?.line, loc?.column);
+                throw new VError(`Integer default overflow: field '${f.name}' value (${v}) outside range ${INT_MIN}..${INT_MAX}.`, ent.loc?.filePath, loc?.line, loc?.column);
               }
             }
           }
@@ -802,6 +815,13 @@ export function validateDatabase(ast: UnifiedAST) {
             const loc = (f as any).nameLoc;
             throw new VError(`Default function '${fn}' not allowed. Allowed: ${Array.from(whitelist).join(', ')}.`, (ent as any).sourceFile, loc?.line, loc?.column);
           }
+        }
+        if (attr.kind === 'default' && typeof (attr as any).value === 'number' && f.type === 'Integer') {
+          const v = (attr as any).value;
+            if (v > 2147483647 || v < -2147483648) {
+              const loc = (f as any).nameLoc;
+              throw new VError(`Integer default overflow: ${v} outside 32-bit range (-2147483648..2147483647).`, (ent as any).sourceFile, loc?.line, loc?.column);
+            }
         }
       }
     }

@@ -20,7 +20,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Remove optional list type parsing (`list of Type?`) - make grammar-level error (builder now throws)
 - [x] (P0) Implement proper `style_override {}` block with CSS-ish token pass-through
 - [x] (P1) Standardize two-word constructs: enforce `on load`; parser pre-check rejects `on_load` with guidance
-- [ ] (P1) Normalize attribute syntax: choose between parentheses `(attr)` vs annotations `@attr`
+- [x] (P1) Normalize attribute syntax: choose between parentheses `(attr)` vs annotations `@attr`
 - [ ] (P2) Consider `Type[]` shorthand for `list of Type` with deprecation path
 - [ ] (P2) Implement canonical formatter for deterministic whitespace/ordering
 
@@ -61,8 +61,8 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Implement cross-reference validation for workflow actions (validator + tests)
 - [x] (P1) Add relation cardinality validation (duplicate has_one detection in both parse and unified validation)
 - [x] (P1) Support explicit inverse relation specification (inverse: fieldName syntax parsed & validated)
-- [ ] (P2) Add relation indexing hints
-- [ ] (P2) Implement cascade policy validation
+- [x] (P2) Add relation indexing hints
+- [x] (P2) Implement cascade policy validation
 
 ## 3. Error Reporting & Diagnostics
 
@@ -132,7 +132,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P1) Implement resource usage limits (env LOCUS_MAX_WORKFLOW_STEPS)
 - [x] (P1) Add runtime type checking capabilities (expression function whitelist enforcement)
 - [x] (P2) Implement bounds checking for arrays/collections
-- [ ] (P2) Add overflow protection for numeric operations
+- [x] (P2) Add overflow protection for numeric operations
 
 ## 7. Testing & Quality Assurance
 
@@ -140,7 +140,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P0) Add comprehensive fuzz testing for all grammar rules
 - [ ] (P0) Implement property-based testing for parser correctness
 - [x] (P1) Add regression testing for error message quality (stability test for optional list message)
-- [ ] (P1) Implement parser benchmark suite
+- [x] (P1) Implement parser benchmark suite
 - [ ] (P2) Add mutation testing for parser robustness
 - [ ] (P2) Implement coverage analysis for grammar rules
 
