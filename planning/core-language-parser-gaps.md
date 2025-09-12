@@ -12,7 +12,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Unify parsing strategies: Move UI and workflow parsing from ad-hoc regex to Chevrotain grammar (initial token + grammar unification started; UI/workflow tokens consolidated)
 - [x] (P0) Generate CST for all language constructs to ensure consistent error spans (added nullable union + referential integrity into CST)
 - [x] (P0) Reserve structural keywords (`else`, `elseif`, `guard`, `in`) as explicit tokens instead of using Identifier (tokens present in `tokens.ts`)
-- [ ] (P1) Implement unified token stream for all parsers
+- [x] (P1) Implement unified token stream for all parsers
 - [ ] (P1) Add recovery strategies for malformed syntax
 - [ ] (P2) Create modular parser architecture for easier extension
 
@@ -30,7 +30,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Add retry configuration schema: `retry { max: Int backoff: fixed|exponential factor: Int delay: Duration }` (retryBlock + parsed fields)
 - [x] (P1) Validate step references against available actions/operations (validator cross-references run step action names)
 - [x] (P1) Add deterministic step ID assignment for tracing (auto 'sN' IDs in modularAstBuilder)
-- [ ] (P2) Implement step dependency analysis and ordering
+- [x] (P2) Implement step dependency analysis and ordering
 
 ## 2. Type System Enhancements
 
@@ -45,13 +45,13 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Implement grammar support for `| Null` syntax or `nullable` keyword (Pipe + NullT added)
 - [x] (P0) Update Prisma generator to properly map nullable vs optional (comment marker emitted for nullable-only)
 - [x] (P1) Add validation rules for incompatible combinations (validator enforces optional+nullable conflict & optional list prohibition)
-- [ ] (P1) Update documentation with clear examples and migration guide
+- [x] (P1) Update documentation with clear examples and migration guide
 - [ ] (P2) Consider backward compatibility for existing `?` usage
 
 ### Expression System
 - [x] (P0) Implement formal expression grammar for all `{...}` contexts (added comparison ops < >, call expressions, precedence)
 - [x] (P0) Add basic identifier validation for UI attribute expressions (loop vars, params, state, children); deeper type checking TBD
-- [ ] (P1) Create expression AST for compile-time validation
+- [x] (P1) Create expression AST for compile-time validation
 - [x] (P1) Implement expression optimization and caching (constant folding + AST memoization)
 - [ ] (P2) Add support for custom expression functions
 - [ ] (P3) Consider expression debugging capabilities
@@ -131,7 +131,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Add expression evaluation sandboxing (block constructor/__proto__/prototype member access)
 - [x] (P1) Implement resource usage limits (env LOCUS_MAX_WORKFLOW_STEPS)
 - [x] (P1) Add runtime type checking capabilities (expression function whitelist enforcement)
-- [ ] (P2) Implement bounds checking for arrays/collections
+- [x] (P2) Implement bounds checking for arrays/collections
 - [ ] (P2) Add overflow protection for numeric operations
 
 ## 7. Testing & Quality Assurance

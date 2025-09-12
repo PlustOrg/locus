@@ -410,6 +410,75 @@ function walkUi(node: any, fn: (n:any)=>void) {
   }
   // (earlier dependency analysis already executed)
   }
+  // UI bounds checking + expression identifier sanity (lightweight)
+  const allowedGlobalExprIds = new Set(['now','uuid','cuid','nanoid','props','children']);
+  function collectIds(exprAst:any, out:Set<string>) {
+    if (!exprAst || typeof exprAst !== 'object') return;
+    switch (exprAst.kind) {
+      case 'id': out.add(exprAst.name); break;
+      case 'member': collectIds(exprAst.object, out); break;
+      case 'call': collectIds(exprAst.callee, out); for (const a of exprAst.args||[]) collectIds(a,out); break;
+      case 'bin': collectIds(exprAst.left,out); collectIds(exprAst.right,out); break;
+      case 'unary': collectIds(exprAst.expr,out); break;
+      case 'paren': collectIds(exprAst.expr,out); break;
+    }
+  }
+  function traverseUi(node:any, pageCtx:{params?:string[], state?:string[], loopVars:Set<string>} , file?:string){
+    if (!node || typeof node!=='object') return;
+    if (node.type==='forEach') {
+      // Warn about potential unbounded iteration (simple heuristic: iterable is identifier without obvious slice/limit)
+      if (typeof node.iterable === 'string' && /[A-Za-z_][A-Za-z0-9_]*$/.test(node.iterable.trim())) {
+        namingWarnings.push(`Bounds checking: unbounded iteration over '${node.iterable}' in UI forEach; consider validating length.`);
+      }
+      const newLoop = new Set(pageCtx.loopVars); newLoop.add(node.item);
+      traverseUi(node.template, { ...pageCtx, loopVars: newLoop }, file);
+      return;
+    }
+    if (node.type==='element') {
+      if (node.attrs && node.attrs.forEach && (node.attrs.forEach as any).kind==='expr') {
+        const raw = (node.attrs.forEach as any).value;
+        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(raw)) {
+          namingWarnings.push(`Bounds checking: unbounded iteration over '${raw}' in UI forEach; consider validating length.`);
+        }
+      }
+      if (node.attrs) for (const a of Object.values(node.attrs) as any[]) if (a && a.kind==='expr' && a.ast) {
+        const ids = new Set<string>(); collectIds(a.ast, ids);
+        for (const id of ids) {
+          if (pageCtx.loopVars.has(id)) continue;
+          if (allowedGlobalExprIds.has(id)) continue;
+          if (pageCtx.params?.includes(id)) continue;
+          if (pageCtx.state?.includes(id)) continue;
+          // Basic unknown identifier heuristic: not followed by member access? we already collected root ids only.
+          // Instead of throwing (which could create noise), produce naming warning for now.
+          namingWarnings.push(`Unknown identifier '${id}' in UI expression (page/component).`);
+        }
+      }
+      if (Array.isArray(node.children)) node.children.forEach((c:any)=>traverseUi(c, pageCtx, file));
+    } else if (node.type==='if') {
+      if (Array.isArray(node.consequent)) node.consequent.forEach((c:any)=>traverseUi(c,pageCtx,file));
+      if (Array.isArray(node.elif)) node.elif.forEach((br:any)=> br.children.forEach((c:any)=>traverseUi(c,pageCtx,file)));
+      if (Array.isArray(node.else)) node.else.forEach((c:any)=>traverseUi(c,pageCtx,file));
+    }
+  }
+  try {
+    for (const p of (ast.pages||[]) as any[]) {
+      if (p.uiAst) traverseUi(p.uiAst, { params: p.params || [], state: (p.state||[]).map((s:any)=>s.name), loopVars:new Set() }, p.filePath);
+    }
+    for (const c of (ast.components||[]) as any[]) if (c.uiAst) traverseUi(c.uiAst, { params: c.params || [], state: [], loopVars:new Set() }, c.filePath);
+  } catch {/* ignore */}
+  // Relation indexing hints: if entity has >1 belongs_to fields without @index/@unique attributes suggest adding index
+  try {
+    const dbs:any[] = (ast as any).databases || (ast.database?[ast.database]:[]);
+    for (const db of dbs) {
+      for (const e of (db.entities||[]) as any[]) {
+        const rels = (e.fields||[]).filter((f:any)=> f.relation && f.relation.type==='belongs_to');
+        if (rels.length>1) {
+          const unindexed = rels.filter((r:any)=> !(r.attributes||[]).some((a:any)=> /unique|index/i.test(a.name||a)));
+          if (unindexed.length>1) namingWarnings.push(`Relation indexing hint: entity '${e.name}' has multiple belongs_to without explicit indexing. Consider adding @unique/@index.`);
+        }
+      }
+    }
+  } catch {/* ignore */}
   // Page on load canonical form warning
   for (const pg of ast.pages || []) {
     if ((pg as any).onLoad && /onLoad\s*\{/.test((pg as any).onLoad)) {
