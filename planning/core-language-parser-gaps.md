@@ -13,7 +13,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Generate CST for all language constructs to ensure consistent error spans (added nullable union + referential integrity into CST)
 - [x] (P0) Reserve structural keywords (`else`, `elseif`, `guard`, `in`) as explicit tokens instead of using Identifier (tokens present in `tokens.ts`)
 - [x] (P1) Implement unified token stream for all parsers
-- [ ] (P1) Add recovery strategies for malformed syntax
+- [x] (P1) Add recovery strategies for malformed syntax
 - [ ] (P2) Create modular parser architecture for easier extension
 
 ### Syntax Inconsistencies  
@@ -21,7 +21,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Implement proper `style_override {}` block with CSS-ish token pass-through
 - [x] (P1) Standardize two-word constructs: enforce `on load`; parser pre-check rejects `on_load` with guidance
 - [x] (P1) Normalize attribute syntax: choose between parentheses `(attr)` vs annotations `@attr`
-- [ ] (P2) Consider `Type[]` shorthand for `list of Type` with deprecation path
+- [x] (P2) Consider `Type[]` shorthand for `list of Type` with deprecation path
 - [ ] (P2) Implement canonical formatter for deterministic whitespace/ordering
 
 ### Workflow Grammar Formalization
@@ -53,7 +53,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Add basic identifier validation for UI attribute expressions (loop vars, params, state, children); deeper type checking TBD
 - [x] (P1) Create expression AST for compile-time validation
 - [x] (P1) Implement expression optimization and caching (constant folding + AST memoization)
-- [ ] (P2) Add support for custom expression functions
+- [x] (P2) Add support for custom expression functions
 - [ ] (P3) Consider expression debugging capabilities
 
 ### Relation System Improvements
@@ -72,7 +72,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Add context-specific error messages for attribute misuse (initial: optional list, optional+nullable, relation policy, workflow trigger conflicts)
 - [x] (P1) Include suggested replacement snippets in error metadata (errors carry suggestions array; on_load provides 'on load')
 - [x] (P1) Implement quick-fix suggestions for common errors (PError.fixes array with elseif/on_delete/forEach replacements)
-- [ ] (P2) Add error correlation across multiple files
+- [x] (P2) Add error correlation across multiple files
 
 ### Diagnostic Infrastructure
 - [x] (P0) Implement structured diagnostic format with machine-readable codes (DiagnosticCode constants added in `errors.ts`)
@@ -85,7 +85,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ## 4. Performance & Memory Optimization
 
 ### Parser Performance  
-- [ ] (P0) Implement incremental parsing with per-block content hashing
+- [x] (P0) Implement incremental parsing with per-block content hashing
 - [ ] (P0) Add parallel parsing with worker thread pool
 - [ ] (P1) Implement compact AST node representation using numeric enums
 - [x] (P1) Add memory usage monitoring and budgets (parse/merge/generate heap deltas recorded)

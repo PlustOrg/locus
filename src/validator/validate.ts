@@ -1,4 +1,5 @@
 import { VError } from '../errors';
+import { isCustomExprFunction } from './exprFunctions';
 import { registerDeprecation } from '../deprecations';
 import { UnifiedAST } from '../parser/merger';
 import { PluginManager } from '../plugins/manager';
@@ -445,7 +446,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
         const ids = new Set<string>(); collectIds(a.ast, ids);
         for (const id of ids) {
           if (pageCtx.loopVars.has(id)) continue;
-          if (allowedGlobalExprIds.has(id)) continue;
+          if (allowedGlobalExprIds.has(id) || isCustomExprFunction(id)) continue;
           if (pageCtx.params?.includes(id)) continue;
           if (pageCtx.state?.includes(id)) continue;
           // Basic unknown identifier heuristic: not followed by member access? we already collected root ids only.
@@ -840,6 +841,7 @@ export function validateDatabase(ast: UnifiedAST) {
       }
     }
     // inverse relation validation
+    const missingRelationTargets: Record<string, Set<string>> = {};
     for (const r of ent.relations as any[]) {
       if (r.inverse) {
         const targetEnt = entities.find((e: any) => e.name === r.target);
@@ -849,6 +851,17 @@ export function validateDatabase(ast: UnifiedAST) {
           throw new VError(`Relation '${r.name}' declares inverse '${r.inverse}' not found on target '${r.target}'.`, (ent as any).sourceFile, r.nameLoc?.line, r.nameLoc?.column);
         }
       }
+      // collect missing targets (correlation)
+      if (!entities.find((e:any)=>e.name===r.target)) {
+        if (!missingRelationTargets[r.target]) missingRelationTargets[r.target] = new Set();
+        missingRelationTargets[r.target].add(`${ent.name}.${r.name}`);
+      }
+    }
+    // after scanning relations, emit correlated error if any
+    const missingKeys = Object.keys(missingRelationTargets);
+    if (missingKeys.length) {
+      const summary = missingKeys.map(k=>`'${k}' referenced by ${Array.from(missingRelationTargets[k]).join(', ')}`).join('; ');
+      throw new VError(`Missing relation target(s): ${summary}`, (ent as any).sourceFile, ent.nameLoc?.line, ent.nameLoc?.column);
     }
     // relation cardinality
     const hasOneCounts = new Map<string, number>();

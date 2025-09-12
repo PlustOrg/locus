@@ -1,10 +1,16 @@
 import { LocusFileAST } from '../ast';
 import { PError } from '../errors';
 import { LocusLexer } from './tokens';
+import crypto from 'crypto';
 import { DatabaseCstParser } from './databaseParser';
 import { buildAstModular } from './modularAstBuilder';
 // style_override handled directly in grammar. Legacy style:override removed.
-
+let __parseCount = 0;
+const __hashCache = new Map<string,string>();
+const __astCache = new Map<string,LocusFileAST>();
+export function __getParseCount(){ return __parseCount; }
+export function __resetParseCount(){ __parseCount = 0; __hashCache.clear(); __astCache.clear(); }
+function hashContent(s: string){ return crypto.createHash('sha1').update(s).digest('hex'); }
 
 export function parseLocus(source: string, filePath?: string): LocusFileAST {
   // quick lexical pre-check for disallowed legacy constructs
@@ -18,7 +24,18 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     (err as any).suggestions = (err as any).suggestions ? [...(err as any).suggestions, 'on load'] : ['on load'];
     throw err;
   }
-  const lexResult = LocusLexer.tokenize(source.replace(/!/g, ' '));
+  const normalized = source.replace(/!/g, ' ');
+  if (filePath) {
+    const h = hashContent(normalized);
+    const prev = __hashCache.get(filePath);
+    if (prev && prev === h) {
+      const cached = __astCache.get(filePath);
+      if (cached) return cached;
+    }
+    __hashCache.set(filePath, h);
+  }
+  __parseCount++;
+  const lexResult = LocusLexer.tokenize(normalized);
   if (lexResult.errors.length) {
     const err = lexResult.errors[0];
   throw new PError(err.message, filePath, err.line, err.column, (err as any).length ?? 1);
@@ -48,6 +65,7 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
       if (entities.length) (ast as any).entities = entities;
     }
   } catch {/* ignore */}
+  if (filePath) __astCache.set(filePath as string, ast);
   return ast;
 }
 
