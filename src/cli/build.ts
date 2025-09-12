@@ -12,7 +12,7 @@ import { generateExpressApi, AuthConfig } from '../generator/express';
 import { initPluginManager } from '../plugins/manager';
 import chalk from 'chalk';
 import { reportError, ErrorOutputFormat } from './reporter';
-import { recordTiming, exportMetrics } from '../metrics';
+import { recordTiming, exportMetrics, incDiagnostic, recordMemoryPhase } from '../metrics';
 import { collectDeprecationWarnings } from '../deprecations';
 
 /**
@@ -71,6 +71,7 @@ export async function buildProject(opts: {
   }
   // If any parse errors, report and exit early
   if (diagnostics.length) {
+    incDiagnostic(diagnostics.length);
     reportError([], fileMap, opts.errorFormat); // no-op for pretty
     if (opts.errorFormat === 'json') {
       process.stderr.write(JSON.stringify({ diagnostics }) + '\n');
@@ -84,7 +85,9 @@ export async function buildProject(opts: {
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Parsed ${files.length} files in ${tParse1-tParse0}ms\n`);
   }
-  recordTiming('parseMs', tParse1 - tParse0);
+  const parseDur = tParse1 - tParse0;
+  recordTiming('parseMs', parseDur);
+  recordMemoryPhase('parse', memAfterParse - mem0);
   // Plugin hook: after each file parsed
   for (let i = 0; i < asts.length; i++) {
     const filePath = files[i];
@@ -101,7 +104,8 @@ export async function buildProject(opts: {
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
       const diag = errorToDiagnostic(e as any);
-      if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
+  incDiagnostic(1);
+  if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
       else reportError(e as any, fileMap, opts.errorFormat);
       return { outDir, diagnostics: [diag], failed: true } as any;
     }
@@ -136,7 +140,8 @@ export async function buildProject(opts: {
   } catch (e) {
     if (e instanceof LocusError || (e && (e as any).code)) {
       const diag = errorToDiagnostic(e as any);
-      if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
+  incDiagnostic(1);
+  if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
       else reportError(e as any, fileMap, opts.errorFormat);
       return { outDir, diagnostics: [diag], failed: true } as any;
     }
@@ -147,7 +152,9 @@ export async function buildProject(opts: {
   if (opts.debug) {
     process.stdout.write(`[locus][debug] Merged ASTs in ${tMerge1-tParse1}ms\n`);
   }
-  recordTiming('mergeMs', tMerge1 - tParse1);
+  const mergeDur = tMerge1 - tParse1;
+  recordTiming('mergeMs', mergeDur);
+  recordMemoryPhase('merge', memAfterMerge - memAfterParse);
 
   // Generate all build artifacts
   let genMeta: any = {};
@@ -222,6 +229,7 @@ export async function buildProject(opts: {
     }
   genDur = Date.now() - tMerge1;
   recordTiming('generateMs', genDur);
+  recordMemoryPhase('generate', memAfterGenerate - memAfterMerge);
   memAfterGenerate = process.memoryUsage().heapUsed;
     // Dry run: just list files
     if (opts.dryRun) {

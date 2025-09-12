@@ -52,7 +52,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Implement formal expression grammar for all `{...}` contexts (added comparison ops < >, call expressions, precedence)
 - [x] (P0) Add basic identifier validation for UI attribute expressions (loop vars, params, state, children); deeper type checking TBD
 - [ ] (P1) Create expression AST for compile-time validation
-- [ ] (P1) Implement expression optimization and caching
+- [x] (P1) Implement expression optimization and caching (constant folding + AST memoization)
 - [ ] (P2) Add support for custom expression functions
 - [ ] (P3) Consider expression debugging capabilities
 
@@ -78,7 +78,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Implement structured diagnostic format with machine-readable codes (DiagnosticCode constants added in `errors.ts`)
 - [x] (P1) Add diagnostic severity levels (severity field added; currently all 'error')
 - [x] (P1) Implement diagnostic filtering and suppression (filterDiagnostics utility: severity threshold, code/message suppression)
-- [ ] (P2) Add diagnostic performance metrics
+- [x] (P2) Add diagnostic performance metrics (diagnostic count + memory deltas captured)
 - [ ] (P2) Create diagnostic aggregation and reporting
 - [ ] (P3) Implement IDE integration protocols (LSP)
 
@@ -88,7 +88,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P0) Implement incremental parsing with per-block content hashing
 - [ ] (P0) Add parallel parsing with worker thread pool
 - [ ] (P1) Implement compact AST node representation using numeric enums
-- [ ] (P1) Add memory usage monitoring and budgets
+- [x] (P1) Add memory usage monitoring and budgets (parse/merge/generate heap deltas recorded)
 - [ ] (P2) Implement AST node pooling for reduced allocations
 - [ ] (P2) Add parser performance profiling and optimization
 
@@ -122,13 +122,13 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P0) Implement exhaustive validation for all language constructs
 - [x] (P0) Add cross-reference validation (entities, components, workflows) (actions aggregated across pages/components/stores)
 - [x] (P1) Implement unused code detection (unused action warnings)
-- [ ] (P1) Add circular dependency detection
+- [x] (P1) Add circular dependency detection (component JSX DFS cycle detection)
 - [ ] (P2) Implement dead code elimination
 - [ ] (P2) Add code complexity metrics and warnings
 
 ### Runtime Safety
 - [x] (P0) Implement whitelist for default value functions (validator enforced: now, uuid, cuid, nanoid, autoincrement)
-- [ ] (P0) Add expression evaluation sandboxing
+- [x] (P0) Add expression evaluation sandboxing (block constructor/__proto__/prototype member access)
 - [ ] (P1) Implement resource usage limits
 - [ ] (P1) Add runtime type checking capabilities
 - [ ] (P2) Implement bounds checking for arrays/collections

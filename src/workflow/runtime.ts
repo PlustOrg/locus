@@ -14,7 +14,13 @@ export function evaluateExpr(expr: ExprNode | undefined, ctx: WorkflowContext): 
   switch (expr.kind) {
     case 'id': return ctx.bindings[(expr as any).name] ?? ctx.inputs?.[(expr as any).name];
     case 'lit': return (expr as any).value;
-    case 'member': return evaluateExpr((expr as any).object, ctx)?.[(expr as any).property];
+    case 'member': {
+      const prop = (expr as any).property;
+      if (prop === 'constructor' || prop === '__proto__' || prop === 'prototype') return undefined;
+      const obj = evaluateExpr((expr as any).object, ctx);
+      if (obj == null) return undefined;
+      return (obj as any)[prop];
+    }
     case 'unary': {
       const v = evaluateExpr((expr as any).expr, ctx); const op = (expr as any).op; return op === '!' ? !v : -v; }
     case 'bin': {

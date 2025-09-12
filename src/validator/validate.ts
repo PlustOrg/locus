@@ -82,6 +82,43 @@ function walkUi(node: any, fn: (n:any)=>void) {
   }
   for (const p of (ast.pages || []) as any[]) if (!pascal(p.name)) namingWarnings.push(`Page '${p.name}' should use PascalCase.`);
   for (const c of (ast.components || []) as any[]) if (!pascal(c.name)) namingWarnings.push(`Component '${c.name}' should use PascalCase.`);
+  // Component circular dependency detection (simple DFS based on JSX element usage)
+  try {
+    const comps: any[] = (ast.components || []) as any[];
+    if (comps.length) {
+      const byName = new Map<string, any>();
+      for (const c of comps) byName.set(c.name, c);
+      const uses = new Map<string, Set<string>>();
+      function collect(n: any, acc: Set<string>) {
+        if (!n) return;
+        if (n.type === 'element' && /^[A-Z][A-Za-z0-9]*/.test(n.tag)) acc.add(n.tag);
+        if (n.children) for (const ch of n.children) collect(ch, acc);
+        if (Array.isArray(n.consequent)) for (const ch of n.consequent) collect(ch, acc);
+        if (n.else) for (const ch of n.else) collect(ch, acc);
+        if (n.elif) for (const e of n.elif) for (const ch of e.children) collect(ch, acc);
+      }
+      for (const c of comps) {
+        const acc = new Set<string>();
+        collect((c as any).uiAst, acc);
+        uses.set(c.name, new Set([...acc].filter(n => n !== c.name && byName.has(n))));
+      }
+      const visiting = new Set<string>();
+      const visited = new Set<string>();
+      function dfs(name: string, path: string[]): void {
+        if (visiting.has(name)) {
+          const cycle = [...path, name].join(' -> ');
+          const comp = byName.get(name);
+          throw new VError(`Circular component dependency detected: ${cycle}`, comp?.sourceFile, comp?.nameLoc?.line, comp?.nameLoc?.column);
+        }
+        if (visited.has(name)) return;
+        visiting.add(name);
+        const deps = uses.get(name) || new Set();
+        for (const d of deps) dfs(d, [...path, name]);
+        visiting.delete(name); visited.add(name);
+      }
+      for (const c of comps) dfs(c.name, []);
+    }
+  } catch (e) { if (e instanceof VError) throw e; }
   for (const w of (ast.workflows || []) as any[]) if (!pascal(w.name)) namingWarnings.push(`Workflow '${w.name}' should use PascalCase.`);
   // two-word construct standardization: disallow legacy underscore variant
   for (const p of (ast.pages || []) as any[]) {

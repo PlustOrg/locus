@@ -16,7 +16,8 @@ export function parseExpression(text: string): ExprNode | undefined {
   const tokens = lex.tokens.filter(t => t.tokenType.name !== 'WhiteSpace');
   const ts: TokenStream = { idx:0, tokens };
   if (!tokens.length) return undefined;
-  const ast = parseExpr(ts, 0);
+  let ast = parseExpr(ts, 0);
+  ast = foldConstants(ast);
   exprCache.set(text, ast);
   return ast;
 }
@@ -94,5 +95,39 @@ function parsePrimary(ts: TokenStream): ExprNode {
     }
     default:
       throw new Error('Unexpected token: ' + t.image);
+  }
+}
+
+function foldConstants(node: ExprNode): ExprNode {
+  switch (node.kind) {
+    case 'bin': {
+      const n:any = node as any; n.left = foldConstants(n.left); n.right = foldConstants(n.right);
+      if (n.left.kind === 'lit' && n.right.kind === 'lit' && typeof (n.left as any).value === 'number' && typeof (n.right as any).value === 'number') {
+        const l = (n.left as any).value; const r = (n.right as any).value; let v: number | undefined;
+        switch (n.op) { case '+': v = l + r; break; case '-': v = l - r; break; case '*': v = l * r; break; case '/': v = r !== 0 ? l / r : undefined; break; case '==': v = l == r ? 1 : 0; break; case '!=': v = l != r ? 1 : 0; break; case '<': v = l < r ? 1 : 0; break; case '>': v = l > r ? 1 : 0; break; }
+        if (v !== undefined) return { kind: 'lit', value: v } as any;
+      }
+      return n;
+    }
+    case 'unary': {
+      const n:any = node as any; n.expr = foldConstants(n.expr);
+      if (n.expr.kind === 'lit' && typeof (n.expr as any).value === 'number') {
+        if (n.op === '-') return { kind: 'lit', value: -(n.expr as any).value } as any;
+      }
+      if (n.expr.kind === 'lit' && n.op === '!') {
+        return { kind: 'lit', value: !(n.expr as any).value ? 1 : 0 } as any;
+      }
+      return n;
+    }
+    case 'paren': {
+      const inner:any = foldConstants((node as any).expr); return inner;
+    }
+    case 'member': {
+      const n:any = node as any; n.object = foldConstants(n.object); return n;
+    }
+    case 'call': {
+      const n:any = node as any; n.callee = foldConstants(n.callee); n.args = n.args.map((a:ExprNode)=>foldConstants(a)); return n;
+    }
+    default: return node;
   }
 }
