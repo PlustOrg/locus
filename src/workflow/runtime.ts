@@ -166,7 +166,13 @@ export function compileWorkflow(block: WorkflowBlock) {
 }
 
 function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: WorkflowContext, pm?: PluginManager) {
+  const maxSteps = Number(process.env.LOCUS_MAX_WORKFLOW_STEPS || '0');
+  let executed = 0;
   for (const step of steps) {
+    if (maxSteps > 0 && executed >= maxSteps) {
+      ctx.log.push({ kind: 'limit_exceeded', detail: { max: maxSteps }, v: 1 });
+      return;
+    }
     // plugin custom kind
     emitTrace({ type: 'step_start', data: { kind: (step as any).kind, id: (step as any).id } });
     if (pm) {
@@ -182,6 +188,7 @@ function runWorkflowSteps(block: WorkflowBlock, steps: WorkflowStep[], ctx: Work
     }
   runStepWithRetry(step, ctx, (block as any).retryConfig, pm);
     emitTrace({ type: 'step_end', data: { kind: (step as any).kind, id: (step as any).id } });
+    executed++;
   }
 }
 
@@ -245,8 +252,11 @@ function runStep(step: WorkflowStep, ctx: WorkflowContext, pm?: PluginManager) {
       const fe: any = step as any;
       let iterable: any = undefined;
       if (fe.iterExpr) iterable = evaluateExpr(fe.iterExpr, ctx);
-      if (!Array.isArray(iterable)) iterable = [];
-      ctx.log.push({ kind: 'for_each', detail: { count: iterable.length }, v: 1 });
+      if (!Array.isArray(iterable)) {
+        ctx.log.push({ kind: 'bounds_warning', detail: { iter: fe.iterRaw || fe.iter }, v: 1 });
+        iterable = [];
+      }
+      ctx.log.push({ kind: 'for_each', detail: { count: Array.isArray(iterable)?iterable.length:0 }, v: 1 });
       for (const item of iterable) {
         ctx.bindings[fe.loopVar] = item;
         for (const s of fe.steps || []) runStep(s as any, ctx, pm);

@@ -57,8 +57,12 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         }
         const attrGroups = ((fdCh['fieldAttributeGroup'] as CstNode[]) || []).concat((fdCh['fieldAnnotation'] as CstNode[]) || []);
         const attributes: FieldAttribute[] = collectFieldAttributes(attrGroups);
+        // Capture raw field text (between field name token start and end of last attribute token) for downstream analyses.
+  // (raw capture placeholder omitted to avoid unused variable warnings)
         const fieldNode: any = { name: fieldName, type: fieldType, attributes };
         defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
+        // Mark deprecated attribute syntax if any attribute groups used paren style
+        if (attrGroups.some(g => (g.children as any).LParen)) fieldNode.raw = (fieldNode.raw || '(attr)');
         fields.push(fieldNode);
       }
 

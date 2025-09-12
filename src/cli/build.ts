@@ -74,11 +74,12 @@ export async function buildProject(opts: {
     incDiagnostic(diagnostics.length);
     reportError([], fileMap, opts.errorFormat); // no-op for pretty
     if (opts.errorFormat === 'json') {
-      process.stderr.write(JSON.stringify({ diagnostics }) + '\n');
+      const summary = diagnostics.reduce((acc:any,d)=>{acc[d.code]=(acc[d.code]||0)+1;return acc;},{});
+      process.stderr.write(JSON.stringify({ diagnostics, summary }) + '\n');
     } else {
       reportError(new LocusError({ code: 'parse_error', message: diagnostics[0].message, filePath: diagnostics[0].filePath, line: diagnostics[0].line, column: diagnostics[0].column, length: diagnostics[0].length }), fileMap, opts.errorFormat);
     }
-    return { outDir, diagnostics, failed: true } as any;
+    return { outDir, diagnostics, failed: true, summary: diagnostics.reduce((acc:any,d)=>{acc[d.code]=(acc[d.code]||0)+1;return acc;},{}) } as any;
   }
   const tParse1 = Date.now();
   const memAfterParse = process.memoryUsage().heapUsed;
@@ -105,9 +106,9 @@ export async function buildProject(opts: {
     if (e instanceof LocusError || (e && (e as any).code)) {
       const diag = errorToDiagnostic(e as any);
   incDiagnostic(1);
-  if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
+  if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag], summary: { [diag.code]:1 } }) + '\n');
       else reportError(e as any, fileMap, opts.errorFormat);
-      return { outDir, diagnostics: [diag], failed: true } as any;
+  return { outDir, diagnostics: [diag], failed: true, summary: { [diag.code]:1 } } as any;
     }
     throw new BuildError(`Failed to merge ASTs: ${(e as any)?.message || e}`, e);
   }
@@ -141,9 +142,9 @@ export async function buildProject(opts: {
     if (e instanceof LocusError || (e && (e as any).code)) {
       const diag = errorToDiagnostic(e as any);
   incDiagnostic(1);
-  if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag] }) + '\n');
+  if (opts.errorFormat === 'json') process.stderr.write(JSON.stringify({ diagnostics: [diag], summary: { [diag.code]:1 } }) + '\n');
       else reportError(e as any, fileMap, opts.errorFormat);
-      return { outDir, diagnostics: [diag], failed: true } as any;
+  return { outDir, diagnostics: [diag], failed: true, summary: { [diag.code]:1 } } as any;
     }
     throw e;
   }

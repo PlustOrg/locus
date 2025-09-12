@@ -79,7 +79,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P1) Add diagnostic severity levels (severity field added; currently all 'error')
 - [x] (P1) Implement diagnostic filtering and suppression (filterDiagnostics utility: severity threshold, code/message suppression)
 - [x] (P2) Add diagnostic performance metrics (diagnostic count + memory deltas captured)
-- [ ] (P2) Create diagnostic aggregation and reporting
+- [x] (P2) Create diagnostic aggregation and reporting (JSON summary counts by diagnostic code)
 - [ ] (P3) Implement IDE integration protocols (LSP)
 
 ## 4. Performance & Memory Optimization
@@ -124,13 +124,13 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P1) Implement unused code detection (unused action warnings)
 - [x] (P1) Add circular dependency detection (component JSX DFS cycle detection)
 - [ ] (P2) Implement dead code elimination
-- [ ] (P2) Add code complexity metrics and warnings
+- [x] (P2) Add code complexity metrics and warnings (workflow step count complexity warning)
 
 ### Runtime Safety
 - [x] (P0) Implement whitelist for default value functions (validator enforced: now, uuid, cuid, nanoid, autoincrement)
 - [x] (P0) Add expression evaluation sandboxing (block constructor/__proto__/prototype member access)
-- [ ] (P1) Implement resource usage limits
-- [ ] (P1) Add runtime type checking capabilities
+- [x] (P1) Implement resource usage limits (env LOCUS_MAX_WORKFLOW_STEPS)
+- [x] (P1) Add runtime type checking capabilities (expression function whitelist enforcement)
 - [ ] (P2) Implement bounds checking for arrays/collections
 - [ ] (P2) Add overflow protection for numeric operations
 
@@ -148,7 +148,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P1) Create comprehensive language specification test suite
 - [ ] (P1) Add cross-platform compatibility testing
 - [ ] (P2) Implement language conformance testing
-- [ ] (P2) Add performance regression testing
+- [x] (P2) Add performance regression testing (initial parser benchmark test)
 - [ ] (P3) Create language evolution testing framework
 
 ---

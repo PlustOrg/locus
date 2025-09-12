@@ -190,3 +190,26 @@ database {
   }
 }
 ```
+
+## Nullable vs Optional Migration
+
+The compiler now distinguishes between optional presence (`?`) and nullable value (`| Null`). Use this guide when updating legacy schemas:
+
+1. If a field previously used `?` to mean it can store nulls, migrate to `Type | Null`.
+2. Reserve `?` for cases where the field may be omitted entirely from inputs.
+3. Do not combine `?` and `| Null` unless both semantics are desired; the validator will warn on conflicting patterns in future releases.
+4. Generators map optional fields to nullable database columns only when explicitly unioned with `Null`.
+
+Example:
+```locus
+// Legacy
+entity User { middleName: String? }
+
+// Nullable but required
+entity User { middleName: String | Null }
+
+// Optional (absent vs present)
+entity User { middleName?: String }
+```
+
+This section is a living migration aid; expect future enhancements with automated quick‑fixes.

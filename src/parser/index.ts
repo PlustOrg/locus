@@ -38,6 +38,16 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   }
 
   const ast = buildAstModular(cst, source, filePath);
+  // Provide unified top-level convenience arrays for mixed content files.
+  try {
+    const dbs = (ast as any).databases || [];
+    const hasMixed = dbs.length > 1 || ((ast as any).pages?.length || (ast as any).components?.length || (ast as any).workflows?.length);
+    if (hasMixed || process.env.LOCUS_EXPOSE_FLAT_ENTITIES === '1') {
+      const entities: any[] = [];
+      for (const db of dbs) if (Array.isArray(db.entities)) entities.push(...db.entities);
+      if (entities.length) (ast as any).entities = entities;
+    }
+  } catch {/* ignore */}
   return ast;
 }
 

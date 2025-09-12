@@ -37,6 +37,9 @@ function walkUi(node: any, fn: (n:any)=>void) {
       if (!pascal(e.name)) namingWarnings.push(`Entity '${e.name}' should use PascalCase.`);
       // Field rules (nullable vs optional)
       for (const f of e.fields || []) {
+        if (f.raw && /\([A-Za-z0-9_]+\)/.test(f.raw) && !/@[A-Za-z0-9_]+/.test(f.raw)) {
+          namingWarnings.push(`Deprecated attribute syntax '(attr)' on field '${f.name}' in entity '${e.name}'. Use '@attr'.`);
+        }
         try {
           const def = (f.attributes||[]).find((a:any)=>a.kind==='default');
           if (def && def.value === 'null' && f.type?.optional && !(f.type as any).nullable) {
@@ -120,6 +123,14 @@ function walkUi(node: any, fn: (n:any)=>void) {
     }
   } catch (e) { if (e instanceof VError) throw e; }
   for (const w of (ast.workflows || []) as any[]) if (!pascal(w.name)) namingWarnings.push(`Workflow '${w.name}' should use PascalCase.`);
+  // Workflow complexity warning
+  const complexityThreshold = Number(process.env.LOCUS_WORKFLOW_COMPLEXITY_THRESHOLD || '50');
+  if (complexityThreshold > 0) {
+    for (const w of (ast.workflows || []) as any[]) {
+      const count = Array.isArray(w.steps) ? w.steps.length : 0;
+      if (count > complexityThreshold) namingWarnings.push(`Workflow '${w.name}' complexity warning: ${count} steps exceeds threshold ${complexityThreshold}.`);
+    }
+  }
   // two-word construct standardization: disallow legacy underscore variant
   for (const p of (ast.pages || []) as any[]) {
     if (p.source && /on_load\s*\{/.test(p.source)) {
@@ -249,7 +260,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
   for (const p of (ast.pages || []) as any[]) for (const a of (p.actions||[])) actionNames.add(a.name);
   for (const c of (ast.components || []) as any[]) for (const a of (c.actions||[])) actionNames.add(a.name);
   for (const sblk of (ast.stores || []) as any[]) for (const a of (sblk.actions||[])) actionNames.add(a.name);
-    for (const s of steps) {
+  for (const s of steps) {
       const raw = s.raw as string;
       const m = /const\s+([A-Za-z_][A-Za-z0-9_]*)/g;
       let r: RegExpExecArray | null;
@@ -316,10 +327,73 @@ function walkUi(node: any, fn: (n:any)=>void) {
           throw new VError(`Workflow '${w.name}' http_request must use HTTPS (add allow_insecure: true to override).`, (w as any).sourceFile, loc?.line, loc?.column);
         }
       }
+      // Expression function whitelist
+      const allowEnv = process.env.LOCUS_ALLOWED_EXPR_FUNCS || '';
+      const allowed = new Set(allowEnv.split(/[\s,]+/).filter(Boolean));
+      if (allowed.size && (s.raw || (s as any).conditionRaw)) {
+        const seen = new Set<string>();
+        const scan = (txt?: string) => {
+          if (!txt) return; const re = /([A-Za-z_][A-Za-z0-9_]*)\s*\(/g; let m: RegExpExecArray | null;
+          while ((m = re.exec(txt))) { const fn = m[1]; if (['run','branch','forEach','for_each','delay','const'].includes(fn)) continue; seen.add(fn); }
+        };
+        scan(s.raw); scan((s as any).conditionRaw);
+        for (const fn of seen) if (!allowed.has(fn)) {
+          const loc = s.loc || w.nameLoc;
+          throw new VError(`Workflow '${w.name}' disallowed function '${fn}' in step expression.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+      }
   }
   // Simple taint analysis placeholder: flag http_request bodies referencing `${input}` style patterns directly.
   for (const w of ast.workflows || []) {
     const steps: any[] = Array.isArray(w.steps) ? (w.steps as any[]) : [];
+    // Perform dependency analysis FIRST so forward-ref errors surface before unknown action errors.
+    const depBindings: string[] = [];
+    const depUsed = new Set<string>();
+    for (let i=0;i<steps.length;i++) {
+      const s: any = steps[i];
+      if (s.kind === 'run') {
+        if (s.binding) depBindings.push(s.binding);
+        const argText = s.argsRaw || s.raw || '';
+        const later = steps.slice(i+1).map((x:any)=>x.binding).filter(Boolean);
+        for (const name of later) if (name && new RegExp(`\\b${name}\\b`).test(argText)) {
+          const loc = s.loc || w.nameLoc; throw new VError(`Workflow '${w.name}' step dependency error: binding '${name}' referenced before declaration.`, (w as any).sourceFile, loc?.line, loc?.column);
+        }
+        for (const b of depBindings) if (new RegExp(`\\b${b}\\b`).test(argText)) depUsed.add(b);
+      } else if (s.kind === 'branch') {
+        const cond = (s as any).conditionRaw || '';
+        for (const b of depBindings) if (new RegExp(`\\b${b}\\b`).test(cond)) depUsed.add(b);
+      }
+    }
+  for (const b of depBindings) if (!depUsed.has(b)) namingWarnings.push(`unused workflow binding '${b}'.`);
+    // Fallback raw-scan for unused bindings if earlier mechanism missed (defensive)
+    // Only run fallback if some bindings exist and some remain unused after primary detection
+    if (depBindings.length && depUsed.size < depBindings.length) {
+      const existing = new Set(namingWarnings);
+      outer: for (let i=0;i<steps.length;i++) {
+        const s: any = steps[i];
+        if (s.kind !== 'run' || typeof s.raw !== 'string') continue;
+        const m = /^\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(s.raw);
+        if (!m) continue;
+        const name = m[1];
+        if (depUsed.has(name)) continue;
+        if (!depBindings.includes(name)) continue;
+        const msg = `unused workflow binding '${name}'.`;
+        if (!existing.has(msg)) namingWarnings.push(msg);
+      }
+    }
+    // Legacy builder safety pass regardless of depBindings (covers disabled workflows v2)
+    try {
+      const raws: string[] = steps.map((s:any)=> typeof s.raw === 'string' ? s.raw : '').filter(Boolean);
+      for (let i=0;i<raws.length;i++) {
+        const m = /^\s*const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(raws[i]);
+        if (!m) continue;
+        const name = m[1];
+        const later = raws.slice(i+1).join('\n');
+        if (!new RegExp(`\b${name}\b`).test(later)) {
+          if (!namingWarnings.some(w=>w.includes(`unused workflow binding '${name}'`))) namingWarnings.push(`unused workflow binding '${name}'.`);
+        }
+      }
+    } catch {/* ignore */}
     for (const s of steps) {
       if (s.kind === 'http_request' && typeof s.raw === 'string') {
         if (/\$\{\s*input\./.test(s.raw)) {
@@ -334,6 +408,7 @@ function walkUi(node: any, fn: (n:any)=>void) {
       }
     }
   }
+  // (earlier dependency analysis already executed)
   }
   // Page on load canonical form warning
   for (const pg of ast.pages || []) {
