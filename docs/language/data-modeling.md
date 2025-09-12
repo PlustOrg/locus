@@ -39,6 +39,11 @@ Locus provides a set of built-in primitive types.
 | `Boolean`  | For `true` or `false` values. Maps to `Boolean`.                         |
 | `DateTime` | For storing specific dates and times. Maps to `DateTime`.                |
 | `Json`     | For storing arbitrary JSON data. Maps to `Json`.                         |
+| `BigInt`   | For very large integers. Maps to `BigInt`.                               |
+| `Float`    | For floating-point numbers. Maps to `Float`.                             |
+| `UUID`     | For UUID values. Maps to `String` with UUID validation.                  |
+| `Email`    | For email addresses. Maps to `String` with email validation.             |
+| `URL`      | For URLs. Maps to `String` with URL validation.                          |
 
 ### List Types
 You can also define a field as a list of a primitive type. This is useful for things like tags, roles, or simple arrays of strings or numbers.
@@ -108,6 +113,46 @@ Overrides the underlying column name (helpful for legacy schemas or different na
 emailAddress: String @map("user_email")
 ```
 
+#### Validation Attributes
+Locus supports several validation attributes for enhanced data integrity:
+
+##### `@min(n)` / `@max(n)`
+Sets minimum and maximum values for numeric fields:
+```locus
+age: Integer @min(0) @max(120)
+price: Decimal @min(0.01)
+```
+
+##### `@length(min: n, max: n)`
+Sets length constraints for string fields:
+```locus
+username: String @length(min: 3, max: 20)
+```
+
+##### `@pattern("regex")`
+Validates string fields against a regular expression:
+```locus
+phoneNumber: String @pattern("^\\+?[1-9]\\d{1,14}$")
+```
+
+##### `@email`
+Validates that a string is a valid email address:
+```locus
+email: String @email
+```
+
+##### `@enum([values])`
+Constrains a field to specific allowed values:
+```locus
+status: String @enum(["draft", "published", "archived"])
+```
+
+##### `@policy("rule")`
+Applies a security policy to the field:
+```locus
+sensitiveData: String @policy("admin_only")
+```
+
 ### Canonical Attribute Ordering
 When multiple annotations are present they are normalized to this order for deterministic generation:
 1. `@id`
@@ -163,7 +208,7 @@ database {
 
   entity Profile {
     // A profile belongs to one user, and this link must be unique
-  user: belongs_to User @unique
+    user: belongs_to User @unique
 
     // You still need the foreign key field
     userId: Integer
@@ -171,6 +216,21 @@ database {
 }
 ```
 Here, `has_one` is used for clarity, but the uniqueness is enforced by the `@unique` annotation on the `belongs_to` side.
+
+#### Cascade Deletion
+You can specify what happens when the referenced entity is deleted:
+
+```locus
+entity Post {
+  author: belongs_to User (onDelete: cascade)
+  authorId: Integer
+}
+```
+
+Supported cascade options:
+- `cascade`: Delete this record when the referenced record is deleted
+- `restrict`: Prevent deletion of the referenced record if this record exists
+- `set_null`: Set the foreign key to null when the referenced record is deleted
 
 ### Many-to-Many
 To create a many-to-many relationship, use `has_many` on both sides of the relationship. Locus will automatically create and manage the hidden join table for you.
@@ -202,14 +262,14 @@ The compiler now distinguishes between optional presence (`?`) and nullable valu
 
 Example:
 ```locus
-// Legacy
+// Legacy (still supported)
 entity User { middleName: String? }
 
 // Nullable but required
 entity User { middleName: String | Null }
 
-// Optional (absent vs present)
-entity User { middleName?: String }
+// Optional (absent vs present) - note: suffix form
+entity User { middleName: String? }
 ```
 
 This section is a living migration aid; expect future enhancements with automated quick‑fixes.

@@ -71,7 +71,7 @@ After a moment, you'll see a startup banner in your terminal that looks somethin
 
 Your app is now running! Open your web browser and navigate to **`http://localhost:3000`**. You should see a welcome page.
 
-> Deprecation Warnings: If the compiler detects legacy syntax it will print deprecation warnings with suggested rewrites. You can suppress specific ones via config or fail the build early with `REMOVE_PAREN_ATTRS=1 locus build` once migrated.
+> **Legacy Syntax:** If you use outdated syntax like `on_load` (instead of `on load`), the compiler will show a helpful error with the correct replacement.
 
 ## Step 4: Make a Change
 
