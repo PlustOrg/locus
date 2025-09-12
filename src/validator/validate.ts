@@ -550,10 +550,14 @@ function walkUi(node: any, fn: (n:any)=>void) {
   // Phase 3: UI expression validation (basic pass)
   for (const comp of (ast.components || []) as any[]) {
     if (comp.uiAst) {
+      const loopVars: string[] = [];
       walkUi(comp.uiAst, (n: any) => {
+        if (n.type === 'forEach') {
+          loopVars.push(n.item);
+        }
         if (n.type === 'expr' && typeof n.value === 'string') {
           const first = /^[A-Za-z_][A-Za-z0-9_]*/.exec(n.value)?.[0];
-          if (first && !((comp.params||[]).some((p:any)=>p.name===first) || (comp.state||[]).some((s:any)=>s.name===first) || first === 'children')) {
+          if (first && !((comp.params||[]).some((p:any)=>p.name===first) || (comp.state||[]).some((s:any)=>s.name===first) || loopVars.includes(first) || first === 'children')) {
             throw new VError(`Unknown identifier in UI expression: '${first}'`);
           }
           try { parseExpression(n.value); } catch (e:any) {

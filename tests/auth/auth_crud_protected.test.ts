@@ -17,6 +17,6 @@ describe('Auth generation', () => {
       const server = readFileSync(join(out,'server.ts'),'utf8');
       expect(server).toMatch(/auth middleware/i);
       expect(server).toMatch(/getSession/);
-    } finally { rmSync(dir,{recursive:true, force:true}); }
+  } finally { try { rmSync(dir,{recursive:true, force:true}); } catch { /* ignore cleanup error */ } }
   });
 });

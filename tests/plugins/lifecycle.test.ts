@@ -39,7 +39,7 @@ describe('Plugin lifecycle hooks', () => {
       expect(existsSync(injectedFile)).toBe(true);
       expect((result.meta.warnings || []).some((w:string)=>/from-plugin/.test(w))).toBe(true);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      try { rmSync(dir, { recursive: true, force: true }); } catch { /* ignore cleanup error */ }
     }
   });
 
@@ -53,7 +53,7 @@ describe('Plugin lifecycle hooks', () => {
       const result = await buildProject({ srcDir: dir, outDir });
   expect((result.meta.warnings || []).some((_w:string)=>/boom-error/)).toBe(true);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      try { rmSync(dir, { recursive: true, force: true }); } catch { /* ignore cleanup error */ }
     }
   });
 });

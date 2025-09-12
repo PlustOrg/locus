@@ -183,3 +183,20 @@ export class PError extends LocusError {
     }
   }
 }
+
+// Diagnostic filtering helpers
+export interface DiagnosticFilterOptions {
+  minSeverity?: DiagnosticSeverity; // threshold
+  suppressCodes?: string[];
+  suppressMessageRegex?: RegExp;
+}
+function _severityRank(s: DiagnosticSeverity): number { return s === 'error' ? 3 : s === 'warning' ? 2 : 1; }
+export function filterDiagnostics(diags: Diagnostic[], opts: DiagnosticFilterOptions): Diagnostic[] {
+  const minRank = opts.minSeverity ? _severityRank(opts.minSeverity) : 1;
+  return diags.filter(d => {
+    if (_severityRank(d.severity) < minRank) return false;
+    if (opts.suppressCodes && opts.suppressCodes.includes(d.code)) return false;
+    if (opts.suppressMessageRegex && opts.suppressMessageRegex.test(d.message)) return false;
+    return true;
+  });
+}

@@ -167,15 +167,16 @@ export interface UploadFieldAst {
 }
 
 // --- Expression AST (Phase 5 minimal) ---
-export type ExprNode = IdentifierExpr | LiteralExpr | BinaryExpr | UnaryExpr | MemberExpr | ParenExpr;
+export type ExprNode = IdentifierExpr | LiteralExpr | BinaryExpr | UnaryExpr | MemberExpr | ParenExpr | CallExpr;
 
 export interface BaseExpr { kind: string; loc?: { line: number; column: number } }
 export interface IdentifierExpr extends BaseExpr { kind: 'id'; name: string }
 export interface LiteralExpr extends BaseExpr { kind: 'lit'; value: string | number | boolean | null }
 export interface UnaryExpr extends BaseExpr { kind: 'unary'; op: '!' | '-'; expr: ExprNode }
-export interface BinaryExpr extends BaseExpr { kind: 'bin'; op: '==' | '!=' | '&&' | '||' | '+' | '-' | '*' | '/'; left: ExprNode; right: ExprNode }
+export interface BinaryExpr extends BaseExpr { kind: 'bin'; op: '==' | '!=' | '&&' | '||' | '<' | '>' | '+' | '-' | '*' | '/'; left: ExprNode; right: ExprNode }
 export interface MemberExpr extends BaseExpr { kind: 'member'; object: ExprNode; property: string }
 export interface ParenExpr extends BaseExpr { kind: 'paren'; expr: ExprNode }
+export interface CallExpr extends BaseExpr { kind: 'call'; callee: ExprNode; args: ExprNode[] }
 
 export interface ProjectAST {
   files: LocusFileAST[];
