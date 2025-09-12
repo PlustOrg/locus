@@ -72,19 +72,21 @@ Sample (trimmed):
 Use these spans for precise diagnostics; see [UI Lexical Mode & Location Metadata](../guides/ui-lexical-mode.md).
 
 ### Events & Binding Normalization
-Event attributes use a directive form `on:click={...}` which normalizes to the React-style `onClick` internally. If you write a lower‑case form like `onclick={...}` a warning will suggest the corrected casing.
+Always use the `on:eventName` directive form for event handling. Locus automatically normalizes these to React's camelCase event props during code generation.
 
 ```locus
-<Button on:click={save()} />  // becomes onClick
-<Input on:focus={handle()} />  // becomes onFocus
+<Button on:click={save()} />       // becomes onClick in React
+<Input on:focus={handle()} />      // becomes onFocus in React
+<div on:mouse-enter={hover()} />   // becomes onMouseEnter in React
 ```
 
-Bindings use `bind:` prefix. A general form `bind:value={stateVar}` normalizes internally to a synthesized representation (e.g. `bind$value`) that expands to appropriate `value` + change handler code during generation.
+Two-way data binding uses the `bind:` prefix:
 
 ```locus
 <TextField bind:value={name} />
 ```
-If an invalid bind target is used (e.g. `bind:???`), validation will report an `Invalid bind target` error.
+
+> **How it works:** `bind:value={name}` expands to `value={name} onChange={(e) => setName(e.target.value)}` during generation.
 
 ### Large UI Trees & Performance
 The UI parser performs a single pass producing stable spans for each node. Tips:
@@ -229,7 +231,7 @@ ui {
 > **How it works:** `bind:value={name}` is syntactic sugar for `value={name} onChange={(e) => setName(e.target.value)}`. It works with any state variable that has a corresponding setter (`setVariableName`).
 
 ## Event Handling
-Use the `on:[event]` directive to call an `action` when a user interacts with an element. You can use any standard browser event name.
+Use the `on:eventName` directive to call an `action` when a user interacts with an element. You can use any standard browser event name.
 
 ```locus
 action sayHello() {
@@ -245,8 +247,10 @@ ui {
 - `on:click`
 - `on:submit` (for forms)
 - `on:change` (for inputs)
-- `on:mouseEnter` / `on:mouseLeave`
+- `on:mouse-enter` / `on:mouse-leave`
 - `on:focus` / `on:blur`
+
+> **Note:** Event names with hyphens (like `on:mouse-enter`) are automatically converted to camelCase (`onMouseEnter`) in the generated React code.
 
 ## Control Flow
 You can conditionally render UI or create loops using special Locus elements.
@@ -341,16 +345,23 @@ component PageLayout {
 ```
 
 ## Styling
-See the [Design System & Theming](../guides/design-system.md) documentation for details on styling components. For custom components, you can link a CSS file using the `style: override` block.
+See the [Design System & Theming](../guides/design-system.md) documentation for details on styling components. For custom components, you can include CSS directly using the `style_override` block.
 
 ```locus
 component MyStyledButton {
   param children: slot
-  style: override {
-    // This block links './MyStyledButton.css'
+  style_override {
+    .my-button {
+      background: var(--color-primary);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-md);
+    }
   }
   ui {
     <button class="my-button">{children}</button>
   }
 }
 ```
+
+> **How it works:** The `style_override` block generates a co-located CSS file (e.g., `MyStyledButton.css`) that gets imported automatically with your component.

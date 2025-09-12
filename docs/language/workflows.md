@@ -2,7 +2,7 @@
 
 Declaratively describe background and event-driven processes in your application: trigger something, run actions, branch, iterate, send an email, retry on failure, and plug in custom step kinds — all in one cohesive block.
 
-> Status: **Experimental / MVP** (workflow manifest version `2`). Syntax and behavior may evolve; we aim to keep changes additive when possible.
+> Status: **Experimental / MVP** (workflow manifest version `1`). Syntax and behavior may evolve; we aim to keep changes additive when possible.
 
 ---
 ## At a Glance
@@ -166,12 +166,12 @@ Runtime produces an ordered log; each entry includes `kind` and `v: 1` (schema v
 
 ### Manifest Output
 
-Each workflow generates `generated/workflows/<Name>.json` (version 2). Example (trimmed):
+Each workflow generates `workflows/<Name>.json` (relative to your build output directory, default `generated/`). Example (trimmed):
 
 ```jsonc
 {
   "name": "WelcomeEmail",
-  "version": 2,
+  "version": 1,
   "triggerMeta": { "type": "webhook", "secretRef": "HOOK_SECRET" },
   "steps": [
     { "kind": "run", "action": "hydrateUser" },

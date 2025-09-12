@@ -83,7 +83,8 @@ locus dev
 | `locus db migrate`       | Run Prisma migrations                                                     |
 | `locus db studio`        | Launch Prisma Studio for data management                                 |
 | `locus deploy`           | Build and deploy to Vercel, Railway, etc.                                |
-| `locus add <package>`    | Add npm packages to frontend or backend                                  |
+| `locus plugins list`     | List installed plugins                                                    |
+| `locus plugins doctor`   | Diagnose plugin setup and performance                                    |
 
 **Common Flags:**
 - `--src <dir>`: Source directory for `.locus` files

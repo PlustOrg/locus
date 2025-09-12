@@ -11,6 +11,7 @@ Welcome—this is the canonical guide to the Locus language, compiler, and tooli
 
 ### Getting Started & Guides
 - [Getting Started](./guides/getting-started.md)
+- [Build Outputs & Generated Files](./guides/build-outputs.md)
 - [Authentication](./guides/authentication.md)
 - [Data Relationships](./guides/data-relationships.md)
 - [Design System Guide](./guides/design-system.md)

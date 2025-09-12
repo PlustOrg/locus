@@ -43,7 +43,6 @@ locus build [options]
 | `--emit-js`          | Compiles the generated TypeScript into JavaScript in a `dist` folder.    |
 | `--suppress-warnings`| Prevents build warnings from being printed to the console.               |
 | `--debug`            | Prints detailed timing and performance logs for the build process.       |
-| `--suppress-warnings`| Suppress non-error warnings (still emitted in JSON output if selected).  |
 
 ---
 
@@ -66,12 +65,13 @@ locus dev [options]
 | `--quiet`            | Hides the startup banner and other informational logs.                   |
 | `--log-file <path>`  | Mirrors all development server output to the specified log file.         |
 | `--debug`            | Prints detailed timing logs for incremental rebuilds.                    |
-| `--suppress-warnings`| Suppress non-error warnings.                                             |
 
 **Environment Variables:**
 - `API_PORT` / `PORT`: Sets the port for the backend API server (defaults to `3001`).
 - `ENABLE_CORS=1`: Enables CORS middleware on the API server for cross-origin requests.
 - `LOCUS_NO_UPDATE_CHECK=1`: Disables the periodic CLI update notification.
+- `LOCUS_WORKFLOW_JIT=1`: Enables experimental JIT compilation for workflows.
+- `LOCUS_PARALLEL_PARSE=1`: Enables experimental parallel parsing of source files.
 
 ---
 
@@ -112,50 +112,67 @@ This command does **not** perform a deployment itself. Instead, it:
 2. Reads your `Locus.toml` file and looks for a `[deploy.environment]` section that matches the environment you specified.
 3. Prints the configured deployment platforms (e.g., Vercel, Railway) based on that section.
 
-This serves as a pre-flight check before you manually run the deployment commands for your hosting provider.
+This serves as a pre-flight check before you manually run the deployment commands for your hosting provider.---
+
+## `locus check`
+Parses and validates your `.locus` files without generating any output. Useful for quick syntax and semantic validation.
+
+**Usage:**
+```bash
+locus check [options]
+```
+
+**Options:**
+- `--src <dir>`: Source directory (default: `.`)
+- `--errors <format>`: Error output format: `pretty` or `json`
+
+---
+
+## `locus format`
+Formats all `.locus` source files according to the standard style conventions.
+
+**Usage:**
+```bash
+locus format [options]
+```
+
+**Options:**
+- `--src <dir>`: Source directory (default: `.`)
+
+---
+
+## `locus doctor`
+Diagnoses your environment and configuration, providing a JSON report of system information, flags, and plugin performance data.
+
+**Usage:**
+```bash
+locus doctor [options]
+```
+
+**Options:**
+- `--src <dir>`: Source directory (default: `.`)
+
+---
+
+## `locus workflow:run`
+Executes a workflow by name. This is an experimental feature for testing workflow definitions.
+
+**Usage:**
+```bash
+locus workflow:run <name> [options]
+```
+
+**Arguments:**
+- `<name>` (required): The workflow name to execute
+
+**Options:**
+- `--src <dir>`: Source directory (default: `.`)
+- `--inputs <json>`: JSON object of input bindings (default: `{}`)
+- `--dry-run`: Parse and validate only, do not execute
 
 ---
 
 ## `locus plugins`
----
-## `locus ui:ast`
-Parses a UI snippet from STDIN and prints the structured UI AST (with location metadata). Useful for debugging parser output and inspecting spans used in diagnostics.
-
-**Usage:**
-```bash
-echo '<Button on:click={doThing}>Hi</Button>' | locus ui:ast
-```
-
-**Output (trimmed):**
-```json
-{
-  "type": "element",
-  "tag": "Button",
-  "attrs": { "onClick": { "kind": "expr", "value": "doThing" } },
-  "loc": { "line": 1, "column": 1, "endLine": 1, "endColumn": 37 }
-}
-```
-
----
-## Update Notifications
-The CLI checks npm for a newer version shortly after startup and prints a one‑line notice if an update is available. To disable:
-
-```bash
-export LOCUS_NO_UPDATE_CHECK=1
-```
-
-This check is skipped automatically in some CI contexts (heuristic) and when stdout isn't a TTY.
----
-## Deterministic Builds & Hashes
-Build output is intentionally deterministic. If you observe unexpected file diffs on unchanged input, enable `--debug` to inspect phase timings, then compare generated artifact ordering. Non-determinism sources (e.g. unsorted object keys) should be reported.
-
----
-## Dry Run for Plugin Generators
-Use `--dry-run` with `locus build` to preview artifacts (including plugin-generated files) without writing to disk. This is helpful in CI to ensure no unintended file churn:
-```bash
-locus build --dry-run --errors json > build-plan.json
-```
-Review `build-plan.json` for any unexpected additions before running a real build.
 Tools for inspecting the Locus plugin ecosystem in your project.
 
 **Usage:**
