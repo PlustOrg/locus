@@ -90,7 +90,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [ ] (P1) Implement compact AST node representation using numeric enums
 - [x] (P1) Add memory usage monitoring and budgets (parse/merge/generate heap deltas recorded)
 - [ ] (P2) Implement AST node pooling for reduced allocations
-- [ ] (P2) Add parser performance profiling and optimization
+- [x] (P2) Add parser performance profiling and optimization
 
 ### Compilation Performance
 - [ ] (P1) Implement modular CST with cached sub-trees
@@ -138,7 +138,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 
 ### Parser Testing
 - [ ] (P0) Add comprehensive fuzz testing for all grammar rules
-- [ ] (P0) Implement property-based testing for parser correctness
+- [x] (P0) Implement property-based testing for parser correctness
 - [x] (P1) Add regression testing for error message quality (stability test for optional list message)
 - [x] (P1) Implement parser benchmark suite
 - [ ] (P2) Add mutation testing for parser robustness
