@@ -33,7 +33,11 @@ describe('Parser: database blocks', () => {
       stores: [],
   workflows: [],
     };
-    expect(ast).toEqual(expected);
+  // Allow additional metadata like numeric primitive codes
+  expect(ast.databases[0].entities[0].fields[0].type).toMatchObject(expected.databases[0].entities[0].fields[0].type);
+  const clone = JSON.parse(JSON.stringify(ast));
+  for (const db of clone.databases) for (const ent of db.entities) for (const f of ent.fields) delete f.type.code;
+  expect(clone).toEqual(expected);
   });
 
   test('entity with all field types', () => {
@@ -52,7 +56,10 @@ describe('Parser: database blocks', () => {
     `;
     const ast = parseLocus(src);
     const entity = ast.databases[0].entities[0];
-    expect(entity.fields.map(f => ({ name: f.name, type: f.type }))).toEqual([
+    expect(entity.fields.map(f => {
+      const t:any = f.type;
+      return { name: f.name, type: { kind: t.kind, name: t.name } };
+    })).toEqual([
       { name: 'a', type: { kind: 'primitive', name: 'String' } },
       { name: 'b', type: { kind: 'primitive', name: 'Text' } },
       { name: 'c', type: { kind: 'primitive', name: 'Integer' } },
@@ -83,7 +90,8 @@ describe('Parser: database blocks', () => {
       acc[f.name] = f.attributes.map(a => (a as any).kind);
       return acc;
     }, {} as Record<string, string[]>);
-    expect(entity.fields.find(f => f.name === 'imageUrl')?.type).toEqual({ kind: 'primitive', name: 'String', optional: true });
+  const imageType: any = entity.fields.find(f => f.name === 'imageUrl')?.type;
+  expect({ kind: imageType?.kind, name: imageType?.name, optional: imageType?.optional }).toEqual({ kind: 'primitive', name: 'String', optional: true });
     expect(attrKinds['sku']).toContain('unique');
     expect(attrKinds['price']).toContain('default');
     expect(attrKinds['createdAt']).toContain('default');

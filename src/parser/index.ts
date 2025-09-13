@@ -4,6 +4,7 @@ import { LocusLexer } from './tokens';
 import crypto from 'crypto';
 import { DatabaseCstParser } from './databaseParser';
 import { buildAstModular } from './modularAstBuilder';
+import { extractTypeAliases, applyTypeAliases } from './typeAliases';
 // style_override handled directly in grammar. Legacy style:override removed.
 let __parseCount = 0;
 const __hashCache = new Map<string,string>();
@@ -24,6 +25,11 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     (err as any).suggestions = (err as any).suggestions ? [...(err as any).suggestions, 'on load'] : ['on load'];
     throw err;
   }
+  // Extract and strip simple type alias lines so core grammar (database etc.) is unaffected
+  const aliasLines: string[] = [];
+  const originalSource = source;
+  const aliasMap = extractTypeAliases(originalSource);
+  source = source.replace(/^type\s+[A-Z][A-Za-z0-9_]*\s*=\s*[A-Z][A-Za-z0-9_]*\s*$/gm, (m) => { aliasLines.push(m); return ''; });
   const normalized = source.replace(/!/g, ' ');
   if (filePath) {
     const h = hashContent(normalized);
@@ -35,7 +41,7 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
     __hashCache.set(filePath, h);
   }
   __parseCount++;
-  const lexResult = LocusLexer.tokenize(normalized);
+  const lexResult = LocusLexer.tokenize(normalized.replace(/\b([A-Z][A-Za-z0-9_]*)\b/g, (id) => aliasMap[id] ? aliasMap[id] : id));
   if (lexResult.errors.length) {
     const err = lexResult.errors[0];
   throw new PError(err.message, filePath, err.line, err.column, (err as any).length ?? 1);
@@ -55,6 +61,9 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   }
 
   const ast = buildAstModular(cst, source, filePath);
+  try {
+    if (Object.keys(aliasMap).length) applyTypeAliases(ast as any, aliasMap);
+  } catch {/* ignore alias failures */}
   // Provide unified top-level convenience arrays for mixed content files.
   try {
     const dbs = (ast as any).databases || [];

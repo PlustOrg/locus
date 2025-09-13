@@ -38,9 +38,28 @@ export type FieldTypeName =
   | 'Email'
   | 'URL';
 
+export enum PrimitiveTypeCode {
+  String = 1,
+  Text,
+  Integer,
+  Decimal,
+  Boolean,
+  DateTime,
+  Json,
+  BigInt,
+  Float,
+  UUID,
+  Email,
+  URL,
+}
+export function primitiveCodeOf(name: FieldTypeName): PrimitiveTypeCode {
+  return (PrimitiveTypeCode as any)[name] as PrimitiveTypeCode;
+}
+
 export interface FieldType {
   kind: 'primitive';
   name: FieldTypeName;
+  code?: PrimitiveTypeCode; // compact numeric for perf
   optional?: boolean; // if `?`
   nullable?: boolean; // Phase 2 distinction (DB allows NULL even if required)
 }

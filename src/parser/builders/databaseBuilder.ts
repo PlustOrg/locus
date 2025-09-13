@@ -1,5 +1,5 @@
 import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
-import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation } from '../../ast';
+import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation, primitiveCodeOf } from '../../ast';
 import { posOf, defineHidden } from '../builderUtils';
 import crypto from 'crypto';
 import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } from './helpers';
@@ -99,6 +99,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         const attributes: FieldAttribute[] = collectFieldAttributes(attrGroups);
         // Capture raw field text (between field name token start and end of last attribute token) for downstream analyses.
   // (raw capture placeholder omitted to avoid unused variable warnings)
+  if (fieldType && fieldType.kind === 'primitive') (fieldType as any).code = primitiveCodeOf(fieldType.name as any);
   const fieldNode: any = makeField({ name: fieldName, type: fieldType, attributes });
         defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
         // Mark deprecated attribute syntax if any attribute groups used paren style

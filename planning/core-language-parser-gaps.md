@@ -38,7 +38,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Add missing production primitives: `BigInt`, `Float`, `UUID`, `Email`, `URL` (tokens & grammar)
 - [x] (P0) Map new primitives to generator capabilities (Prisma, validation, React) (Prisma mapping updated)
 - [x] (P1) Implement type validation for primitive constraints (min/max numeric; length string/text)
-- [ ] (P2) Add custom type definition capabilities
+ - [x] (P2) Add custom type definition capabilities
 
 ### Nullable vs Optional Semantics
 - [x] (P0) Clarify distinction: `?` (optional field presence) vs `nullable` (explicit null allowed) (initial grammar & tokens adjustment; generator update pending)
@@ -87,16 +87,16 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ### Parser Performance  
 - [x] (P0) Implement incremental parsing with per-block content hashing
 - [x] (P0) Add parallel parsing with worker thread pool
-- [ ] (P1) Implement compact AST node representation using numeric enums
+ - [x] (P1) Implement compact AST node representation using numeric enums
 - [x] (P1) Add memory usage monitoring and budgets (parse/merge/generate heap deltas recorded)
 - [x] (P2) Implement AST node pooling for reduced allocations
 - [x] (P2) Add parser performance profiling and optimization
 
 ### Compilation Performance
 - [x] (P1) Implement modular CST with cached sub-trees
-- [ ] (P1) Add compilation phase parallelization
+ - [x] (P1) Add compilation phase parallelization
 - [ ] (P2) Implement lazy loading for unused language features
-- [ ] (P2) Add compilation result caching
+ - [x] (P2) Add compilation result caching
 - [ ] (P3) Implement streaming compilation for large projects
 
 ## 5. Language Feature Completeness
@@ -119,7 +119,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 ## 6. Validation & Safety
 
 ### Compile-time Validation
-- [ ] (P0) Implement exhaustive validation for all language constructs
+ - [x] (P0) Implement exhaustive validation for all language constructs
 - [x] (P0) Add cross-reference validation (entities, components, workflows) (actions aggregated across pages/components/stores)
 - [x] (P1) Implement unused code detection (unused action warnings)
 - [x] (P1) Add circular dependency detection (component JSX DFS cycle detection)
