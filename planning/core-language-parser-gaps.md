@@ -22,7 +22,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P1) Standardize two-word constructs: enforce `on load`; parser pre-check rejects `on_load` with guidance
 - [x] (P1) Normalize attribute syntax: choose between parentheses `(attr)` vs annotations `@attr`
 - [x] (P2) Consider `Type[]` shorthand for `list of Type` with deprecation path
-- [ ] (P2) Implement canonical formatter for deterministic whitespace/ordering
+- [x] (P2) Implement canonical formatter for deterministic whitespace/ordering
 
 ### Workflow Grammar Formalization
 - [x] (P0) Create formal trigger DSL grammar: `trigger { on: create(Entity) | update(Entity) | webhook(secret: NAME) }` (implemented in `triggerBlock` + builder extraction)
@@ -86,14 +86,14 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 
 ### Parser Performance  
 - [x] (P0) Implement incremental parsing with per-block content hashing
-- [ ] (P0) Add parallel parsing with worker thread pool
+- [x] (P0) Add parallel parsing with worker thread pool
 - [ ] (P1) Implement compact AST node representation using numeric enums
 - [x] (P1) Add memory usage monitoring and budgets (parse/merge/generate heap deltas recorded)
-- [ ] (P2) Implement AST node pooling for reduced allocations
+- [x] (P2) Implement AST node pooling for reduced allocations
 - [x] (P2) Add parser performance profiling and optimization
 
 ### Compilation Performance
-- [ ] (P1) Implement modular CST with cached sub-trees
+- [x] (P1) Implement modular CST with cached sub-trees
 - [ ] (P1) Add compilation phase parallelization
 - [ ] (P2) Implement lazy loading for unused language features
 - [ ] (P2) Add compilation result caching
@@ -123,7 +123,7 @@ Status Legend: P0 Critical (blocker for production) | P1 Important | P2 Nice-to-
 - [x] (P0) Add cross-reference validation (entities, components, workflows) (actions aggregated across pages/components/stores)
 - [x] (P1) Implement unused code detection (unused action warnings)
 - [x] (P1) Add circular dependency detection (component JSX DFS cycle detection)
-- [ ] (P2) Implement dead code elimination
+- [x] (P2) Implement dead code elimination
 - [x] (P2) Add code complexity metrics and warnings (workflow step count complexity warning)
 
 ### Runtime Safety

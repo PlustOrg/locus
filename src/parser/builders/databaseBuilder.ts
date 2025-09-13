@@ -1,8 +1,36 @@
 import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation } from '../../ast';
 import { posOf, defineHidden } from '../builderUtils';
+import crypto from 'crypto';
 import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } from './helpers';
 import { registerDeprecation } from '../../deprecations';
+
+let __allocCount = 0;
+const fieldPool: any[] = [];
+const entityPool: any[] = [];
+export function __getAstAllocCount(){ return __allocCount; }
+function makeField(init: any): Field {
+  if (process.env.LOCUS_AST_POOL === '1' && fieldPool.length) {
+    const f = fieldPool.pop();
+    Object.assign(f, init);
+    return f;
+  }
+  __allocCount++;
+  return init;
+}
+function makeEntity(init: any): Entity {
+  if (process.env.LOCUS_AST_POOL === '1' && entityPool.length) {
+    const e = entityPool.pop();
+    Object.assign(e, init);
+    return e;
+  }
+  __allocCount++;
+  return init;
+}
+
+const entityCache = new Map<string, Entity>();
+let __entityBuilds = 0;
+export function __getEntityBuildCount(){ return __entityBuilds; }
 
 export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
   const databases: DatabaseBlock[] = [];
@@ -14,6 +42,18 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
       const entChildren = ent.children as CstChildrenDictionary;
       const nameTok = (entChildren['Identifier'] as IToken[])[0];
       const name = nameTok.image;
+      // hash raw entity text region (approx using token offsets)
+      const firstTok = nameTok;
+      const lastTokArr = ((entChildren['fieldDecl'] as CstNode[])||[]).slice(-1);
+      const lastTok: IToken | undefined = lastTokArr.length ? ((lastTokArr[0].children as any)['RCurly']?.[0] || (lastTokArr[0].children as any)['Identifier']?.slice(-1)[0]) : nameTok;
+      const start = firstTok.startOffset ?? 0;
+      const end = (lastTok?.endOffset ?? firstTok.endOffset) as number;
+  const hash = crypto.createHash('sha1').update(name+':'+String(start)+':'+String(end)).digest('hex');
+      if (process.env.LOCUS_CST_CACHE === '1' && entityCache.has(hash)) {
+        entities.push(entityCache.get(hash)!);
+        continue;
+      }
+      __entityBuilds++;
       const fields: Field[] = [];
       const relations: Relation[] = [];
 
@@ -59,7 +99,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         const attributes: FieldAttribute[] = collectFieldAttributes(attrGroups);
         // Capture raw field text (between field name token start and end of last attribute token) for downstream analyses.
   // (raw capture placeholder omitted to avoid unused variable warnings)
-        const fieldNode: any = { name: fieldName, type: fieldType, attributes };
+  const fieldNode: any = makeField({ name: fieldName, type: fieldType, attributes });
         defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
         // Mark deprecated attribute syntax if any attribute groups used paren style
         if (attrGroups.some(g => (g.children as any).LParen)) fieldNode.raw = (fieldNode.raw || '(attr)');
@@ -108,9 +148,10 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         defineHidden(relNode, 'targetLoc', posOf(targetTok));
         relations.push(relNode);
       }
-      const entity: any = { name, fields, relations };
+  const entity: any = makeEntity({ name, fields, relations });
       defineHidden(entity, 'nameLoc', posOf(nameTok));
-      entities.push(entity);
+  entities.push(entity);
+  if (process.env.LOCUS_CST_CACHE === '1') entityCache.set(hash, entity);
     }
     databases.push({ type: 'database', entities });
   }
