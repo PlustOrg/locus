@@ -1,3 +1,76 @@
+# Parser Parser Modernization – Next Steps
+
+Objective: Remove dead/unused code and prepare for a clean renaming of legacy artifacts (e.g. `databaseParser.ts` / `DatabaseCstParser`) to clearer, future‑proof names (`locusParser.ts` / `LocusCstParser`) without breaking existing tests or hash guards until the final, intentional update.
+Scope: Only structural cleanup & rename scaffolding. No semantic / grammar behavior changes (AST, errors, hashes) until the deliberate hash baseline update step.
+
+## Core Rules
+- No rule or token name changes until the explicit “Rename & Re‑baseline” phase.
+- All removals require: (1) grep shows no references; (2) tests green after removal.
+- Keep hash guard tests (`grammar_rule_names.test.ts`, `primitives_hash.test.ts`) passing until the re‑baseline step.
+## Phase A: Dead Code Identification (Done)
+- [x] Inventory performed: candidates (`primitiveTokenToName`, exported `parseStructuredStateDecls`, `astUtils.ts` facade unused, instrumentation counters `__getAstAllocCount`, `__getEntityBuildCount`).
+
+## Phase B: Safe Removals & Visibility Tightening
+1. Remove `primitiveTokenToName` from `primitiveTypes.ts` (unused).
+2. Make `parseStructuredStateDecls` non-exported (internal helper only).
+3. Decide fate of `astUtils.ts`:
+	- If adopting: start migrating imports (none currently) – skip removal.
+	- Else: delete file.
+	(Plan: delete now, re-create later if needed.)
+4. Remove instrumentation exports `__getAstAllocCount` / `__getEntityBuildCount` if not referenced in tests (confirm via grep). If kept, add comment explaining retention.
+5. Run full test suite.
+
+## Phase C: Primitive Mapping Consolidation (Optional Enhancement)
+6. Replace `mapPrimitiveToken` switch with table derived from `PRIMITIVE_TOKEN_NAMES` for consistency (no behavior change). Keep function name & export.
+7. Add tiny unit test ensuring every primitive token maps to its base name.
+
+## Phase D: Parser Rename Preparation (Non-breaking)
+8. Create new file `src/parser/locusParser.ts` exporting `{ LocusCstParser = DatabaseCstParser }` (type alias or subclass wrapper) and re-export anything needed.
+9. Update internal import sites (excluding tests) to import from `locusParser` (keep old `databaseParser.ts` for now).
+10. Add comment banner in `databaseParser.ts` marking legacy name and pointing to `locusParser.ts`.
+## Phase E: Intentional Rename & Baseline Update
+12. Rename class `DatabaseCstParser` -> `LocusCstParser` inside original file (or move grammar to `locusParser.ts`).
+13. Update all imports (including tests) to new class name.
+14. Run rule/token hash test – expect failure.
+15. Update expected hash baseline with clear commit message: "Intentional parser class rename (no grammar rule changes)."
+16. Remove legacy re-export (`databaseParser.ts`) or keep stub that throws informative error if imported directly (since no external users, safe to delete now).
+## Phase F: Post-Rename Cleanup
+17. Search for lingering references to `databaseParser` or `DatabaseCstParser` (grep) – remove or migrate.
+18. Update docs (`development-plan.md`, README) referencing new parser naming.
+19. Final full test + benchmark run (parser micro benchmark, ensure within previous performance band ±5%).
+## Phase G: Optional Follow-ups (Not Required Now)
+20. Introduce explicit API surface docs for parser exports.
+21. Consider moving workflow/upload grammar to separate modular grammar file and merging tokens (future feature; would require new baseline).
+
+## Risk Mitigation Checklist
+- After each removal (Phase B) run: targeted test + full test.
+- Keep commits small: one logical removal/refactor per commit for easy rollback.
+- Capture timing before and after the rename (micro benchmark script) for regression awareness.
+
+## Tracking Template
+- [ ] B1 remove primitiveTokenToName
+- [ ] B2 internalize parseStructuredStateDecls
+- [ ] B3 delete astUtils.ts (or migrate imports if decision changes)
+- [ ] B4 remove instrumentation exports (or document and keep)
+- [ ] B5 full test run
+- [ ] C6 table-driven mapPrimitiveToken
+- [ ] C7 primitive mapping unit test
+- [ ] D8 add locusParser.ts shim
+- [ ] D9 migrate internal imports
+- [ ] D10 legacy banner comment
+- [ ] D11 hash check
+- [ ] E12 rename class
+- [ ] E13 update imports/tests
+- [ ] E14 hash failure observed
+- [ ] E15 update baseline hash
+- [ ] E16 remove legacy file
+- [ ] F17 grep lingering names
+- [ ] F18 docs update
+- [ ] F19 perf benchmark
+- [ ] G20 parser API docs (optional)
+- [ ] G21 modular grammar exploration note (optional)
+
+Maintain zero semantic change until E15.
 # Parser Cleanup & Refactor Checklist (Structure/Formatting Only)
 
 Goal: Improve `src/parser/` code organization, readability, and reuse without altering runtime logic or observable AST/output. All existing tests must remain green. Where functionality lacks direct test coverage, add minimal tests before refactoring to lock behavior. No semantic changes.
