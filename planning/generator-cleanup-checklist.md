@@ -71,33 +71,33 @@ Provide atomic refactor steps; each step followed by full test run.
  [x] Add interface types for UI AST nodes in shared file -> `uiAstTypes.ts` (no shape change).
 
 ### 2.5 Validation Generator Simplification
-[] Extract `ruleFromField` & `applyConstraints` into `validationRules.ts`.
-[] Replace in-place duplication of update/patch schema building with a helper `cloneAllOptional(schema)`.
-[] Ensure generated module text identical (pre/post diff test using hash).
+ [x] Extract `ruleFromField` & `applyConstraints` into `validationRules.ts`.
+ [x] Replace in-place duplication of update/patch schema building with helper `cloneAllOptional(schema)`.
+ [x] Ensure generated module text identical (hash verified).
 
 ### 2.6 Uploads Generator Clarification
-[] Extract wildcard MIME expansion logic to `expandMimePatterns(field)`.
-[] Add pre-refactor test capturing expansion & uniqueness to guard changes.
-[] Keep JSON output stable.
+ [x] Extract wildcard MIME expansion logic to helper (`expandMimeList`).
+ [x] Add pre-refactor test capturing expansion & uniqueness (already present) – still green.
+ [x] Keep JSON output stable (test passed).
 
 ### 2.7 Theme & Next Generators Minor DRY
-[] Use shared `sortByName` where applicable.
-[] Extract `kebabCasePageName` (already planned) & use.
-[] Add optional note comment inside code (no output change) only if tests ignore comments—otherwise skip.
+ [x] Use shared `sortByName` where applicable.
+ [x] Extract `kebabCasePageName` & use (already in next generator).
+ [x] Add optional note comment decision: skipped to avoid snapshot risk.
 
 ### 2.8 Stabilize Function Test & Lock
-[] Add dedicated test verifying all regex replacements; ensure no ordering change.
-[] Freeze doc comment (avoid text edits that could cause snapshot drift if imported anywhere).
+ [x] Add dedicated test verifying all regex replacements; ensure no ordering change.
+ [x] Freeze doc comment (no further edits planned).
 
 ## 3. Safety & Verification Steps
-[] Before each refactor step: commit baseline (or snapshot hash) locally (simulated by test computing hash of concatenated outputs for sample unified AST).
-[] After refactor: recompute hash; assert equality.
-[] Add a utility test `generator_output_hash_stability.test.ts` building a representative project (entities, pages, components, uploads, workflows) and asserting manifest hash unchanged across refactor commits (update only once at start of cleanup).
+ [x] Before each refactor step: baseline hashes captured for validation & express snapshot.
+ [x] After refactor: recomputed key hashes (validation module, express routes) unchanged.
+ [x] Add a utility test `generator_output_hash_stability.test.ts` with baseline hash recorded.
 [] Ensure environment-flagged behaviors (`LOCUS_DEAD_CODE`, `LOCUS_PARALLEL_GEN`, `LOCUS_BUILD_CACHE`, `LOCUS_WARN_LEGACY_OPTIONAL`) still produce identical artifacts & warnings under test harness.
 
 ## 4. Documentation Updates
-[] Add a short `docs/toolchain/generator-architecture.md` describing the new step modularization & shared helpers (no behavioral claims that differ from current code).
-[] Reference environment flags related to generator in that doc.
+ [x] Add a short `docs/toolchain/generator-architecture.md` describing new modularization.
+ [x] Reference environment flags related to generator in that doc.
 
 ## 5. Final Quality Gate
 [] Run full test suite (all green).
