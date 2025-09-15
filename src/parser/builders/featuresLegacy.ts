@@ -2,24 +2,10 @@ import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { PageBlock, ComponentBlock, StoreBlock } from '../../ast';
 import { posOf, defineHidden } from '../builderUtils';
 import { parseUi } from '../uiParser';
+import { sliceFromCst } from '../cstText';
 
-function sliceFrom(node: CstNode, source: string): string {
-  const tokens: IToken[] = [];
-  const collect = (n: CstNode) => {
-    const ch = n.children as CstChildrenDictionary;
-    for (const k of Object.keys(ch)) {
-      const arr = (ch as any)[k] as Array<IToken | CstNode>;
-      if (!Array.isArray(arr) || !arr.length) continue;
-      if ((arr[0] as any).image !== undefined) tokens.push(...(arr as IToken[]));
-      else for (const child of arr as CstNode[]) collect(child);
-    }
-  };
-  collect(node);
-  if (!tokens.length) return '';
-  const start = Math.min(...tokens.map(t => t.startOffset ?? 0));
-  const end = Math.max(...tokens.map(t => (t.endOffset ?? t.startOffset ?? 0)));
-  return source.slice(start, end + 1);
-}
+// Wrapper preserving original local function name to avoid larger diff; delegates to shared helper.
+function sliceFrom(node: CstNode, source: string): string { return sliceFromCst(node, source); }
 
 function parseStateDecls(body: string) {
   const lines = body.split(/\n|;+/).map(s => s.trim()).filter(Boolean);

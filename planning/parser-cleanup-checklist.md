@@ -49,25 +49,25 @@ Files reviewed:
 ## Detailed Task List
 
 ### Phase 0: Baseline Guard
-- [ ] Add test: `parser/grammar_rule_names.test.ts` capturing current rule name list & token name list hash.
-- [ ] Add test: `parser/type_alias_resolution.test.ts` verifying alias resolution fields.
-- [ ] Add test: `parser/preprocess_blocks.test.ts` for `extractFeatureBlocks` & `preprocessSource` invariants.
-- [ ] Add test: `parser/style_scanner.test.ts` for multi + unterminated style blocks.
-- [ ] Add test: `parser/extract_styles_integration.test.ts` ensuring `attachComponentStyles` merges last style block.
-- [ ] Add test: `parser/upload_cst_extraction.test.ts` verifying upload policy AST nodes from single file.
-- [ ] Add test: `parser/workflow_retry_concurrency_extras.test.ts` verifying negative max/factor, unknown entries, durations parsed.
+- [x] Add test: `parser/grammar_rule_names.test.ts` capturing current rule name list & token name list hash.
+- [x] Add test: `parser/type_alias_resolution.test.ts` verifying alias resolution fields.
+- [x] Add test: `parser/preprocess_blocks.test.ts` for `extractFeatureBlocks` & `preprocessSource` invariants.
+- [x] Add test: `parser/style_scanner.test.ts` for multi + unterminated style blocks.
+- [x] Add test: `parser/extract_styles_integration.test.ts` ensuring `attachComponentStyles` merges last style block.
+- [x] Add test: `parser/upload_cst_extraction.test.ts` verifying upload policy AST nodes from single file.
+- [x] Add test: `parser/workflow_retry_concurrency_extras.test.ts` verifying negative max/factor, unknown entries, durations parsed.
 
 ### Phase 1: Shared Utilities
-- [ ] Create `src/parser/astUtils.ts` re-exporting `posOf`, `defineHidden` (leave originals; import sites migrate gradually).
-- [ ] Create `src/parser/cstText.ts` with `sliceFromCst(node, source)` and `extractTextSpan(node, source)` and unit tests.
-- [ ] Replace inline copies in `featuresLegacy.ts` (`sliceFrom`) & `modularAstBuilder.ts` (`extractText`) referencing new helpers (keep old functions temporarily exporting wrappers to avoid large diff; remove after tests pass).
-- [ ] Introduce `primitiveTypes.ts` exporting `PRIMITIVE_TOKEN_NAMES`, `PRIMITIVE_TO_NAME`, and helper `detectPrimitiveToken(childrenDict)` used in `databaseBuilder.ts` and others.
+- [x] Create `src/parser/astUtils.ts` re-exporting `posOf`, `defineHidden` (leave originals; import sites migrate gradually).
+- [x] Create `src/parser/cstText.ts` with `sliceFromCst(node, source)` and `extractTextSpan(node, source)` and unit tests.
+- [x] Replace inline copies in `featuresLegacy.ts` (`sliceFrom`) & `modularAstBuilder.ts` (`extractText`) referencing new helpers (keep old functions temporarily exporting wrappers to avoid large diff; remove after tests pass).
+- [x] Introduce `primitiveTypes.ts` exporting `PRIMITIVE_TOKEN_NAMES`, `PRIMITIVE_TO_NAME`, and helper `detectPrimitiveToken(childrenDict)` used in `databaseBuilder.ts` and others. (Partial: constants & detect function added; integration into builders deferred to Phase 4.)
 
 ### Phase 2: Workflow & Upload Modularization
-- [ ] Extract workflow CST -> AST logic from `modularAstBuilder.ts` into `workflowBuilder.ts` (pure functions: `buildWorkflowBlocks(nodes, source)` returning array of workflow blocks). Maintain environment flag gating inside `workflowBuilder`.
-- [ ] Extract upload policy CST logic into `uploadBuilder.ts` (function `buildUploadPolicies(nodes, source)`).
-- [ ] Update `modularAstBuilder.ts` to delegate and slim to orchestrator + basic loops.
-- [ ] Ensure no change to resulting AST by re-running full test suite & rule/token hash test.
+- [x] Extract workflow CST -> AST logic from `modularAstBuilder.ts` into `workflowBuilder.ts` (pure functions: `buildWorkflowBlocks(nodes, source)` returning array of workflow blocks). Maintain environment flag gating inside `workflowBuilder`.
+- [x] Extract upload policy CST logic into `uploadBuilder.ts` (function `buildUploadPolicies(nodes, source)`).
+- [x] Update `modularAstBuilder.ts` to delegate and slim to orchestrator + basic loops.
+- [x] Ensure no change to resulting AST by re-running full test suite & rule/token hash test.
 
 ### Phase 3: State & Feature Deduplication
 - [ ] Create `stateHelpers.ts` with `parseStructuredStateDecl(cstNode)`, `parseRawStateDecls(innerSource)`, and unify logic used for pages and stores.
