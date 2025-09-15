@@ -70,9 +70,9 @@ Files reviewed:
 - [x] Ensure no change to resulting AST by re-running full test suite & rule/token hash test.
 
 ### Phase 3: State & Feature Deduplication
-- [ ] Create `stateHelpers.ts` with `parseStructuredStateDecl(cstNode)`, `parseRawStateDecls(innerSource)`, and unify logic used for pages and stores.
-- [ ] Refactor `featuresLegacy.ts` to consume helpers; remove duplicated logic blocks while preserving output property names & ordering.
-- [ ] Add unit test specifically asserting parsed state arrays equality before/after refactor (store + page sample). Use snapshot or deep-equality fixture.
+- [x] Create `stateHelpers.ts` with `parseStructuredStateDecl(cstNode)`, `parseRawStateDecls(innerSource)`, and unify logic used for pages and stores.
+- [x] Refactor `featuresLegacy.ts` to consume helpers; remove duplicated logic blocks while preserving output property names & ordering.
+- [x] Add unit test specifically asserting parsed state arrays equality before/after refactor (store + page sample). Use snapshot or deep-equality fixture.
 
 ### Phase 4: Primitive & Attribute DRY
 - [ ] Refactor `mapPrimitiveToken` & primitive detection in `databaseBuilder.ts` to use shared constants from `primitiveTypes.ts`.
