@@ -1,9 +1,10 @@
 import { Entity } from '../ast';
+import { sortByName } from './_shared';
 
 export function generatePrismaSchema(db: { entities: Entity[] }): string {
   const header = `generator client {\n  provider = \"prisma-client-js\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n`;
 
-  const sorted = [...db.entities].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = sortByName(db.entities);
   const models = sorted.map(entity => renderModel(entity, sorted)).join('\n\n');
   return header + models + '\n';
 }

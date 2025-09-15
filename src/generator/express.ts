@@ -1,32 +1,12 @@
 import { Entity, UploadPolicyAst } from '../ast';
 import { generateValidationModules } from './validation';
 import { generateUploadPolicyModules } from './uploads';
+import { pluralize, sortByName } from './_shared';
 
-function pluralize(name: string): string {
-  if (name.endsWith('y') && !/[aeiou]y$/i.test(name)) return name.slice(0, -1) + 'ies';
-  if (name.endsWith('s')) return name + 'es';
-  return name + 's';
-}
-export interface AuthConfig {
-  adapterPath?: string;
-  requireAuth?: boolean;
-  jwtSecret?: string;
-}
-
-export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[], uploads?: UploadPolicyAst[] }): Record<string, string> {
-  const files: Record<string, string> = {};
-  // generate validation schemas first
-  Object.assign(files, generateValidationModules(entities));
-  if (opts?.uploads && opts.uploads.length) {
-    const policyModules = generateUploadPolicyModules(opts.uploads);
-    Object.assign(files, policyModules);
-  }
-  const mounts: string[] = [];
-  const sorted = [...entities].sort((a, b) => a.name.localeCompare(b.name));
-  for (const e of sorted) {
-    const base = e.name.charAt(0).toLowerCase() + e.name.slice(1);
-    const routeBase = opts?.pluralizeRoutes ? pluralize(base) : base;
-  const route = `import { Router } from 'express'
+// --- Decomposed helper builders (pure). Output strings must remain byte-identical to previous inline construction. ---
+function buildEntityRouteModule(e: Entity, routeBase: string): string {
+  const base = e.name.charAt(0).toLowerCase() + e.name.slice(1);
+  return `import { Router } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { validate${e.name}Body, validate${e.name}Update } from '../validation/${e.name}'
 import { validationErrorEnvelope } from '../runtime/validateRuntime'
@@ -101,11 +81,14 @@ router.delete('/${routeBase}/:id', async (req, res) => {
   }
 })
 `;
-  files[`routes/${base}.ts`] = route;
-  mounts.push(base);
-  }
-  // Optional: basic app bootstrap
-  // Use CommonJS style dynamic requires to avoid extension resolution issues under differing module loaders
+}
+
+function buildAuthUtils(jwtSecret?: string): string | undefined {
+  if (!jwtSecret) return undefined;
+  return `import crypto from 'crypto';\n\nconst secret = process.env.LOCUS_JWT_SECRET || ${JSON.stringify(jwtSecret)};\n\ninterface TokenOptions { expSeconds?: number }\ninterface TokenPayload { [k:string]: any; exp?: number }\nexport function generateToken(payload: TokenPayload, opts: TokenOptions = {}): string {\n  const bodyObj: TokenPayload = { ...payload };\n  if (opts.expSeconds) { bodyObj.exp = Math.floor(Date.now()/1000) + opts.expSeconds; }\n  const body = Buffer.from(JSON.stringify(bodyObj)).toString('base64url');\n  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');\n  return body + '.' + sig;\n}\nexport function verifyToken(token: string): TokenPayload | null {\n  const [body, sig] = token.split('.');\n  if (!body || !sig) return null;\n  const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');\n  if (expected !== sig) return null;\n  try { const obj: TokenPayload = JSON.parse(Buffer.from(body,'base64url').toString('utf8')); if (obj.exp && obj.exp < Math.floor(Date.now()/1000)) return null; return obj; } catch { return null; }\n}\n`;
+}
+
+function buildServerBootstrap(mounts: string[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[], uploads?: UploadPolicyAst[] }): string {
   const imports = mounts.map(n => `const { router: ${n}Router } = require('./routes/${n}.ts')`).join('\n');
   const uses = mounts.map(n => `app.use('/${opts?.pluralizeRoutes ? pluralize(n) : n}', ${n}Router)`).join('\n');
   const guardLines: string[] = [];
@@ -113,24 +96,19 @@ router.delete('/${routeBase}/:id', async (req, res) => {
     guardLines.push('// page guard declarations');
     for (const pg of opts.pagesWithGuards) {
       guardLines.push(`// Guard page ${pg.name} requires role ${pg.role}`);
-  // create stub endpoint illustrating guard enforcement
-  guardLines.push(`app.get('/guard/${pg.name.toLowerCase()}', requireRole('${pg.role}'), (req,res)=> res.json({ ok: true, page: '${pg.name}' }))`);
+      guardLines.push(`app.get('/guard/${pg.name.toLowerCase()}', requireRole('${pg.role}'), (req,res)=> res.json({ ok: true, page: '${pg.name}' }))`);
     }
   }
-  // Auth utilities generation (if requested)
-  if (opts?.auth?.jwtSecret) {
-  files['auth/authUtils.ts'] = `import crypto from 'crypto';\n\nconst secret = process.env.LOCUS_JWT_SECRET || ${JSON.stringify(opts.auth.jwtSecret)};\n\ninterface TokenOptions { expSeconds?: number }\ninterface TokenPayload { [k:string]: any; exp?: number }\nexport function generateToken(payload: TokenPayload, opts: TokenOptions = {}): string {\n  const bodyObj: TokenPayload = { ...payload };\n  if (opts.expSeconds) { bodyObj.exp = Math.floor(Date.now()/1000) + opts.expSeconds; }\n  const body = Buffer.from(JSON.stringify(bodyObj)).toString('base64url');\n  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');\n  return body + '.' + sig;\n}\nexport function verifyToken(token: string): TokenPayload | null {\n  const [body, sig] = token.split('.');\n  if (!body || !sig) return null;\n  const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');\n  if (expected !== sig) return null;\n  try { const obj: TokenPayload = JSON.parse(Buffer.from(body,'base64url').toString('utf8')); if (obj.exp && obj.exp < Math.floor(Date.now()/1000)) return null; return obj; } catch { return null; }\n}\n`;
-  }
-
   const authLines: string[] = [];
   if (opts?.auth?.adapterPath) {
-    authLines.push(`// auth middleware injected\nimport * as authAdapter from '${opts.auth.adapterPath.replace(/\\/g,'/')}';`);
+    authLines.push(`// auth middleware injected`);
+    authLines.push(`import * as authAdapter from '${opts.auth.adapterPath.replace(/\\/g,'/')}';`);
     authLines.push(`(app as any).authAdapter = authAdapter;`);
     authLines.push(`app.use(async function locusAuthMiddleware(req,res,next){\n  try {\n    const session = authAdapter.getSession ? await authAdapter.getSession(req,res) : null;\n    (req as any).auth = session;\n    (req as any).user = session;\n    if (${opts.auth.requireAuth ? 'true' : 'false'} && !session) { return res.status(401).json({ error: 'Unauthorized' }); }\n    next();\n  } catch (e) { res.status(500).json({ error: 'Auth failure' }); }\n});`);
-    authLines.push(`// expose requireRole if provided\nconst requireRole = authAdapter.requireRole || ((role: string)=> (req:any,res:any,next:any)=> next());`);
+    authLines.push(`// expose requireRole if provided`);
+    authLines.push(`const requireRole = authAdapter.requireRole || ((role: string)=> (req:any,res:any,next:any)=> next());`);
   }
-
-  files['server.ts'] = `/* eslint-disable */
+  return `/* eslint-disable */
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
@@ -151,7 +129,7 @@ ${authLines.join('\n')}
 ${guardLines.join('\n')}
 // Auto-wire upload middlewares (simple heuristic: POST route name matches policy name lowercased or singular)
 const uploadPolicies: Record<string, any> = {};
-try { ${ (opts?.uploads||[]).map(p => `uploadPolicies['${p.name}'] = require('./uploads/${p.name}.ts').policy;`).join(' ') } } catch {}
+try { ${(opts?.uploads||[]).map(p => `uploadPolicies['${p.name}'] = require('./uploads/${p.name}.ts').policy;`).join(' ')} } catch {}
 function attachUploadPolicy(appRef: any, routeBase: string, policyName: string) {
   const pol = uploadPolicies[policyName]; if (!pol) return;
   const mw = makeUploadMiddleware(pol, process.env.LOCUS_UPLOAD_TMP || require('path').join(__dirname,'..','..','tmp_uploads'));
@@ -170,5 +148,45 @@ if (require.main === module) {
   startServer();
 }
 `;
+}
+export interface AuthConfig {
+  adapterPath?: string;
+  requireAuth?: boolean;
+  jwtSecret?: string;
+}
+
+export function generateExpressApi(entities: Entity[], opts?: { pluralizeRoutes?: boolean; auth?: AuthConfig; pagesWithGuards?: { name: string; role: string }[], uploads?: UploadPolicyAst[] }): Record<string, string> {
+  const files: Record<string, string> = {};
+  // generate validation schemas first
+  Object.assign(files, generateValidationModules(entities));
+  if (opts?.uploads && opts.uploads.length) {
+    const policyModules = generateUploadPolicyModules(opts.uploads);
+    Object.assign(files, policyModules);
+  }
+  const mounts: string[] = [];
+  const sorted = sortByName(entities); // identical ordering
+  for (const e of sorted) {
+    const base = e.name.charAt(0).toLowerCase() + e.name.slice(1);
+    const routeBase = opts?.pluralizeRoutes ? pluralize(base) : base;
+    const route = buildEntityRouteModule(e, routeBase);
+    files[`routes/${base}.ts`] = route;
+    mounts.push(base);
+  }
+  // Optional: basic app bootstrap
+  // Use CommonJS style dynamic requires to avoid extension resolution issues under differing module loaders
+  // reuse identical logic via helper
+  // Auth utilities generation (if requested)
+  const authUtils = buildAuthUtils(opts?.auth?.jwtSecret);
+  if (authUtils) files['auth/authUtils.ts'] = authUtils;
+
+  const authLines: string[] = [];
+  if (opts?.auth?.adapterPath) {
+    authLines.push(`// auth middleware injected\nimport * as authAdapter from '${opts.auth.adapterPath.replace(/\\/g,'/')}';`);
+    authLines.push(`(app as any).authAdapter = authAdapter;`);
+    authLines.push(`app.use(async function locusAuthMiddleware(req,res,next){\n  try {\n    const session = authAdapter.getSession ? await authAdapter.getSession(req,res) : null;\n    (req as any).auth = session;\n    (req as any).user = session;\n    if (${opts.auth.requireAuth ? 'true' : 'false'} && !session) { return res.status(401).json({ error: 'Unauthorized' }); }\n    next();\n  } catch (e) { res.status(500).json({ error: 'Auth failure' }); }\n});`);
+    authLines.push(`// expose requireRole if provided\nconst requireRole = authAdapter.requireRole || ((role: string)=> (req:any,res:any,next:any)=> next());`);
+  }
+
+  files['server.ts'] = buildServerBootstrap(mounts, opts);
   return files;
 }

@@ -1,3 +1,5 @@
+import { sortByName, kebabCasePageName } from './_shared';
+
 export function generateNextApp(pages: Array<{ name: string }>): Record<string, string> {
   const files: Record<string, string> = {};
   // globals.css imports public/theme.css
@@ -12,12 +14,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 `;
 
-  const sorted = [...pages].sort((a, b) => a.name.localeCompare(b.name));
-  const kebab = (name: string) => name
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .replace(/\s+/g, '-')
-    .replace(/_/g, '-')
-    .toLowerCase();
+  const sorted = sortByName(pages);
+  const kebab = (name: string) => kebabCasePageName(name); // extracted helper
 
   // Landing page listing links to each generated page
   if (sorted.length) {
