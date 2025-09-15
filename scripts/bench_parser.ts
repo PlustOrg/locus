@@ -1,5 +1,17 @@
-import { LocusLexer } from '../src/parser/tokens';
-import { DatabaseCstParser } from '../src/parser/databaseParser';
+/* eslint-disable @typescript-eslint/no-var-requires */
+// Benchmark script attempts src import first (ts-node path). When executed by plain node ESM, fall back to dist via dynamic import.
+let LocusLexer: any, DatabaseCstParser: any;
+async function resolveModules() {
+  try {
+    // CommonJS resolution path (ts-node/register)
+    ({ LocusLexer } = require('../src/parser/tokens'));
+    ({ DatabaseCstParser } = require('../src/parser/databaseParser'));
+  } catch {
+    const t = await import('../dist/parser/tokens.js');
+    const d = await import('../dist/parser/databaseParser.js');
+    LocusLexer = (t as any).LocusLexer; DatabaseCstParser = (d as any).DatabaseCstParser;
+  }
+}
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -21,4 +33,4 @@ function run(sample: string, iterations = 100) {
 
 const samplePath = process.argv[2] || join(__dirname, 'sample.locus');
 const input = readFileSync(samplePath, 'utf8');
-run(input, Number(process.argv[3]) || 100);
+resolveModules().then(() => run(input, Number(process.argv[3]) || 100));

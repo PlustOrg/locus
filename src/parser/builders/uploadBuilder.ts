@@ -1,4 +1,8 @@
 import { CstNode } from 'chevrotain';
+/**
+ * buildUploadPolicies
+ * Pure: constructs upload policy AST nodes from CST. Does not modify input, returns new objects only.
+ */
 
 function parseSizeLiteral(txt?: string): number | undefined {
   if (!txt) return undefined;

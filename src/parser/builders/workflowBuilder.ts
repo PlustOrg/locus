@@ -1,4 +1,9 @@
 import { CstNode } from 'chevrotain';
+/**
+ * buildWorkflowBlocks
+ * Pure function: derives workflow block AST objects from CST nodes & source text.
+ * No side-effects, no mutation of passed CST. Environment flags are read-only (feature gating).
+ */
 import { WorkflowBlock, RawWorkflowSection, WorkflowStep } from '../../ast';
 import { parseExpression } from '../expr';
 import { extractTextSpan } from '../cstText';

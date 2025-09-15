@@ -1,4 +1,8 @@
-/** Primitive token name constants shared by builders. */
+/**
+ * Primitive token name constants shared by builders.
+ * Order is significant for deterministic detection (first match wins) and guarded by tests.
+ * Pure: no side effects, only string transformations.
+ */
 export const PRIMITIVE_TOKEN_NAMES = [
   'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT'
 ] as const;

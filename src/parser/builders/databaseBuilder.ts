@@ -3,6 +3,7 @@ import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation, prim
 import { posOf, defineHidden } from '../builderUtils';
 import crypto from 'crypto';
 import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } from './helpers';
+import { detectPrimitive } from '../primitiveTypes';
 import { registerDeprecation } from '../../deprecations';
 
 let __allocCount = 0;
@@ -69,7 +70,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         let primitiveTokenName: string | undefined;
         const usedLegacyList = !!typeCh['List'];
         const isList = usedLegacyList || (!!typeCh['LBracketTok'] && !!typeCh['RBracketTok']);
-        const typeTokenName = Object.keys(typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
+  const typeTokenName = detectPrimitive(typeCh as any);
               const optional = !!typeCh['Question'];
         let nullable = false;
         if (!nullable && typeCh['Identifier']) {
@@ -84,13 +85,14 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
           if (optional) {
             throw new Error("ParseError: Optional list types 'list of Type?' or 'Type[]?' are not allowed; remove '?' after list.");
           }
-          primitiveTokenName = Object.keys(scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k));
+          const scanChildren = scalarNodes.length ? scalarNodes[0].children as CstChildrenDictionary : typeCh;
+          primitiveTokenName = detectPrimitive(scanChildren as any);
           fieldType = { kind: 'list', of: mapPrimitiveToken(primitiveTokenName!), optional, nullable };
           if (usedLegacyList) {
             registerDeprecation('list_of_syntax', "'list of Type' syntax is deprecated; use 'Type[]'", '0.5.0', "Replace 'list of String' with 'String[]'");
           }
         } else {
-          primitiveTokenName = scalarNodes.length ? Object.keys(scalarNodes[0].children as CstChildrenDictionary).find(k => [ 'StringT','TextT','IntegerT','DecimalT','BooleanT','DateTimeT','JsonT','BigIntT','FloatT','UUIDT','EmailT','URLT' ].includes(k)) : typeTokenName;
+          primitiveTokenName = scalarNodes.length ? detectPrimitive(scalarNodes[0].children as any) : typeTokenName;
           fieldType = { kind: 'primitive', name: mapPrimitiveToken(primitiveTokenName!) } as FieldType;
           if (optional) fieldType.optional = true;
           if (nullable) (fieldType as any).nullable = true;

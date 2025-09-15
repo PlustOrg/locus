@@ -103,6 +103,11 @@ locus dev
   3. Run tests: `npm test`
   4. Add features with tests and docs
 
+  ### Parser Guard Tests
+  The grammar and primitive mappings are protected by hash tests (`grammar_rule_names.test.ts`, `primitives_hash.test.ts`). If you intentionally change the grammar or primitive token set, update the expected hash in those tests with a clear commit message.
+
+  Parser utilities live in `src/parser` (`primitiveTypes.ts`, `stateHelpers.ts`, `workflowBuilder.ts`, `uploadBuilder.ts`). These helpers are pure; avoid hidden side-effects to keep parsing deterministic.
+
 ## 📚 Documentation
 
 - [Introduction & Philosophy](docs/introduction/language.md)

@@ -1,5 +1,6 @@
 import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { sliceFromCst } from '../cstText';
+// All helpers below are pure: they perform string/token inspection only and allocate new objects.
 
 /** Parse inline (raw) state declarations from a body string. Pure. */
 export function parseStateDecls(body: string) {

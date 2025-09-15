@@ -1,4 +1,12 @@
 import { CstParser, IToken as _IToken } from 'chevrotain';
+/**
+ * DatabaseCstParser
+ * ------------------------------------------------------
+ * CENTRAL GRAMMAR DEFINITION (Chevrotain)
+ * Sections are delineated with banner comments for readability only.
+ * Rule names MUST NOT change without updating hash/guard tests.
+ * Parser recovery is intentionally disabled (fail fast for clear errors).
+ */
 import {
   AllTokens,
   LCurly,
@@ -122,16 +130,19 @@ import {
   SizeLiteral,
 } from './tokens';
 
+// === Parser Class ==========================================================
 export class DatabaseCstParser extends CstParser {
   constructor() {
     super(AllTokens, { recoveryEnabled: false });
     this.performSelfAnalysis();
   }
 
+  // === Entry Points ========================================================
   public file = this.RULE('file', () => {
   this.MANY(() => this.SUBRULE(this.topLevel));
   });
 
+  // === Top-Level Constructs ================================================
   private topLevel = this.RULE('topLevel', () => {
     this.OR([
       { ALT: () => this.SUBRULE(this.databaseBlock) },
@@ -144,7 +155,7 @@ export class DatabaseCstParser extends CstParser {
     ]);
   });
 
-  // --- Workflow scaffold (Phase 1) ---
+  // === Workflow Blocks =====================================================
   private workflowBlock = this.RULE('workflowBlock', () => {
     this.CONSUME(Workflow);
     this.CONSUME(Identifier);
@@ -219,7 +230,7 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(RCurly);
   });
 
-  // --- Upload DSL ---
+  // === Upload DSL ==========================================================
   private uploadBlock = this.RULE('uploadBlock', () => {
     this.CONSUME(UploadKw);
     this.CONSUME(Identifier);
@@ -298,7 +309,7 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(Identifier);
   });
   
-  // Steps block within workflow
+  // === Workflow Steps ======================================================
   private stepsWorkflowBlock = this.RULE('stepsWorkflowBlock', () => {
     this.CONSUME(Steps);
     this.CONSUME(LCurly);
@@ -605,7 +616,7 @@ export class DatabaseCstParser extends CstParser {
     this.CONSUME(RCurly);
   });
 
-  // --- Feature internals ---
+  // === Feature Blocks (Pages / Components / Stores) ========================
   private stateBlock = this.RULE('stateBlock', () => {
     this.CONSUME(State);
     this.CONSUME(LCurly);
@@ -769,6 +780,7 @@ export class DatabaseCstParser extends CstParser {
   ]));
   });
 
+  // === Design System =======================================================
   private designSystemBlock = this.RULE('designSystemBlock', () => {
     this.CONSUME(DesignSystem);
     this.CONSUME(LCurly);
@@ -850,6 +862,7 @@ export class DatabaseCstParser extends CstParser {
     ]);
   });
 
+  // === Database & Entities =================================================
   private databaseBlock = this.RULE('databaseBlock', () => {
     this.CONSUME(Database);
     this.CONSUME(LCurly);
