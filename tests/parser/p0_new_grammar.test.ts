@@ -1,5 +1,5 @@
 import { LocusLexer } from '../../src/parser/tokens';
-import { LocusCstParser } from '../../src/parser/databaseParser';
+import { LocusCstParser } from '../../src/parser/locusCstParser';
 import { buildDatabaseBlocks } from '../../src/parser/builders/databaseBuilder';
 
 function parseSource(src: string) {

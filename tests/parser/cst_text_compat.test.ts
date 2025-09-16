@@ -1,5 +1,5 @@
 import { sliceFromCst, extractTextSpan } from '../../src/parser/cstText';
-import { LocusCstParser } from '../../src/parser/databaseParser';
+import { LocusCstParser } from '../../src/parser/locusCstParser';
 import { LocusLexer } from '../../src/parser/tokens';
 
 test('sliceFromCst and extractTextSpan produce non-empty text for entityDecl', () => {

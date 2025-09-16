@@ -2,7 +2,7 @@ import { LocusFileAST } from '../ast';
 import { PError } from '../errors';
 import { LocusLexer } from './tokens';
 import crypto from 'crypto';
-import { LocusCstParser } from './databaseParser';
+import { LocusCstParser } from './locusCstParser';
 import { buildAstModular } from './modularAstBuilder';
 import { extractTypeAliases, applyTypeAliases } from './typeAliases';
 // style_override handled directly in grammar. Legacy style:override removed.

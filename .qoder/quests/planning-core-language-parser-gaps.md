@@ -68,7 +68,7 @@ graph TB
 
 #### CST Generation Enhancement
 - **Generate CST for all language constructs**
-  - Extend `DatabaseCstParser` to cover UI and workflow syntax
+  - Extend `LocusCstParser` (formerly `DatabaseCstParser`) to cover UI and workflow syntax
   - Ensure precise token spans for all nodes
   - Implement CST visitor pattern for transformation
 
@@ -271,7 +271,7 @@ graph TD
 1. **Extend Chevrotain grammar for UI parsing**
    - Add UI element tokens and rules
    - Migrate `uiParser.ts` logic to grammar rules
-   - Update `DatabaseCstParser` to include UI constructs
+  - Update `LocusCstParser` (formerly `DatabaseCstParser`) to include UI constructs
 
 2. **Formalize workflow grammar**
    - Define structured trigger syntax

@@ -1,4 +1,7 @@
 import { CstParser, IToken as _IToken } from 'chevrotain';
+// Legacy Notice: This parser class was previously named `DatabaseCstParser`.
+// Renamed to `LocusCstParser` as part of parser modernization (no grammar rule name changes).
+// Do not change rule names without updating hash guard tests.
 /**
  * DatabaseCstParser
  * ------------------------------------------------------

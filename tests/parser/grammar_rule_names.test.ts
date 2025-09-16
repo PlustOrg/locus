@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { LocusCstParser } from '../../src/parser/databaseParser';
+import { LocusCstParser } from '../../src/parser/locusCstParser';
 import { AllTokens } from '../../src/parser/tokens';
 
 function computeHash(): { hash: string; ruleNames: string[]; tokenNames: string[] } {

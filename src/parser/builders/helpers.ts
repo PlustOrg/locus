@@ -1,22 +1,14 @@
 import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { FieldAttribute, FieldAttributeDefault, FieldAttributeMap, FieldAttributeUnique, FieldType } from '../../ast';
+import { PRIMITIVE_TOKEN_NAMES } from '../primitiveTypes';
+
+// Table-driven primitive token mapping (deterministic, derived from PRIMITIVE_TOKEN_NAMES).
+const PRIMITIVE_MAP: Record<string, FieldType['name']> = Object.fromEntries(
+  PRIMITIVE_TOKEN_NAMES.map(n => [n, n.replace(/T$/, '') as FieldType['name']])
+) as Record<string, FieldType['name']>;
 
 export function mapPrimitiveToken(key: string): FieldType['name'] {
-  switch (key) {
-    case 'StringT': return 'String';
-    case 'TextT': return 'Text';
-    case 'IntegerT': return 'Integer';
-    case 'DecimalT': return 'Decimal';
-    case 'BooleanT': return 'Boolean';
-    case 'DateTimeT': return 'DateTime';
-    case 'JsonT': return 'Json';
-    case 'BigIntT': return 'BigInt';
-    case 'FloatT': return 'Float';
-    case 'UUIDT': return 'UUID';
-    case 'EmailT': return 'Email';
-    case 'URLT': return 'URL';
-    default: return 'String';
-  }
+  return PRIMITIVE_MAP[key] || 'String';
 }
 
 export function collectFieldAttributes(attrGroups: CstNode[]): FieldAttribute[] {

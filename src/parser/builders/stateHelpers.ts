@@ -29,8 +29,8 @@ export function parseStateDecls(body: string) {
   return out;
 }
 
-/** Parse a structured stateDecl CST node list into state entries. */
-export function parseStructuredStateDecls(nodes: CstNode[]): any[] {
+/** Parse a structured stateDecl CST node list into state entries. (Internal) */
+function parseStructuredStateDecls(nodes: CstNode[]): any[] {
   return nodes.map(sd => {
     const sdch = sd.children as CstChildrenDictionary;
     const nameTok = (sdch['Identifier'] as IToken[])[0];

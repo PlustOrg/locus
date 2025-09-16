@@ -6,9 +6,10 @@ import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } 
 import { detectPrimitive } from '../primitiveTypes';
 import { registerDeprecation } from '../../deprecations';
 
-let __allocCount = 0;
+let __allocCount = 0; // instrumentation counter
 const fieldPool: any[] = [];
 const entityPool: any[] = [];
+// Retained for tests (ast_pooling.test.ts)
 export function __getAstAllocCount(){ return __allocCount; }
 function makeField(init: any): Field {
   if (process.env.LOCUS_AST_POOL === '1' && fieldPool.length) {
@@ -30,7 +31,8 @@ function makeEntity(init: any): Entity {
 }
 
 const entityCache = new Map<string, Entity>();
-let __entityBuilds = 0;
+let __entityBuilds = 0; // instrumentation counter
+// Retained for tests (cst_entity_cache.test.ts)
 export function __getEntityBuildCount(){ return __entityBuilds; }
 
 export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {

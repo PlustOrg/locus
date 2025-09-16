@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
 // Generates a simplistic grammar spec by traversing Chevrotain parser instance rule names.
-import { LocusCstParser } from '../src/parser/databaseParser';
+import { LocusCstParser } from '../src/parser/locusCstParser';
 
 const parser = new LocusCstParser();
 const rules = Object.keys((parser as any).definitions || (parser as any).ruleNames || {}).concat((parser as any).ruleNames || []);
