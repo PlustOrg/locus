@@ -1,11 +1,11 @@
 import { LocusLexer } from '../../src/parser/tokens';
-import { DatabaseCstParser } from '../../src/parser/databaseParser';
+import { LocusCstParser } from '../../src/parser/databaseParser';
 import { buildDatabaseBlocks } from '../../src/parser/builders/databaseBuilder';
 
 function parseSource(src: string) {
   const lex = LocusLexer.tokenize(src);
   if (lex.errors.length) throw new Error('Lex errors: '+lex.errors[0].message);
-  const parser = new DatabaseCstParser();
+  const parser = new LocusCstParser();
   (parser as any).input = lex.tokens;
   const cst = parser.file();
   if (parser.errors.length) throw new Error('Parse errors: '+parser.errors[0].message);

@@ -1,11 +1,11 @@
 import { sliceFromCst, extractTextSpan } from '../../src/parser/cstText';
-import { DatabaseCstParser } from '../../src/parser/databaseParser';
+import { LocusCstParser } from '../../src/parser/databaseParser';
 import { LocusLexer } from '../../src/parser/tokens';
 
 test('sliceFromCst and extractTextSpan produce non-empty text for entityDecl', () => {
   const src = `database { entity User { id: String } }`;
   const lex = LocusLexer.tokenize(src);
-  const parser = new DatabaseCstParser();
+  const parser = new LocusCstParser();
   parser.input = lex.tokens;
   const cst = parser.file();
   const top = (cst as any).children.topLevel[0];

@@ -131,7 +131,7 @@ import {
 } from './tokens';
 
 // === Parser Class ==========================================================
-export class DatabaseCstParser extends CstParser {
+export class LocusCstParser extends CstParser {
   constructor() {
     super(AllTokens, { recoveryEnabled: false });
     this.performSelfAnalysis();

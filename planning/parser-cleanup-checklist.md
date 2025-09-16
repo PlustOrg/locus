@@ -26,7 +26,7 @@ Scope: Only structural cleanup & rename scaffolding. No semantic / grammar behav
 - [ ] Verify hash test unchanged.
 
 ## Phase E: Intentional Rename & Baseline Update
-- [ ] Rename class to `LocusCstParser` (or move grammar code).
+- [x] Rename class to `LocusCstParser` (or move grammar code).
 - [ ] Update all imports & tests.
 - [ ] Run hash test (expect failure) and update baseline with explanatory commit.
 - [ ] Remove legacy `databaseParser.ts` (or leave stub if desired).

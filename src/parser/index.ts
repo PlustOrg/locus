@@ -2,7 +2,7 @@ import { LocusFileAST } from '../ast';
 import { PError } from '../errors';
 import { LocusLexer } from './tokens';
 import crypto from 'crypto';
-import { DatabaseCstParser } from './databaseParser';
+import { LocusCstParser } from './databaseParser';
 import { buildAstModular } from './modularAstBuilder';
 import { extractTypeAliases, applyTypeAliases } from './typeAliases';
 // style_override handled directly in grammar. Legacy style:override removed.
@@ -47,7 +47,7 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   throw new PError(err.message, filePath, err.line, err.column, (err as any).length ?? 1);
   }
 
-  const parser = new DatabaseCstParser();
+  const parser = new LocusCstParser();
   parser.input = lexResult.tokens;
   const cst = parser.file();
 

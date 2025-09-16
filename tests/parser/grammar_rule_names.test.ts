@@ -1,9 +1,9 @@
 import crypto from 'crypto';
-import { DatabaseCstParser } from '../../src/parser/databaseParser';
+import { LocusCstParser } from '../../src/parser/databaseParser';
 import { AllTokens } from '../../src/parser/tokens';
 
 function computeHash(): { hash: string; ruleNames: string[]; tokenNames: string[] } {
-  const parser = new DatabaseCstParser();
+  const parser = new LocusCstParser();
   // Chevrotain exposes productions via getGAstProductions()
   const productionsCache: Record<string, any> = (parser as any).gastProductionsCache || (parser as any).productionsCache || {};
   const ruleNames: string[] = Object.keys(productionsCache).sort();
