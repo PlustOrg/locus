@@ -1,4 +1,7 @@
 import { CstParser, IToken as _IToken } from 'chevrotain';
+import { defineDesignSystemGrammar } from './grammar/designSystem';
+import { defineUploadGrammar } from './grammar/upload';
+import { defineWorkflowGrammar } from './grammar/workflow';
 // Legacy Notice: This parser class was previously named `DatabaseCstParser`.
 // Renamed to `LocusCstParser` as part of parser modernization (no grammar rule name changes).
 // Do not change rule names without updating hash guard tests.
@@ -85,59 +88,36 @@ import {
   StyleKw,
   OverrideKw,
   HexColor,
-  // workflow tokens
-  Workflow,
-  Trigger,
-  InputKw,
-  Steps,
-  OnError,
-  Concurrency,
-  Retry,
-  OnFailure,
+  // workflow tokens moved to modular workflow grammar (retain only those still referenced locally)
   Group,
   Limit,
   Policy,
-  // (future workflow tokens not yet used in Phase 1 omitted to avoid lint errors)
-  ConstKw,
-  RunKw,
-  Delay,
-  HttpRequest,
-  Branch,
-  ForEach,
-  SendEmail,
-  Parallel,
-  QueuePublish,
-  DbTx,
-  CreateKw,
-  UpdateKw,
-  DeleteKw,
-  WebhookKw,
-  MaxKw,
-  BackoffKw,
-  FactorKw,
-  Duration,
   AtSign,
+  MaxKw,
   StyleOverride,
   PipeTok,
-  // upload tokens
-  UploadKw,
-  FieldKw,
-  MaxSizeKw,
-  MaxCountKw,
-  MimeKw,
-  // StoreKw removed (duplicate pattern)
-  StrategyKw,
-  PathKw,
-  NamingKw,
-  RequiredKw,
-  SizeLiteral,
+  // upload tokens now referenced in modular upload grammar
 } from './tokens';
 
 // === Parser Class ==========================================================
 export class LocusCstParser extends CstParser {
+  // Design system rule placeholders (populated by defineDesignSystemGrammar)
+  private designSystemBlock!: any;
+  private colorsBlock!: any;
+  private themeBlock!: any;
+  private typographyBlock!: any;
+  private weightsBlock!: any;
+  private spacingBlock!: any;
+  private radiiBlock!: any;
+  private shadowsBlock!: any;
+  private tokenAssignment!: any;
   constructor() {
-    super(AllTokens, { recoveryEnabled: false });
-    this.performSelfAnalysis();
+  super(AllTokens, { recoveryEnabled: false });
+  // Attach modular grammar segments BEFORE self-analysis
+  defineDesignSystemGrammar(this);
+  defineUploadGrammar(this);
+  defineWorkflowGrammar(this);
+  this.performSelfAnalysis();
   }
 
   // === Entry Points ========================================================
@@ -159,343 +139,8 @@ export class LocusCstParser extends CstParser {
   });
 
   // === Workflow Blocks =====================================================
-  private workflowBlock = this.RULE('workflowBlock', () => {
-    this.CONSUME(Workflow);
-    this.CONSUME(Identifier);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.triggerBlock) },
-      { ALT: () => this.SUBRULE(this.inputBlock) },
-      { ALT: () => this.SUBRULE(this.stateBlock) }, // reuse existing
-      { ALT: () => this.SUBRULE(this.stepsWorkflowBlock) },
-  { ALT: () => this.SUBRULE(this.onErrorWorkflowBlock) },
-  { ALT: () => this.SUBRULE(this.onFailureWorkflowBlock) },
-  { ALT: () => this.SUBRULE(this.concurrencyBlock) },
-  { ALT: () => this.SUBRULE(this.retryBlock) },
-      {
-        GATE: () => {
-          const t = this.LA(1).tokenType;
-          return ![Trigger, InputKw, State, Steps, OnError, OnFailure, Concurrency, Retry, RCurly].includes(t as any);
-        },
-        ALT: () => this.SUBRULE(this.rawContent)
-      }
-    ]));
-    this.CONSUME(RCurly);
-  });
-
-  private triggerBlock = this.RULE('triggerBlock', () => {
-    this.CONSUME(Trigger);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.OR([
-      { GATE: () => this.LA(1).tokenType === On, ALT: () => this.MANY(() => this.SUBRULE(this.triggerDecl)) },
-      { ALT: () => this.SUBRULE(this.rawContent) }
-    ]));
-    this.CONSUME(RCurly);
-  });
-  // Restored richer workflow trigger grammar using subrules to avoid Chevrotain occurrence collisions.
-  private webhookTrigger = this.RULE('webhookTrigger', () => {
-    this.CONSUME(WebhookKw);
-    this.OPTION(() => {
-      this.CONSUME(LParen);
-      this.OPTION1(() => {
-        this.CONSUME(Identifier); // secret name
-        this.CONSUME(Colon);
-        this.CONSUME1(Identifier); // secret value identifier / binding
-      });
-      this.CONSUME(RParen);
-    });
-  });
-
-  private entityTrigger = this.RULE('entityTrigger', () => {
-    this.OR([
-      { ALT: () => this.CONSUME(CreateKw) },
-      { ALT: () => this.CONSUME(UpdateKw) },
-      { ALT: () => this.CONSUME(DeleteKw) },
-    ]);
-    this.CONSUME(LParen);
-    this.CONSUME(Identifier); // entity name
-    this.CONSUME(RParen);
-  });
-
-  private triggerDecl = this.RULE('triggerDecl', () => {
-    this.CONSUME(On);
-    this.OPTION(() => this.CONSUME(Colon)); // optional colon after 'on'
-    this.OR([
-      { ALT: () => this.SUBRULE(this.webhookTrigger) },
-      { ALT: () => this.SUBRULE(this.entityTrigger) },
-    ]);
-  });
-
-  private inputBlock = this.RULE('inputBlock', () => {
-    this.CONSUME(InputKw);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-
-  // === Upload DSL ==========================================================
-  private uploadBlock = this.RULE('uploadBlock', () => {
-    this.CONSUME(UploadKw);
-    this.CONSUME(Identifier);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.uploadFieldDecl) },
-      { ALT: () => this.SUBRULE(this.uploadStoreDecl) },
-    ]));
-    this.CONSUME(RCurly);
-  });
-
-  private uploadFieldDecl = this.RULE('uploadFieldDecl', () => {
-    this.CONSUME(FieldKw);
-    this.CONSUME1(Identifier); // field name
-    this.OPTION(() => this.SUBRULE(this.maxSizeDecl));
-    this.OPTION1(() => this.SUBRULE(this.maxCountDecl));
-    this.SUBRULE(this.mimeDecl);
-    this.OPTION2(() => this.CONSUME(RequiredKw));
-  });
-
-  private maxSizeDecl = this.RULE('maxSizeDecl', () => {
-    this.CONSUME(MaxSizeKw);
-    this.CONSUME(Colon);
-    this.CONSUME(SizeLiteral);
-  });
-
-  private maxCountDecl = this.RULE('maxCountDecl', () => {
-    this.CONSUME(MaxCountKw);
-    this.CONSUME(Colon);
-    this.CONSUME(NumberLiteral);
-  });
-
-  private mimeDecl = this.RULE('mimeDecl', () => {
-    this.CONSUME(MimeKw);
-    this.CONSUME(Colon);
-    this.CONSUME(LBracketTok);
-    this.AT_LEAST_ONE_SEP({
-      SEP: Comma,
-      DEF: () => this.SUBRULE(this.mimeValue)
-    });
-    this.CONSUME(RBracketTok);
-  });
-
-  private mimeValue = this.RULE('mimeValue', () => {
-    this.CONSUME(Identifier);
-    this.OPTION(() => {
-      this.CONSUME(SlashTok);
-      this.CONSUME1(Identifier);
-    });
-  });
-
-  private uploadStoreDecl = this.RULE('uploadStoreDecl', () => {
-  this.CONSUME(Store);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.strategyDecl) },
-      { ALT: () => this.SUBRULE(this.pathDecl) },
-      { ALT: () => this.SUBRULE(this.namingDecl) },
-    ]));
-  });
-
-  private strategyDecl = this.RULE('strategyDecl', () => {
-    this.CONSUME(StrategyKw);
-    this.CONSUME(Colon);
-    this.CONSUME(Identifier);
-  });
-
-  private pathDecl = this.RULE('pathDecl', () => {
-    this.CONSUME(PathKw);
-    this.CONSUME(Colon);
-    this.CONSUME(StringLiteral);
-  });
-
-  private namingDecl = this.RULE('namingDecl', () => {
-    this.CONSUME(NamingKw);
-    this.CONSUME(Colon);
-    this.CONSUME(Identifier);
-  });
-  
-  // === Workflow Steps ======================================================
-  private stepsWorkflowBlock = this.RULE('stepsWorkflowBlock', () => {
-    this.CONSUME(Steps);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
-    this.CONSUME(RCurly);
-  });
-
-  // run step: run actionName(arg,...)
-  private runStep = this.RULE('runStep', () => {
-    this.CONSUME(RunKw);
-    this.CONSUME(Identifier);
-    this.OPTION(() => {
-      this.CONSUME(LParen);
-      this.OPTION1(() => {
-        this.SUBRULE(this.runArg);
-        this.MANY(() => { this.CONSUME(Comma); this.SUBRULE1(this.runArg); });
-      });
-      this.CONSUME(RParen);
-    });
-  });
-
-  private workflowStepStmt = this.RULE('workflowStepStmt', () => {
-    // const binding optional
-    this.OPTION(() => {
-      this.CONSUME(ConstKw);
-      this.CONSUME(Identifier);
-      this.CONSUME(Equals);
-    });
-    this.OR([
-      { ALT: () => this.SUBRULE(this.runStep) },
-      { ALT: () => this.SUBRULE(this.branchStep) },
-      { ALT: () => this.SUBRULE(this.forEachStep) },
-      { ALT: () => this.SUBRULE(this.delayStep) },
-      { ALT: () => this.SUBRULE(this.httpRequestStep) },
-      { ALT: () => this.SUBRULE(this.sendEmailStep) },
-  { ALT: () => this.SUBRULE(this.parallelStep) },
-  { ALT: () => this.SUBRULE(this.queuePublishStep) },
-  { ALT: () => this.SUBRULE(this.dbTxStep) },
-    ]);
-  });
-
-  private runArg = this.RULE('runArg', () => {
-    // simple key: value pair or bare Identifier
-    this.CONSUME(Identifier);
-    this.OR([
-      { ALT: () => {
-        this.CONSUME(Colon);
-        this.SUBRULE(this.argExpr);
-      }},
-      { ALT: () => {
-        // treat potential dotted chain as expression continuation
-        this.MANY(() => { this.CONSUME(DotTok); this.CONSUME1(Identifier); });
-      }}
-    ]);
-  });
-
-  private argExpr = this.RULE('argExpr', () => {
-    this.OR([
-      { ALT: () => { this.CONSUME(Identifier); this.MANY(() => { this.CONSUME(DotTok); this.CONSUME1(Identifier); }); } },
-      { ALT: () => this.CONSUME(StringLiteral) },
-      { ALT: () => this.CONSUME(NumberLiteral) },
-    ]);
-  });
-
-  private delayStep = this.RULE('delayStep', () => {
-    this.CONSUME(Delay);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-
-  private httpRequestStep = this.RULE('httpRequestStep', () => {
-    this.CONSUME(HttpRequest);
-  // optional name (Identifier) without duplicating OPTION patterns later
-  this.OPTION(() => this.CONSUME(Identifier));
-    this.CONSUME(LCurly);
-  // raw inner content allowed (optional)
-  this.OPTION1(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-
-  private sendEmailStep = this.RULE('sendEmailStep', () => {
-    this.CONSUME(SendEmail);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-
-  private parallelStep = this.RULE('parallelStep', () => {
-    // placeholder semantics
-  this.CONSUME(Parallel);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
-    this.CONSUME(RCurly);
-  });
-  private queuePublishStep = this.RULE('queuePublishStep', () => {
-  this.CONSUME(QueuePublish);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-  private dbTxStep = this.RULE('dbTxStep', () => {
-  this.CONSUME(DbTx);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
-    this.CONSUME(RCurly);
-  });
-
-  private branchStep = this.RULE('branchStep', () => {
-    this.CONSUME(Branch);
-    this.CONSUME(LCurly);
-    // condition raw content (optional)
-    this.OPTION(() => {
-  // const _condStart = this.LA(1).startOffset; // reserved for expression slice
-      this.SUBRULE(this.rawContent);
-  // future: capture condition inner text & parse
-    });
-    this.MANY(() => this.SUBRULE(this.branchInner));
-    this.CONSUME(RCurly);
-  });
-
-  private branchInner = this.RULE('branchInner', () => {
-    // steps { ... } or else { ... }
-    this.OR([
-  { ALT: () => { this.CONSUME(Steps); this.CONSUME(LCurly); this.MANY(() => this.SUBRULE(this.workflowStepStmt)); this.CONSUME1(RCurly); } },
-  { ALT: () => { this.CONSUME(Else); this.CONSUME1(LCurly); this.MANY1(() => this.SUBRULE1(this.workflowStepStmt)); this.CONSUME2(RCurly); } },
-    ]);
-  });
-
-  private forEachStep = this.RULE('forEachStep', () => {
-    this.CONSUME(ForEach);
-    this.CONSUME(Identifier); // loop variable
-    this.CONSUME(In);
-    this.SUBRULE(this.argExpr); // iterable expression
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.workflowStepStmt));
-    this.CONSUME(RCurly);
-  });
-
-  private onErrorWorkflowBlock = this.RULE('onErrorWorkflowBlock', () => {
-    this.CONSUME(OnError);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-
-  private onFailureWorkflowBlock = this.RULE('onFailureWorkflowBlock', () => {
-    this.CONSUME(OnFailure);
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.rawContent));
-    this.CONSUME(RCurly);
-  });
-
-  private concurrencyBlock = this.RULE('concurrencyBlock', () => {
-    this.CONSUME(Concurrency);
-    this.CONSUME(LCurly);
-  this.AT_LEAST_ONE(() => { this.SUBRULE(this.concurrencyEntry); this.OPTION(() => this.CONSUME(Comma)); });
-    this.CONSUME(RCurly);
-  });
-
-  private concurrencyEntry = this.RULE('concurrencyEntry', () => {
-    this.OR([
-      { ALT: () => { this.CONSUME(Limit); this.CONSUME(Colon); this.CONSUME(NumberLiteral); } },
-      { ALT: () => { this.CONSUME(Group); this.CONSUME1(Colon); this.CONSUME(Identifier); } }
-    ]);
-  });
-
-  private retryBlock = this.RULE('retryBlock', () => {
-    this.CONSUME(Retry);
-    this.CONSUME(LCurly);
-    this.MANY(() => { this.SUBRULE(this.retryEntry); this.OPTION(() => this.CONSUME(Comma)); });
-    this.CONSUME(RCurly);
-  });
-
-  private retryEntry = this.RULE('retryEntry', () => {
-    this.OR([
-  { ALT: () => { this.CONSUME(MaxKw); this.CONSUME3(Colon); this.OPTION(() => this.CONSUME(HyphenTok)); this.CONSUME(NumberLiteral); } },
-  { ALT: () => { this.CONSUME(BackoffKw); this.CONSUME4(Colon); this.CONSUME4(Identifier); } },
-  { ALT: () => { this.CONSUME(FactorKw); this.CONSUME5(Colon); this.OPTION1(() => this.CONSUME1(HyphenTok)); this.CONSUME1(NumberLiteral); } },
-  { ALT: () => { this.CONSUME(Delay); this.CONSUME6(Colon); this.OR2([{ ALT: () => this.CONSUME(Duration) }, { ALT: () => { this.OPTION2(() => this.CONSUME2(HyphenTok)); this.CONSUME2(NumberLiteral); } }]); } },
-  { ALT: () => { this.CONSUME5(Identifier); this.CONSUME7(Colon); this.OR3([{ ALT: () => { this.OPTION3(() => this.CONSUME3(HyphenTok)); this.CONSUME3(NumberLiteral); } }, { ALT: () => this.CONSUME6(Identifier) }]); } }
-    ]);
-  });
+  // Workflow grammar moved to modular workflow.ts
+  private workflowBlock!: any; private triggerBlock!: any; private webhookTrigger!: any; private entityTrigger!: any; private triggerDecl!: any; private inputBlock!: any; private stepsWorkflowBlock!: any; private runStep!: any; private workflowStepStmt!: any; private runArg!: any; private argExpr!: any; private delayStep!: any; private httpRequestStep!: any; private sendEmailStep!: any; private parallelStep!: any; private queuePublishStep!: any; private dbTxStep!: any; private branchStep!: any; private branchInner!: any; private forEachStep!: any; private onErrorWorkflowBlock!: any; private onFailureWorkflowBlock!: any; private concurrencyBlock!: any; private concurrencyEntry!: any; private retryBlock!: any; private retryEntry!: any;
 
   private pageBlock = this.RULE('pageBlock', () => {
     this.CONSUME(Page);
@@ -783,87 +428,8 @@ export class LocusCstParser extends CstParser {
   ]));
   });
 
-  // === Design System =======================================================
-  private designSystemBlock = this.RULE('designSystemBlock', () => {
-    this.CONSUME(DesignSystem);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.colorsBlock) },
-      { ALT: () => this.SUBRULE(this.typographyBlock) },
-      { ALT: () => this.SUBRULE(this.spacingBlock) },
-      { ALT: () => this.SUBRULE(this.radiiBlock) },
-      { ALT: () => this.SUBRULE(this.shadowsBlock) },
-    ]));
-    this.CONSUME(RCurly);
-  });
-
-  private colorsBlock = this.RULE('colorsBlock', () => {
-    this.CONSUME(Colors);
-    this.CONSUME(LCurly);
-    this.MANY(() => {
-      this.SUBRULE(this.themeBlock);
-    });
-    this.CONSUME(RCurly);
-  });
-
-  private themeBlock = this.RULE('themeBlock', () => {
-    // theme name: Identifier or StringLiteral
-    this.OR([
-      { ALT: () => this.CONSUME1(Identifier) },
-      { ALT: () => this.CONSUME(StringLiteral) },
-    ]);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.tokenAssignment));
-    this.CONSUME(RCurly);
-  });
-
-  private typographyBlock = this.RULE('typographyBlock', () => {
-    this.CONSUME(Typography);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.tokenAssignment) },
-      { ALT: () => this.SUBRULE(this.weightsBlock) },
-    ]));
-    this.CONSUME(RCurly);
-  });
-
-  private weightsBlock = this.RULE('weightsBlock', () => {
-    this.CONSUME(Weights);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.tokenAssignment));
-    this.CONSUME(RCurly);
-  });
-
-  private spacingBlock = this.RULE('spacingBlock', () => {
-    this.CONSUME(Spacing);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.tokenAssignment));
-    this.CONSUME(RCurly);
-  });
-
-  private radiiBlock = this.RULE('radiiBlock', () => {
-    this.CONSUME(Radii);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.tokenAssignment));
-    this.CONSUME(RCurly);
-  });
-
-  private shadowsBlock = this.RULE('shadowsBlock', () => {
-    this.CONSUME(Shadows);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.tokenAssignment));
-    this.CONSUME(RCurly);
-  });
-
-  private tokenAssignment = this.RULE('tokenAssignment', () => {
-    this.CONSUME1(Identifier);
-    this.CONSUME(Colon);
-    this.OR([
-      { ALT: () => this.CONSUME(StringLiteral) },
-  { ALT: () => this.CONSUME(HexColor) },
-      { ALT: () => this.CONSUME(NumberLiteral) },
-    ]);
-  });
+  // Design system & upload grammar moved to ./grammar/*.ts (rules attached dynamically)
+  private uploadBlock!: any; private uploadFieldDecl!: any; private maxSizeDecl!: any; private maxCountDecl!: any; private mimeDecl!: any; private mimeValue!: any; private uploadStoreDecl!: any; private strategyDecl!: any; private pathDecl!: any; private namingDecl!: any;
 
   // === Database & Entities =================================================
   private databaseBlock = this.RULE('databaseBlock', () => {
