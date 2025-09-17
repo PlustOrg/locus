@@ -2,6 +2,7 @@ import { CstParser, IToken as _IToken } from 'chevrotain';
 import { defineDesignSystemGrammar } from './grammar/designSystem';
 import { defineUploadGrammar } from './grammar/upload';
 import { defineWorkflowGrammar } from './grammar/workflow';
+import { defineDatabaseGrammar } from './grammar/database';
 // Legacy Notice: This parser class was previously named `DatabaseCstParser`.
 // Renamed to `LocusCstParser` as part of parser modernization (no grammar rule name changes).
 // Do not change rule names without updating hash guard tests.
@@ -31,29 +32,19 @@ import {
   TextT,
   IntegerT,
   DecimalT,
-  BooleanT,
-  DateTimeT,
-  JsonT,
-  BigIntT,
-  FloatT,
-  UUIDT,
-  EmailT,
-  URLT,
-  NullT,
-  OnDelete,
-  MinTok,
-  LengthTok,
-  PatternTok,
+  HasMany,
+  BelongsTo,
+  HasOne,
+  Guard,
+    BooleanT,
+    DateTimeT,
+    JsonT,
   Question,
   LParen,
   RParen,
   Unique,
   Default,
   MapTok,
-  HasMany,
-  BelongsTo,
-  HasOne,
-  Guard,
   ElseIf,
   Else,
   In,
@@ -87,15 +78,10 @@ import {
   StarTok,
   StyleKw,
   OverrideKw,
-  HexColor,
   // workflow tokens moved to modular workflow grammar (retain only those still referenced locally)
   Group,
   Limit,
-  Policy,
-  AtSign,
-  MaxKw,
   StyleOverride,
-  PipeTok,
   // upload tokens now referenced in modular upload grammar
 } from './tokens';
 
@@ -117,6 +103,7 @@ export class LocusCstParser extends CstParser {
   defineDesignSystemGrammar(this);
   defineUploadGrammar(this);
   defineWorkflowGrammar(this);
+  defineDatabaseGrammar(this);
   this.performSelfAnalysis();
   }
 
@@ -431,194 +418,6 @@ export class LocusCstParser extends CstParser {
   // Design system & upload grammar moved to ./grammar/*.ts (rules attached dynamically)
   private uploadBlock!: any; private uploadFieldDecl!: any; private maxSizeDecl!: any; private maxCountDecl!: any; private mimeDecl!: any; private mimeValue!: any; private uploadStoreDecl!: any; private strategyDecl!: any; private pathDecl!: any; private namingDecl!: any;
 
-  // === Database & Entities =================================================
-  private databaseBlock = this.RULE('databaseBlock', () => {
-    this.CONSUME(Database);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.entityDecl));
-    this.CONSUME(RCurly);
-  });
-
-  private entityDecl = this.RULE('entityDecl', () => {
-    this.CONSUME(Entity);
-    this.CONSUME(Identifier);
-    this.CONSUME(LCurly);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.fieldDecl) },
-      { ALT: () => this.SUBRULE(this.relationDecl) },
-    ]));
-    this.CONSUME(RCurly);
-  });
-
-  private fieldDecl = this.RULE('fieldDecl', () => {
-    this.CONSUME(Identifier); // field name
-	this.CONSUME(Colon);
-    this.SUBRULE(this.fieldType);
-    this.MANY(() => this.OR([
-      { ALT: () => this.SUBRULE(this.fieldAttributeGroup) },
-      { ALT: () => this.SUBRULE(this.fieldAnnotation) },
-    ]));
-  });
-
-  private scalarType = this.RULE('scalarType', () => {
-    this.OR([
-      { ALT: () => this.CONSUME(StringT) },
-      { ALT: () => this.CONSUME(TextT) },
-      { ALT: () => this.CONSUME(IntegerT) },
-      { ALT: () => this.CONSUME(DecimalT) },
-      { ALT: () => this.CONSUME(BooleanT) },
-      { ALT: () => this.CONSUME(DateTimeT) },
-      { ALT: () => this.CONSUME(JsonT) },
-      { ALT: () => this.CONSUME(BigIntT) },
-      { ALT: () => this.CONSUME(FloatT) },
-      { ALT: () => this.CONSUME(UUIDT) },
-      { ALT: () => this.CONSUME(EmailT) },
-      { ALT: () => this.CONSUME(URLT) },
-    ]);
-  });
-
-  private fieldType = this.RULE('fieldType', () => {
-    this.OR([
-  { ALT: () => { this.CONSUME(List); this.CONSUME(Of); this.SUBRULE(this.scalarType); this.OPTION(() => this.CONSUME(Question)); } },
-  // primitive scalar or scalar? or scalar[] style (legacy optional [] branch retained)
-      { ALT: () => { this.SUBRULE1(this.scalarType); this.OPTION1(() => this.CONSUME1(Question)); this.OPTION2(()=>{ this.CONSUME(LBracketTok); this.CONSUME(RBracketTok); }); } },
-    ]);
-    // Support 'nullable' keyword OR union with NullT
-    this.OPTION3(() => { if (this.LA(1).image === 'nullable') this.CONSUME(Identifier); });
-    this.OPTION4(() => { if (this.LA(1).tokenType === PipeTok) { this.CONSUME(PipeTok); this.CONSUME(NullT); } });
-  });
-
-  private relationDecl = this.RULE('relationDecl', () => {
-  this.CONSUME1(Identifier); // relation field name
-  this.CONSUME(Colon);
-    this.OR([
-      { ALT: () => this.CONSUME(HasMany) },
-      { ALT: () => this.CONSUME(BelongsTo) },
-      { ALT: () => this.CONSUME(HasOne) },
-    ]);
-	this.CONSUME2(Identifier); // target entity name
-	this.MANY(() => this.OR1([
-      { ALT: () => this.SUBRULE(this.fieldAttributeGroup) },
-      { ALT: () => this.SUBRULE(this.fieldAnnotation) },
-    ]));
-    // optional referential integrity clause: on_delete: cascade|restrict|set_null
-  this.OPTION4(() => {
-      this.CONSUME(OnDelete);
-      this.CONSUME1(Colon);
-	this.CONSUME3(Identifier); // referential action identifier
-    });
-    // optional inverse clause: inverse: fieldName (Identifier 'inverse')
-    this.OPTION5(() => {
-      if (this.LA(1).tokenType === Identifier && this.LA(1).image === 'inverse') {
-        this.CONSUME4(Identifier); // 'inverse'
-        this.CONSUME2(Colon);
-        this.CONSUME5(Identifier); // inverse field name
-      }
-    });
-  });
-
-  private fieldAttributeGroup = this.RULE('fieldAttributeGroup', () => {
-    this.CONSUME(LParen);
-    this.OR([
-      { ALT: () => this.CONSUME(Unique) },
-      { ALT: () => this.SUBRULE(this.defaultAttr) },
-  { ALT: () => this.SUBRULE(this.mapAttr) },
-    { ALT: () => this.SUBRULE(this.policyAttr) },
-    ]);
-    this.CONSUME(RParen);
-  });
-
-  private fieldAnnotation = this.RULE('fieldAnnotation', () => {
-    this.CONSUME(AtSign as any);
-    this.OR([
-      { ALT: () => this.CONSUME(Unique) },
-      { ALT: () => this.SUBRULE(this.defaultAnn) },
-      { ALT: () => this.SUBRULE(this.mapAnn) },
-      { ALT: () => this.SUBRULE(this.policyAnn) },
-  // future constraint annotations captured as raw tokens for now
-  { ALT: () => this.SUBRULE(this.constraintAnn) },
-    ]);
-  });
-
-  private constraintAnn = this.RULE('constraintAnn', () => {
-    // matches @min(...), @max(...), @length(...), @pattern(...), @email
-    this.OR([
-      { ALT: () => {
-        this.OR1([
-          { ALT: () => this.CONSUME(MinTok as any) },
-          { ALT: () => this.CONSUME(MaxKw) },
-          { ALT: () => this.CONSUME(LengthTok as any) },
-          { ALT: () => this.CONSUME(PatternTok as any) },
-          { ALT: () => this.CONSUME(EmailT) },
-          { ALT: () => this.CONSUME(Identifier) },
-        ]);
-        this.OPTION(() => {
-          this.CONSUME(LParen);
-          this.OPTION1(() => this.SUBRULE(this.literal));
-          this.MANY(() => { this.CONSUME(Comma); this.SUBRULE1(this.literal); });
-          this.CONSUME(RParen);
-        });
-      } }
-    ]);
-  });
-
-  private defaultAnn = this.RULE('defaultAnn', () => {
-    this.CONSUME(Default); this.CONSUME(LParen); this.SUBRULE(this.annotationValueList); this.CONSUME(RParen);
-  });
-  private mapAnn = this.RULE('mapAnn', () => { this.CONSUME(MapTok); this.CONSUME(LParen); this.CONSUME(StringLiteral); this.CONSUME(RParen); });
-  private policyAnn = this.RULE('policyAnn', () => { this.CONSUME(Policy); this.CONSUME(LParen); this.CONSUME1(Identifier); this.CONSUME(RParen); });
-
-  private annotationValueList = this.RULE('annotationValueList', () => {
-    // same as defaultAttr body but inside parentheses
-    this.OR([
-      { ALT: () => this.CONSUME(NumberLiteral) },
-      { ALT: () => this.CONSUME(StringLiteral) },
-      { ALT: () => this.SUBRULE(this.callExpr) },
-      { ALT: () => this.CONSUME(Identifier) },
-    ]);
-  });
-
-  private defaultAttr = this.RULE('defaultAttr', () => {
-    this.CONSUME(Default);
-    this.CONSUME(Colon);
-    this.OR([
-      { ALT: () => this.CONSUME(NumberLiteral) },
-      { ALT: () => this.CONSUME(StringLiteral) },
-      { ALT: () => this.SUBRULE(this.callExpr) },
-      { ALT: () => this.CONSUME1(Identifier) },
-    ]);
-  });
-
-  private mapAttr = this.RULE('mapAttr', () => {
-    this.CONSUME(MapTok);
-    this.CONSUME(Colon);
-    this.CONSUME(StringLiteral);
-  });
-
-  private policyAttr = this.RULE('policyAttr', () => {
-    this.CONSUME(Policy);
-    this.CONSUME(Colon);
-    this.CONSUME1(Identifier); // e.g., cascade
-  });
-
-  private callExpr = this.RULE('callExpr', () => {
-    this.CONSUME(Identifier); // function name e.g., now
-    this.CONSUME(LParen);
-    this.OPTION(() => {
-      this.SUBRULE(this.literal);
-      this.MANY(() => {
-        this.CONSUME(Comma);
-        this.SUBRULE1(this.literal);
-      });
-    });
-    this.CONSUME(RParen);
-  });
-
-  private literal = this.RULE('literal', () => {
-    this.OR([
-      { ALT: () => this.CONSUME(NumberLiteral) },
-      { ALT: () => this.CONSUME(StringLiteral) },
-      { ALT: () => this.CONSUME(Identifier) },
-    ]);
-  });
+  // Database grammar moved to modular database.ts
+  private databaseBlock!: any; private entityDecl!: any; private fieldDecl!: any; private scalarType!: any; private fieldType!: any; private relationDecl!: any; private fieldAttributeGroup!: any; private fieldAnnotation!: any; private constraintAnn!: any; private defaultAnn!: any; private mapAnn!: any; private policyAnn!: any; private annotationValueList!: any; private defaultAttr!: any; private mapAttr!: any; private policyAttr!: any; private callExpr!: any; private literal!: any;
 }
