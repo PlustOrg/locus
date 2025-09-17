@@ -1,7 +1,7 @@
 import { CstParser } from 'chevrotain';
 import {
   Page, Component, Store, State, Action, On, Load, UI, Param, List, Of, Equals, Identifier, LCurly, RCurly, Comma,
-  StringLiteral, NumberLiteral, LBracketTok, RBracketTok, LParen, RParen, SemicolonTok, StyleKw, OverrideKw, StyleOverride,
+  StringLiteral, NumberLiteral, LBracketTok, RBracketTok, LParen, RParen, SemicolonTok,
   StringT, TextT, IntegerT, DecimalT, BooleanT, DateTimeT, JsonT, Question, Colon, Guard
 } from '../tokens';
 
@@ -25,14 +25,13 @@ export function defineFeatureGrammar(self: CstParser) {
     s.MANY(() => s.OR([
       { GATE: () => s.LA(1).tokenType === Param, ALT: () => s.SUBRULE(s.paramDecl) },
       { GATE: () => s.LA(1).tokenType === UI, ALT: () => s.SUBRULE(s.uiBlock) },
-      { GATE: () => s.LA(1).tokenType === StyleKw, ALT: () => s.SUBRULE(s.styleBlock) },
-      { GATE: () => s.LA(1).tokenType === StyleOverride, ALT: () => s.SUBRULE(s.styleOverrideBlock) },
+  { GATE: () => s.LA(1).tokenType.name === 'StyleKw', ALT: () => s.SUBRULE(s.styleBlock) },
+  { GATE: () => s.LA(1).tokenType.name === 'StyleOverride', ALT: () => s.SUBRULE(s.styleOverrideBlock) },
   { ALT: () => s.SUBRULE(s.rawContent) },
     ]));
     s.CONSUME(RCurly);
   });
-  s.styleOverrideBlock = s.RULE('styleOverrideBlock', () => { s.CONSUME(StyleOverride); s.CONSUME(LCurly); s.OPTION(() => s.SUBRULE(s.rawContent)); s.CONSUME(RCurly); });
-  s.styleBlock = s.RULE('styleBlock', () => { s.CONSUME(StyleKw); s.CONSUME(Colon); s.CONSUME(OverrideKw); s.CONSUME(LCurly); s.OPTION(() => s.SUBRULE(s.rawContent)); s.CONSUME(RCurly); });
+  // styleBlock & styleOverrideBlock now defined in style.ts
   s.storeBlock = s.RULE('storeBlock', () => { s.CONSUME(Store); s.CONSUME(Identifier); s.CONSUME(LCurly); s.MANY(() => s.OR([
     { GATE: () => s.LA(1).tokenType === State, ALT: () => s.SUBRULE(s.stateBlock) },
     { GATE: () => s.LA(1).tokenType === Action, ALT: () => s.SUBRULE(s.actionDecl) },

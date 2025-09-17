@@ -1,10 +1,12 @@
 import { CstParser, IToken as _IToken } from 'chevrotain';
 import { defineDesignSystemGrammar } from './grammar/designSystem';
 import { defineCommonGrammar } from './grammar/common';
+import { defineEntryGrammar } from './grammar/entry';
 import { defineUploadGrammar } from './grammar/upload';
 import { defineWorkflowGrammar } from './grammar/workflow';
 import { defineDatabaseGrammar } from './grammar/database';
 import { defineFeatureGrammar } from './grammar/feature';
+import { defineStyleGrammar } from './grammar/style';
 // Legacy Notice: This parser class was previously named `DatabaseCstParser`.
 // Renamed to `LocusCstParser` as part of parser modernization (no grammar rule name changes).
 // Do not change rule names without updating hash guard tests.
@@ -32,31 +34,18 @@ export class LocusCstParser extends CstParser {
   super(AllTokens, { recoveryEnabled: false });
   // Attach modular grammar segments BEFORE self-analysis
   defineDesignSystemGrammar(this);
+  defineEntryGrammar(this);
   defineCommonGrammar(this);
   defineUploadGrammar(this);
   defineWorkflowGrammar(this);
   defineDatabaseGrammar(this);
+  defineStyleGrammar(this);
   defineFeatureGrammar(this);
   this.performSelfAnalysis();
   }
 
-  // === Entry Points ========================================================
-  public file = this.RULE('file', () => {
-  this.MANY(() => this.SUBRULE(this.topLevel));
-  });
-
-  // === Top-Level Constructs ================================================
-  private topLevel = this.RULE('topLevel', () => {
-    this.OR([
-      { ALT: () => this.SUBRULE(this.databaseBlock) },
-      { ALT: () => this.SUBRULE(this.designSystemBlock) },
-      { ALT: () => this.SUBRULE(this.pageBlock) },
-      { ALT: () => this.SUBRULE(this.componentBlock) },
-      { ALT: () => this.SUBRULE(this.storeBlock) },
-      { ALT: () => this.SUBRULE(this.workflowBlock) },
-  { ALT: () => this.SUBRULE(this.uploadBlock) },
-    ]);
-  });
+  // Entry grammar moved to modular entry.ts
+  public file: any; private topLevel!: any;
 
   // === Workflow Blocks =====================================================
   // Workflow grammar moved to modular workflow.ts
