@@ -4,12 +4,17 @@ import { defineCommonGrammar } from './grammar/common';
 import { defineEntryGrammar } from './grammar/entry';
 import { defineUploadGrammar } from './grammar/upload';
 import { defineWorkflowGrammar } from './grammar/workflow';
+import { defineWorkflowTriggersGrammar } from './grammar/workflowTriggers';
+import { defineWorkflowStepsGrammar } from './grammar/workflowSteps';
+import { defineWorkflowControlGrammar } from './grammar/workflowControl';
+import { defineWorkflowErrorsGrammar } from './grammar/workflowErrors';
 import { defineDatabaseGrammar } from './grammar/database';
 import { defineFeatureGrammar } from './grammar/feature';
 import { defineStyleGrammar } from './grammar/style';
 import { defineStateActionGrammar } from './grammar/stateAction';
 import { defineUiLifecycleGrammar } from './grammar/uiLifecycle';
 import { defineDatabaseAnnotationsGrammar } from './grammar/databaseAnnotations';
+import { defineDatabaseTypesRelationsGrammar } from './grammar/databaseTypesRelations';
 // Legacy Notice: This parser class was previously named `DatabaseCstParser`.
 // Renamed to `LocusCstParser` as part of parser modernization (no grammar rule name changes).
 // Do not change rule names without updating hash guard tests.
@@ -40,8 +45,13 @@ export class LocusCstParser extends CstParser {
   defineEntryGrammar(this);
   defineCommonGrammar(this);
   defineUploadGrammar(this);
+  defineWorkflowTriggersGrammar(this);
+  defineWorkflowStepsGrammar(this);
+  defineWorkflowControlGrammar(this);
+  defineWorkflowErrorsGrammar(this);
   defineWorkflowGrammar(this);
   defineDatabaseAnnotationsGrammar(this);
+  defineDatabaseTypesRelationsGrammar(this);
   defineDatabaseGrammar(this);
   defineStyleGrammar(this);
   defineStateActionGrammar(this);
