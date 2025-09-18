@@ -21,7 +21,7 @@ export function defineUiLifecycleGrammar(self: CstParser) {
   s.uiBlock = s.RULE('uiBlock', () => {
     s.CONSUME(UI);
     s.CONSUME(LCurly);
-    s.OPTION(() => s.SUBRULE(s.rawContent));
+  s.OPTION(() => s.SUBRULE(s.rawContent));
     s.CONSUME(RCurly);
   });
 }

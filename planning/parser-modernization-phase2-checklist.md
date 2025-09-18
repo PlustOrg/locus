@@ -20,8 +20,10 @@ Legend:
 ---
 
 ## S. Structure & Modularity
-- [ ] S1 Split monolithic grammar (`databaseParser.ts`) into feature modules: `grammar/core`, `grammar/designSystem`, `grammar/ui`, `grammar/workflow`, `grammar/upload`.
-- [ ] S2 Introduce aggregator `locusCstParser.ts` that composes feature rule sections (constructor calls only).
+- [x] S1 Split monolithic grammar into modular files:
+	- Completed modules: entry, common, designSystem, databaseAnnotations, databaseTypesRelations, database, style, stateAction, uiLifecycle, feature, upload, workflowTriggers, workflowSteps, workflowControl, workflowErrors, workflow (wrapper)
+	- Behavior preserved: rule names and hashes unchanged (guard tests green).
+- [x] S2 Introduce aggregator `locusCstParser.ts` composing modular segments (ordered calls before `performSelfAnalysis`).
 - [ ] S3 Add `parser/index-internal.ts` re-exporting internal modules; limit public `parser/index.ts` surface.
 - [ ] S4 Add ESLint rule / custom check disallowing deep imports outside allowed barrels (Automation cross-ref AU1).
 
@@ -111,8 +113,8 @@ Legend:
 - Keep commits narrow: one major refactor or codegen introduction per commit; include rationale in body.
 
 ## Tracking Summary (Flat List for Quick View)
-- [ ] S1  Split grammar modules
-- [ ] S2  Aggregator parser
+- [x] S1  Split grammar modules
+- [x] S2  Aggregator parser
 - [ ] S3  Internal index barrel
 - [ ] S4  Lint deep import guard
 - [ ] G1  Token metadata table & generator

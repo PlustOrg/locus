@@ -15,7 +15,10 @@ describe('Plugin performance guard & snapshot', () => {
       const out = join(dir,'generated');
       const res = await buildProject({ srcDir: dir, outDir: out });
   expect(res.meta.warnings.some((_w:string)=>/performance/i)).toBe(true);
-    } finally { delete process.env.LOCUS_PLUGIN_HOOK_WARN_MS; rmSync(dir,{recursive:true,force:true}); }
+    } finally {
+      delete process.env.LOCUS_PLUGIN_HOOK_WARN_MS;
+      try { rmSync(dir,{recursive:true,force:true}); } catch { /* ignore cleanup errors */ }
+    }
   });
 
   test('custom generator output snapshot', async () => {
@@ -27,6 +30,8 @@ describe('Plugin performance guard & snapshot', () => {
       await buildProject({ srcDir: dir, outDir: out });
       const content = readFileSync(join(out,'extra/hello.txt'),'utf8');
       expect(content).toMatchSnapshot('plugin-extra-hello');
-    } finally { rmSync(dir,{recursive:true,force:true}); }
+    } finally {
+      try { rmSync(dir,{recursive:true,force:true}); } catch { /* ignore cleanup errors */ }
+    }
   });
 });

@@ -32,22 +32,27 @@ function findComponentSpan(comp: ComponentBlock, source: string): { bodyStart: n
 }
 
 function scanStyleBlocks(text: string): StyleBlock[] {
+  const patterns = ['style:override', 'style_override'];
   const blocks: StyleBlock[] = [];
   let idx = 0;
-  while (true) {
-    const start = text.indexOf('style:override', idx);
-    if (start === -1) break;
-    const brace = text.indexOf('{', start + 'style:override'.length);
-    if (brace === -1) break;
+  while (idx < text.length) {
+    let foundStart = -1; let matched: string | null = null;
+    for (const p of patterns) {
+      const s = text.indexOf(p, idx);
+      if (s !== -1 && (foundStart === -1 || s < foundStart)) { foundStart = s; matched = p; }
+    }
+    if (foundStart === -1 || matched == null) break;
+    const brace = text.indexOf('{', foundStart + matched.length);
+    if (brace === -1) { idx = foundStart + matched.length; continue; }
     let depth = 1; let i = brace + 1;
     while (i < text.length && depth > 0) {
       const ch = text[i];
       if (ch === '{') depth++; else if (ch === '}') depth--;
       i++;
     }
-    if (depth !== 0) break;
+    if (depth !== 0) { break; }
     const innerStart = brace + 1; const innerEnd = i - 1;
-    blocks.push({ content: text.slice(innerStart, innerEnd), start, end: i });
+    blocks.push({ content: text.slice(innerStart, innerEnd), start: foundStart, end: i });
     idx = i;
   }
   return blocks;

@@ -21,13 +21,13 @@ export function defineFeatureGrammar(self: CstParser) {
     s.MANY(() => s.OR([
   { GATE: () => s.LA(1).tokenType.name === 'Param', ALT: () => s.SUBRULE(s.paramDecl) },
   { GATE: () => s.LA(1).tokenType.name === 'UI', ALT: () => s.SUBRULE(s.uiBlock) },
-  { GATE: () => s.LA(1).tokenType.name === 'StyleKw', ALT: () => s.SUBRULE(s.styleBlock) },
+  { GATE: () => s.LA(1).tokenType.name === 'StyleKw' && s.LA(2).tokenType.name === 'Colon' && s.LA(3).tokenType.name === 'OverrideKw', ALT: () => s.SUBRULE(s.styleBlock) },
   { GATE: () => s.LA(1).tokenType.name === 'StyleOverride', ALT: () => s.SUBRULE(s.styleOverrideBlock) },
   { ALT: () => s.SUBRULE(s.rawContent) },
     ]));
     s.CONSUME(RCurly);
   });
-  // styleBlock & styleOverrideBlock now defined in style.ts
+  // styleOverrideBlock defined in style.ts
   s.storeBlock = s.RULE('storeBlock', () => { s.CONSUME(Store); s.CONSUME(Identifier); s.CONSUME(LCurly); s.MANY(() => s.OR([
     { GATE: () => s.LA(1).tokenType === State, ALT: () => s.SUBRULE(s.stateBlock) },
     { GATE: () => s.LA(1).tokenType === Action, ALT: () => s.SUBRULE(s.actionDecl) },

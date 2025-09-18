@@ -10,6 +10,7 @@ export function defineStyleGrammar(self: CstParser) {
     s.OPTION(() => s.SUBRULE(s.rawContent));
     s.CONSUME(RCurly);
   });
+  // Legacy style:override retained for backward compatibility / extraction tests.
   s.styleBlock = s.RULE('styleBlock', () => {
     s.CONSUME(StyleKw);
     s.CONSUME(Colon);
@@ -18,4 +19,5 @@ export function defineStyleGrammar(self: CstParser) {
     s.OPTION(() => s.SUBRULE(s.rawContent));
     s.CONSUME(RCurly);
   });
+  // Legacy style:override parsing removed; any occurrences should now be picked up by style scanning (and may parse but remain unsupported logically).
 }

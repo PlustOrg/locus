@@ -2,12 +2,14 @@ import { CstParser } from 'chevrotain';
 import {
   LCurly, RCurly, Identifier, StringLiteral, NumberLiteral, StringT, TextT, IntegerT, DecimalT, BooleanT, DateTimeT,
   JsonT, List, Of, On, Load, Page, Component, Store, State, Action, UI, LParen, RParen, Colon, Comma, Equals, Question,
-  Less, Greater, SlashTok, DotTok, PlusTok, HyphenTok, SemicolonTok, LBracketTok, RBracketTok, SingleQuoteTok, Unknown
+  Less, Greater, SlashTok, DotTok, PlusTok, HyphenTok, SemicolonTok, LBracketTok, RBracketTok, SingleQuoteTok, Unknown,
+  ElseIf, Else, In, Spacing
 } from '../tokens';
 
 // Common reusable fragments
 export function defineCommonGrammar(self: CstParser) {
   const s: any = self;
+  // Simplified HTML-like tag chunk inside ui/rawContent to prevent premature termination on attribute names
   s.rawContent = s.RULE('rawContent', () => {
     s.AT_LEAST_ONE(() => s.OR([
       { ALT: () => { s.CONSUME(LCurly); s.CONSUME(RCurly); } },
@@ -24,6 +26,7 @@ export function defineCommonGrammar(self: CstParser) {
       { ALT: () => s.CONSUME(JsonT) },
       { ALT: () => s.CONSUME(List) },
       { ALT: () => s.CONSUME(Of) },
+  { ALT: () => s.CONSUME(Spacing) },
       { ALT: () => s.CONSUME(On) },
       { ALT: () => s.CONSUME(Load) },
       { ALT: () => s.CONSUME(Page) },
@@ -32,6 +35,9 @@ export function defineCommonGrammar(self: CstParser) {
       { ALT: () => s.CONSUME(State) },
       { ALT: () => s.CONSUME(Action) },
       { ALT: () => s.CONSUME(UI) },
+  { ALT: () => s.CONSUME(ElseIf) },
+  { ALT: () => s.CONSUME(Else) },
+  { ALT: () => s.CONSUME(In) },
       { ALT: () => s.CONSUME(LParen) },
       { ALT: () => s.CONSUME(RParen) },
       { ALT: () => s.CONSUME(Colon) },
@@ -48,7 +54,7 @@ export function defineCommonGrammar(self: CstParser) {
       { ALT: () => s.CONSUME(LBracketTok) },
       { ALT: () => s.CONSUME(RBracketTok) },
       { ALT: () => s.CONSUME(SingleQuoteTok) },
-      { ALT: () => s.CONSUME(Unknown) },
+  { ALT: () => s.CONSUME(Unknown) },
     ]));
   });
 }
