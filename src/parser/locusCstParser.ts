@@ -7,6 +7,9 @@ import { defineWorkflowGrammar } from './grammar/workflow';
 import { defineDatabaseGrammar } from './grammar/database';
 import { defineFeatureGrammar } from './grammar/feature';
 import { defineStyleGrammar } from './grammar/style';
+import { defineStateActionGrammar } from './grammar/stateAction';
+import { defineUiLifecycleGrammar } from './grammar/uiLifecycle';
+import { defineDatabaseAnnotationsGrammar } from './grammar/databaseAnnotations';
 // Legacy Notice: This parser class was previously named `DatabaseCstParser`.
 // Renamed to `LocusCstParser` as part of parser modernization (no grammar rule name changes).
 // Do not change rule names without updating hash guard tests.
@@ -38,8 +41,11 @@ export class LocusCstParser extends CstParser {
   defineCommonGrammar(this);
   defineUploadGrammar(this);
   defineWorkflowGrammar(this);
+  defineDatabaseAnnotationsGrammar(this);
   defineDatabaseGrammar(this);
   defineStyleGrammar(this);
+  defineStateActionGrammar(this);
+  defineUiLifecycleGrammar(this);
   defineFeatureGrammar(this);
   this.performSelfAnalysis();
   }

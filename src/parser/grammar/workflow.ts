@@ -3,7 +3,7 @@ import {
   Workflow, Identifier, LCurly, RCurly, Trigger, InputKw, State, Steps, OnError, OnFailure, Concurrency, Retry,
   On, LParen, RParen, Colon, CreateKw, UpdateKw, DeleteKw, WebhookKw, Comma, RunKw, ConstKw, Equals, DotTok,
   StringLiteral, NumberLiteral, Delay, HttpRequest, SendEmail, Parallel, QueuePublish, DbTx, Branch, ForEach, In,
-  Else, HyphenTok, Group, Limit, MaxKw, BackoffKw, FactorKw, Duration, SlashTok
+  Else, HyphenTok, Group, Limit, MaxKw, BackoffKw, FactorKw, Duration
 } from '../tokens';
 
 // Attaches workflow grammar rules (names preserved exactly)
