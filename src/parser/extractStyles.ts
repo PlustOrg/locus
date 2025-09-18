@@ -32,7 +32,7 @@ function findComponentSpan(comp: ComponentBlock, source: string): { bodyStart: n
 }
 
 function scanStyleBlocks(text: string): StyleBlock[] {
-  const patterns = ['style:override', 'style_override'];
+  const patterns = ['style_override'];
   const blocks: StyleBlock[] = [];
   let idx = 0;
   while (idx < text.length) {

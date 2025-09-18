@@ -1,5 +1,4 @@
 import { parseLocus } from '../../src/parser';
-import { attachComponentStyles } from '../../src/parser/extractStyles';
 import { buildOutputArtifacts } from '../../src/generator/outputs';
 
 const parse = (src: string) => parseLocus(src, 'test.locus');
@@ -26,11 +25,4 @@ describe('style_override support', () => {
     expect(tsx).toContain("import './Fancy.css'");
   });
 
-  test('legacy style:override parses (deprecated)', () => {
-    const legacy = `component L { ui { <div/> } style:override { .x { color: red; } } }`;
-    const ast = parse(legacy);
-    attachComponentStyles(ast, legacy);
-    const comp: any = ast.components.find((c: any) => c.name === 'L');
-    expect(comp?.styleOverride).toMatch(/color: red/);
-  });
 });

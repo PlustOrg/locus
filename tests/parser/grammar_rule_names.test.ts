@@ -19,5 +19,6 @@ test('grammar rule & token name hash stable', () => {
   expect(tokenNames.length).toBeGreaterThan(50);
   expect(hash).toMatch(/^[a-f0-9]{64}$/);
   // Baseline hash – update ONLY on intentional grammar/token change.
-  expect(hash).toBe('a7c07a4d1040dd12ae8500d0c16d4130fe42c49367ca78d4351e64df352779e8');
+  // Updated after removal of legacy style:override rule (styleBlock)
+  expect(hash).toBe('988c5fa8d3520d92a1f8bff35cd74a472531db04944034d817501958565f97c4');
 });

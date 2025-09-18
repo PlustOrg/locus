@@ -21,7 +21,6 @@ export function defineFeatureGrammar(self: CstParser) {
     s.MANY(() => s.OR([
   { GATE: () => s.LA(1).tokenType.name === 'Param', ALT: () => s.SUBRULE(s.paramDecl) },
   { GATE: () => s.LA(1).tokenType.name === 'UI', ALT: () => s.SUBRULE(s.uiBlock) },
-  { GATE: () => s.LA(1).tokenType.name === 'StyleKw' && s.LA(2).tokenType.name === 'Colon' && s.LA(3).tokenType.name === 'OverrideKw', ALT: () => s.SUBRULE(s.styleBlock) },
   { GATE: () => s.LA(1).tokenType.name === 'StyleOverride', ALT: () => s.SUBRULE(s.styleOverrideBlock) },
   { ALT: () => s.SUBRULE(s.rawContent) },
     ]));
