@@ -61,6 +61,9 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   }
 
   const ast = buildAstModular(cst, source, filePath);
+  if (process.env.LOCUS_DEV_FREEZE === '1') {
+    try { deepFreeze(ast); } catch { /* ignore */ }
+  }
   try {
     if (Object.keys(aliasMap).length) applyTypeAliases(ast as any, aliasMap);
   } catch {/* ignore alias failures */}
@@ -76,6 +79,16 @@ export function parseLocus(source: string, filePath?: string): LocusFileAST {
   } catch {/* ignore */}
   if (filePath) __astCache.set(filePath as string, ast);
   return ast;
+}
+
+function deepFreeze(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  Object.freeze(obj);
+  for (const k of Object.keys(obj)) {
+    const v = (obj as any)[k];
+    if (v && typeof v === 'object' && !Object.isFrozen(v)) deepFreeze(v);
+  }
+  return obj;
 }
 
 // Experimental parallel parsing scaffold (not yet active for real, placeholder)

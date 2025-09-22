@@ -40,6 +40,7 @@ export interface LocusErrorOptions {
   cause?: unknown;
   suggestions?: string[];
   severity?: DiagnosticSeverity;
+  quickFixes?: Array<{ title: string; replacement: string; range?: { line: number; column: number; length: number } }>;
 }
 
 export class LocusError extends Error {
@@ -51,6 +52,7 @@ export class LocusError extends Error {
   public cause?: unknown;
   public suggestions?: string[];
   public severity: DiagnosticSeverity;
+  public quickFixes?: Array<{ title: string; replacement: string; range?: { line: number; column: number; length: number } }>;
 
   constructor(opts: LocusErrorOptions) {
     super(opts.message);
@@ -63,6 +65,7 @@ export class LocusError extends Error {
     this.cause = opts.cause;
   this.suggestions = opts.suggestions;
   this.severity = opts.severity || 'error';
+    this.quickFixes = opts.quickFixes;
     (Error as any).captureStackTrace?.(this, LocusError);
   }
 }

@@ -24,7 +24,7 @@ Legend:
 	- Completed modules: entry, common, designSystem, databaseAnnotations, databaseTypesRelations, database, style, stateAction, uiLifecycle, feature, upload, workflowTriggers, workflowSteps, workflowControl, workflowErrors, workflow (wrapper)
 	- Behavior preserved: rule names and hashes unchanged (guard tests green).
 - [x] S2 Introduce aggregator `locusCstParser.ts` composing modular segments (ordered calls before `performSelfAnalysis`).
-- [ ] S3 Add `parser/index-internal.ts` re-exporting internal modules; limit public `parser/index.ts` surface.
+- [x] S3 Add `parser/index-internal.ts` re-exporting internal modules; limit public `parser/index.ts` surface.
 - [ ] S4 Add ESLint rule / custom check disallowing deep imports outside allowed barrels (Automation cross-ref AU1).
 
 ## G. Grammar & Tokens
@@ -115,7 +115,7 @@ Legend:
 ## Tracking Summary (Flat List for Quick View)
 - [x] S1  Split grammar modules
 - [x] S2  Aggregator parser
-- [ ] S3  Internal index barrel
+- [x] S3  Internal index barrel
 - [ ] S4  Lint deep import guard
 - [ ] G1  Token metadata table & generator
 - [ ] G2  Auto-build AllTokens
