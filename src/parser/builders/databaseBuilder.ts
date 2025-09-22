@@ -1,34 +1,13 @@
 import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation, primitiveCodeOf } from '../../ast';
+import { createField, createEntity } from '../../ast/factory';
 import { posOf, defineHidden } from '../builderUtils';
 import crypto from 'crypto';
 import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } from './helpers';
 import { detectPrimitive } from '../primitiveTypes';
 import { registerDeprecation } from '../../deprecations';
 
-let __allocCount = 0; // instrumentation counter
-const fieldPool: any[] = [];
-const entityPool: any[] = [];
-// Retained for tests (ast_pooling.test.ts)
-export function __getAstAllocCount(){ return __allocCount; }
-function makeField(init: any): Field {
-  if (process.env.LOCUS_AST_POOL === '1' && fieldPool.length) {
-    const f = fieldPool.pop();
-    Object.assign(f, init);
-    return f;
-  }
-  __allocCount++;
-  return init;
-}
-function makeEntity(init: any): Entity {
-  if (process.env.LOCUS_AST_POOL === '1' && entityPool.length) {
-    const e = entityPool.pop();
-    Object.assign(e, init);
-    return e;
-  }
-  __allocCount++;
-  return init;
-}
+// Allocation pooling removed for primitive field/entity path now that factories are used (Phase 2 A1 partial).
 
 const entityCache = new Map<string, Entity>();
 let __entityBuilds = 0; // instrumentation counter
@@ -104,7 +83,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         // Capture raw field text (between field name token start and end of last attribute token) for downstream analyses.
   // (raw capture placeholder omitted to avoid unused variable warnings)
   if (fieldType && fieldType.kind === 'primitive') (fieldType as any).code = primitiveCodeOf(fieldType.name as any);
-  const fieldNode: any = makeField({ name: fieldName, type: fieldType, attributes });
+  const fieldNode: any = createField(fieldName, fieldType, attributes);
         defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
         // Mark deprecated attribute syntax if any attribute groups used paren style
         if (attrGroups.some(g => (g.children as any).LParen)) fieldNode.raw = (fieldNode.raw || '(attr)');
@@ -153,7 +132,7 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         defineHidden(relNode, 'targetLoc', posOf(targetTok));
         relations.push(relNode);
       }
-  const entity: any = makeEntity({ name, fields, relations });
+  const entity: any = createEntity(name, fields, relations);
       defineHidden(entity, 'nameLoc', posOf(nameTok));
   entities.push(entity);
   if (process.env.LOCUS_CST_CACHE === '1') entityCache.set(hash, entity);

@@ -117,14 +117,15 @@ Legend:
 - [x] S2  Aggregator parser
 - [x] S3  Internal index barrel
 - [ ] S4  Lint deep import guard
-- [ ] G1  Token metadata table & generator
-- [ ] G2  Auto-build AllTokens
+// Completed Phase 2 Updates
+- [x] G1  Token metadata table & generator
+- [x] G2  Auto-build AllTokens
 - [ ] G3  Primitive token category
 - [ ] G4  Category-based primitive detection
 - [ ] G5  Normalize keyword token naming (⚠ baseline)
 - [ ] G6  Unified list parsing w/ deprecation
 - [ ] G7  Keyword naming guard in hash test
-- [ ] A1  AST factory layer
+- [x] A1  AST factory layer
 - [ ] A2  Dev freeze option
 - [ ] A3  Unified attribute walker
 - [ ] A4  `loc()` helper
@@ -134,7 +135,7 @@ Legend:
 - [ ] H1  `astUtils` decision
 - [ ] H2  Unified state parsing
 - [ ] H3  Remove legacy list branch (post deprecation)
-- [ ] E1  Suggestion engine centralization
+- [x] E1  Suggestion engine centralization
 - [ ] E2  Quick-fix scaffolding
 - [ ] E3  Parse error adaptor
 - [ ] E4  Invariant diagnostic aggregator
@@ -143,7 +144,7 @@ Legend:
 - [ ] P3  Primitive mapping cache
 - [ ] P4  Perf baseline update
 - [ ] P5  Remove instrumentation exports
-- [ ] T1  Expanded hash guard
+- [x] T1  Expanded hash guard
 - [ ] T2  Grammar spec snapshot test
 - [ ] T3  State parity property test
 - [ ] T4  Parse error snapshot
