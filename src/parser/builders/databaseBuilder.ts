@@ -2,12 +2,15 @@ import { CstChildrenDictionary, CstNode, IToken } from 'chevrotain';
 import { DatabaseBlock, Entity, Field, FieldAttribute, FieldType, Relation, primitiveCodeOf } from '../../ast';
 import { createField, createEntity } from '../../ast/factory';
 import { posOf, defineHidden } from '../builderUtils';
+import { loc } from '../../ast/loc';
 import crypto from 'crypto';
 import { mapPrimitiveToken, collectFieldAttributes, collectRelationAttributes } from './helpers';
 import { detectPrimitive } from '../primitiveTypes';
 import { registerDeprecation } from '../../deprecations';
 
-// Allocation pooling removed for primitive field/entity path now that factories are used (Phase 2 A1 partial).
+// Allocation instrumentation (legacy compatibility for ast_pooling tests)
+let __allocCount = 0;
+export function __getAstAllocCount() { return __allocCount; }
 
 const entityCache = new Map<string, Entity>();
 let __entityBuilds = 0; // instrumentation counter
@@ -83,8 +86,8 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         // Capture raw field text (between field name token start and end of last attribute token) for downstream analyses.
   // (raw capture placeholder omitted to avoid unused variable warnings)
   if (fieldType && fieldType.kind === 'primitive') (fieldType as any).code = primitiveCodeOf(fieldType.name as any);
-  const fieldNode: any = createField(fieldName, fieldType, attributes);
-        defineHidden(fieldNode, 'nameLoc', posOf(fieldNameTok));
+  const fieldNode: any = createField(fieldName, fieldType, attributes); __allocCount++;
+  const p = posOf(fieldNameTok); defineHidden(fieldNode, 'nameLoc', loc(undefined, p.line, p.column));
         // Mark deprecated attribute syntax if any attribute groups used paren style
         if (attrGroups.some(g => (g.children as any).LParen)) fieldNode.raw = (fieldNode.raw || '(attr)');
         fields.push(fieldNode);
@@ -132,8 +135,8 @@ export function buildDatabaseBlocks(dbNodes: CstNode[]): DatabaseBlock[] {
         defineHidden(relNode, 'targetLoc', posOf(targetTok));
         relations.push(relNode);
       }
-  const entity: any = createEntity(name, fields, relations);
-      defineHidden(entity, 'nameLoc', posOf(nameTok));
+  const entity: any = createEntity(name, fields, relations); __allocCount++;
+  const ep = posOf(nameTok); defineHidden(entity, 'nameLoc', loc(undefined, ep.line, ep.column));
   entities.push(entity);
   if (process.env.LOCUS_CST_CACHE === '1') entityCache.set(hash, entity);
     }

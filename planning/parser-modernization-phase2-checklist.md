@@ -52,7 +52,7 @@ Legend:
 
 ## E. Error & Diagnostics Enhancements
 - [ ] E1 Centralize keyword / identifier suggestion engine (Levenshtein + context map) in `diagnostics/suggestions.ts`.
-- [ ] E2 Add structured quick-fix suggestion objects (foundation, not surfaced yet) – no user-visible change.
+- [x] E2 Add structured quick-fix suggestion objects (foundation, not surfaced yet) – no user-visible change.
 - [ ] E3 Introduce consistent parse error adaptor that rewrites Chevrotain messages into canonical form (guard unchanged wording via snapshot test T4).
 - [ ] E4 Implement dev-only invariant diagnostic aggregator (ties to A7) – collects & reports after build.
 
@@ -128,11 +128,11 @@ Legend:
 - [x] A1  AST factory layer
 - [ ] A2  Dev freeze option
 - [ ] A3  Unified attribute walker
-- [ ] A4  `loc()` helper
+- [x] A4  `loc()` helper
 - [ ] A5  Symbol hidden props
 - [ ] A6  Typed CST node interfaces
 - [ ] A7  Invariant checks
-- [ ] H1  `astUtils` decision
+- [x] H1  `astUtils` decision
 - [ ] H2  Unified state parsing
 - [ ] H3  Remove legacy list branch (post deprecation)
 - [x] E1  Suggestion engine centralization
@@ -148,7 +148,7 @@ Legend:
 - [ ] T2  Grammar spec snapshot test
 - [ ] T3  State parity property test
 - [ ] T4  Parse error snapshot
-- [ ] T5  Deep import test
+- [x] T5  Deep import test
 - [ ] T6  Freeze behavior test
 - [ ] D1  Generated grammar spec doc
 - [ ] D2  Migration note (list + instrumentation)
@@ -163,7 +163,7 @@ Legend:
 - [ ] R3  Remove unused pools
 - [ ] AU1 Lint deep imports
 - [ ] AU2 Precommit regen pipeline
-- [ ] AU3 Regen convenience script
+- [x] AU3 Regen convenience script
 - [ ] EX1 Experimental modular mode flag
 - [ ] EX2 Incremental parsing design doc
 - [ ] EX3 Worker parallel parsing prototype

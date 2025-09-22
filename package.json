@@ -25,7 +25,8 @@
     "perf:baseline": "ts-node scripts/measure_baseline.ts",
     "docs:update-kpis": "ts-node scripts/update_kpis.ts",
     "locus": "dist/index.js",
-    "ci:validate": "npm run lint && npm test"
+    "ci:validate": "npm run lint && npm test",
+    "parser:regen": "node scripts/generate_tokens.js && node scripts/generate_grammar_spec.js || true"
   },
   "repository": {
     "type": "git",

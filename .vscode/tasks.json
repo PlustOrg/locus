@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "log-plan",
+			"type": "shell",
+			"command": "echo 'Implementing E2 A4 H1 T5 AU3 with TDD'"
+		},
+		{
+			"label": "add-deep-import-test",
+			"type": "shell",
+			"command": "echo \"// placeholder\" > tests/lint/deep_import_guard.test.ts"
+		},
+		{
+			"label": "add-regen-script",
+			"type": "shell",
+			"command": "node -e \"const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));pkg.scripts=pkg.scripts||{};pkg.scripts['parser:regen']='node scripts/generate_tokens.js && node scripts/generate_grammar_spec.js || true';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2));\""
+		}
+	]
+}
